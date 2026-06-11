@@ -1,0 +1,3167 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>판례 정리함</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8f5;
+      --panel: #ffffff;
+      --panel-soft: #eef4f2;
+      --ink: #202529;
+      --muted: #6d757b;
+      --line: #d7ded9;
+      --line-strong: #b8c5be;
+      --brand: #176b5f;
+      --brand-2: #c74634;
+      --accent: #dca83f;
+      --mark: #fff29a;
+      --shadow: 0 10px 28px rgba(35, 43, 46, 0.08);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(23, 107, 95, 0.07), rgba(247, 248, 245, 0) 260px),
+        var(--bg);
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: var(--ink);
+      color: #fff;
+      cursor: pointer;
+      min-height: 36px;
+      padding: 0 12px;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    button:disabled,
+    select:disabled,
+    input:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    button.secondary {
+      background: #fff;
+      border-color: var(--line-strong);
+      color: var(--ink);
+    }
+
+    button.ghost {
+      background: transparent;
+      border-color: transparent;
+      color: var(--muted);
+      padding: 0 8px;
+    }
+
+    button.warn {
+      background: var(--brand-2);
+      color: #fff;
+    }
+
+    button.brand {
+      background: var(--brand);
+    }
+
+    button.icon {
+      width: 34px;
+      min-width: 34px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    input,
+    textarea,
+    select,
+    .rich-source,
+    .rich-note {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--ink);
+      outline: none;
+    }
+
+    input,
+    select {
+      height: 38px;
+      padding: 0 11px;
+    }
+
+    textarea {
+      min-height: 86px;
+      resize: none;
+      overflow: hidden;
+      padding: 10px 11px;
+      line-height: 1.55;
+    }
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      accent-color: var(--brand);
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus,
+    .rich-source:focus,
+    .rich-note:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(23, 107, 95, 0.13);
+    }
+
+    .app {
+      height: 100vh;
+      min-height: 100%;
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+      overflow: hidden;
+    }
+
+    header {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 14px;
+      min-height: 0;
+      padding: 14px 12px;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(14px);
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      letter-spacing: 0;
+      flex: 0 0 auto;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.15;
+    }
+
+    .subtitle {
+      margin-top: 3px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .toolbar {
+      min-height: 0;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      padding-right: 2px;
+    }
+
+    .toolbar button,
+    .toolbar .file-button,
+    .toolbar input {
+      width: 100%;
+      font-size: 13px;
+    }
+
+    .toolbar .selected-count {
+      white-space: normal;
+      line-height: 1.35;
+      padding: 4px 2px;
+    }
+
+    .file-button {
+      position: relative;
+      overflow: hidden;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      padding: 0 12px;
+      border-radius: 7px;
+      border: 1px solid var(--line-strong);
+      background: #fff;
+      cursor: pointer;
+      color: var(--ink);
+    }
+
+    .file-button input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    main {
+      display: block;
+      padding: 10px;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .pane,
+    .editor {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .pane {
+      position: fixed;
+      left: 204px;
+      top: 12px;
+      bottom: 12px;
+      width: min(390px, calc(100vw - 230px));
+      height: auto;
+      z-index: 30;
+      display: none;
+    }
+
+    #casePane {
+      width: min(460px, calc(100vw - 230px));
+    }
+
+    .pane.open {
+      display: grid;
+    }
+
+    .editor {
+      width: 100%;
+    }
+
+    .pane-header,
+    .editor-head {
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      background: #fafcf9;
+    }
+
+    .pane-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      min-height: 32px;
+    }
+
+    .pane-toggle {
+      min-height: 28px;
+      padding: 0 9px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .pane.collapsed {
+      grid-template-rows: 1fr;
+    }
+
+    .pane.collapsed .pane-header {
+      border-bottom: 0;
+      padding: 8px 6px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    .pane.collapsed .pane-title {
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 10px;
+      min-height: 0;
+      width: 100%;
+    }
+
+    .pane.collapsed .pane-title h2 {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+    }
+
+    .pane.collapsed .pane-toggle {
+      min-width: 34px;
+      width: 34px;
+      padding: 0;
+      font-size: 11px;
+    }
+
+    .pane.collapsed .pane-body,
+    .pane.collapsed .topic-actions,
+    .pane.collapsed .case-search,
+    .pane.collapsed .scope,
+    .pane.collapsed .bulk-row,
+    .pane.collapsed .compact-note {
+      display: none;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .count {
+      min-width: 28px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--panel-soft);
+      color: var(--brand);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      padding: 0 8px;
+      font-weight: 700;
+    }
+
+    .pane-body {
+      min-height: 0;
+      overflow: auto;
+      padding: 10px;
+    }
+
+    .editor-body {
+      min-height: 0;
+      overflow: hidden;
+      padding: 10px;
+      font-size: calc(1em - 1pt);
+    }
+
+    .editor-case-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 8px;
+    }
+
+    .topic-actions,
+    .case-actions,
+    .form-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .topic-actions,
+    .case-search,
+    .bulk-row,
+    .scope {
+      margin-top: 10px;
+    }
+
+    .tree {
+      display: grid;
+      gap: 4px;
+    }
+
+    .topic-node {
+      border-radius: 7px;
+    }
+
+    .topic-line {
+      height: 36px;
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 4px;
+      border-radius: 7px;
+      padding: 0 4px 0 0;
+      position: relative;
+      cursor: grab;
+    }
+
+    .topic-line:hover {
+      background: #f1f5f1;
+    }
+
+    .topic-line.active {
+      background: rgba(23, 107, 95, 0.12);
+      color: var(--brand);
+      font-weight: 800;
+    }
+
+    .topic-line.dragging {
+      opacity: 0.48;
+    }
+
+    .topic-line.drop-inside {
+      background: #fff8dc;
+      box-shadow: inset 0 0 0 2px var(--accent);
+    }
+
+    .topic-line.drop-before::before,
+    .topic-line.drop-after::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      height: 3px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .topic-line.drop-before::before {
+      top: -3px;
+    }
+
+    .topic-line.drop-after::after {
+      bottom: -3px;
+    }
+
+    .twisty {
+      height: 28px;
+      width: 24px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 0;
+      transform: none;
+    }
+
+    .topic-name {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      min-width: 0;
+      padding: 0 5px;
+      text-align: left;
+      transform: none;
+      cursor: inherit;
+    }
+
+    .topic-name span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .node-buttons {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      opacity: 0.2;
+    }
+
+    .topic-line:hover .node-buttons,
+    .topic-line.active .node-buttons {
+      opacity: 1;
+    }
+
+    .children {
+      margin-left: 18px;
+      border-left: 1px solid var(--line);
+      padding-left: 5px;
+      display: grid;
+      gap: 3px;
+    }
+
+    .tree-case-line {
+      min-height: 32px;
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      align-items: start;
+      gap: 5px;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      padding: 6px 7px;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+      transform: none;
+    }
+
+    .tree-case-line:hover {
+      background: #fbfcfa;
+      border-color: var(--line);
+      transform: none;
+    }
+
+    .topic-name:hover,
+    .twisty:hover,
+    .ghost.icon:hover {
+      transform: none;
+    }
+
+    .tree-case-line.active {
+      background: rgba(23, 107, 95, 0.10);
+      border-color: rgba(23, 107, 95, 0.26);
+      color: var(--brand);
+      font-weight: 800;
+    }
+
+    .tree-case-dot {
+      color: var(--muted);
+      line-height: 1.3;
+    }
+
+    .tree-case-copy {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    .tree-case-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.35;
+    }
+
+    .tree-case-no {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .scope {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: var(--panel-soft);
+      border-radius: 7px;
+      padding: 4px;
+    }
+
+    .scope button {
+      background: transparent;
+      border: 0;
+      color: var(--muted);
+      min-height: 30px;
+      transform: none;
+    }
+
+    .scope button.active {
+      background: #fff;
+      color: var(--brand);
+      box-shadow: 0 1px 4px rgba(35, 43, 46, 0.08);
+      font-weight: 800;
+    }
+
+    .bulk-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .checkline {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .selected-count {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .case-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .case-item {
+      text-align: left;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      min-height: 58px;
+      padding: 10px 11px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      align-items: start;
+      outline: none;
+      user-select: none;
+    }
+
+    .case-item:hover {
+      border-color: var(--line-strong);
+      background: #fbfcfa;
+    }
+
+    .case-item.active {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(23, 107, 95, 0.11);
+    }
+
+    .case-item.selected {
+      background: rgba(23, 107, 95, 0.08);
+    }
+
+    .case-copy {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .case-title {
+      font-weight: 800;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .case-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      border-radius: 999px;
+      background: var(--panel-soft);
+      color: var(--brand);
+      padding: 2px 7px;
+      font-weight: 700;
+    }
+
+    .pill.pending {
+      background: rgba(220, 168, 63, 0.12);
+      color: #8a5d00;
+    }
+
+    .pill.failed {
+      background: rgba(199, 70, 52, 0.12);
+      color: var(--brand-2);
+    }
+
+    .api-key {
+      width: 100%;
+    }
+
+    .editor-head {
+      display: grid;
+      gap: 4px;
+    }
+
+    .editor-tools {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .editor-tools button {
+      min-height: 32px;
+      font-size: 13px;
+    }
+
+    .selected-title {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .selected-title h2 {
+      font-size: 20px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .folder-move {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 8px;
+    }
+
+    .folder-move .field-label {
+      white-space: nowrap;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: minmax(0, 1fr);
+      gap: 0;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .editor-split {
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: minmax(260px, var(--reference-width, 56%)) 8px minmax(260px, 1fr);
+      gap: 0;
+      column-gap: 0;
+    }
+
+    .split-resizer {
+      cursor: col-resize;
+      position: relative;
+      background: var(--line);
+      border-radius: 999px;
+      margin: 0 3px;
+      min-width: 2px;
+    }
+
+    .split-resizer::before {
+      content: "";
+      position: absolute;
+      inset: 0 -5px;
+    }
+
+    .split-resizer:hover,
+    .split-resizer.dragging {
+      background: var(--brand);
+    }
+
+    .editor-column {
+      height: 100%;
+      min-height: 0;
+      overflow: auto;
+      display: grid;
+      align-content: start;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.76);
+      overscroll-behavior: contain;
+    }
+
+    .reference-column {
+      background: rgba(238, 244, 242, 0.58);
+    }
+
+    .note-column {
+      background: #fff;
+      box-shadow: inset 0 0 0 1px rgba(23, 107, 95, 0.04);
+    }
+
+    .column-heading {
+      position: sticky;
+      top: -10px;
+      z-index: 2;
+      margin: -10px -10px 2px;
+      padding: 10px 10px 8px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .reference-column .column-heading {
+      background: var(--panel-soft);
+    }
+
+    .note-column .column-heading {
+      background: #fff;
+    }
+
+    .column-heading h3 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.25;
+    }
+
+    .column-heading .compact-note {
+      display: none;
+    }
+
+    .reference-column .rich-source {
+      min-height: 360px;
+    }
+
+    .note-column .primary-note textarea,
+    .note-column .primary-note .rich-note {
+      min-height: 180px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field.wide {
+      grid-column: 1 / -1;
+    }
+
+    .field-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 28px;
+    }
+
+    .field-body {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field.collapsed .field-body {
+      display: none;
+    }
+
+    .collapse-toggle {
+      min-height: 28px;
+      padding: 0 9px;
+      font-size: 12px;
+    }
+
+    label,
+    .field-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .source-tools,
+    .editor-tools {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .source-tools button.active-tool,
+    .editor-tools button.active-tool {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #1f241f;
+      font-weight: 800;
+    }
+
+    .rich-source.tool-highlight,
+    textarea.tool-highlight {
+      cursor: text;
+    }
+
+    .rich-source.tool-erase,
+    textarea.tool-erase {
+      cursor: cell;
+    }
+
+    .rich-source,
+    .rich-note {
+      min-height: 124px;
+      padding: 11px 12px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .rich-source:empty::before,
+    .rich-note:empty::before {
+      content: attr(data-placeholder);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .rich-source mark,
+    .rich-source span[style*="background"],
+    .rich-note mark,
+    .rich-note span[style*="background"] {
+      background-color: var(--mark) !important;
+      border-radius: 2px;
+      padding: 0 1px;
+    }
+
+    .compact-note {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .empty {
+      min-height: 240px;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    dialog {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 24px 60px rgba(35, 43, 46, 0.22);
+      width: min(560px, calc(100vw - 28px));
+      padding: 0;
+    }
+
+    dialog::backdrop {
+      background: rgba(18, 23, 25, 0.35);
+    }
+
+    .modal {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .modal h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: var(--ink);
+      color: #fff;
+      border-radius: 8px;
+      padding: 11px 13px;
+      box-shadow: var(--shadow);
+      max-width: min(420px, calc(100vw - 36px));
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      z-index: 20;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1180px) {
+      .app {
+        grid-template-columns: 170px minmax(0, 1fr);
+      }
+
+      main {
+        grid-template-columns: minmax(210px, 280px) 46px minmax(0, 1fr);
+      }
+
+      main.topic-pane-collapsed {
+        grid-template-columns: 46px 46px minmax(0, 1fr);
+      }
+
+      main.case-pane-collapsed {
+        grid-template-columns: minmax(210px, 280px) 46px minmax(0, 1fr);
+      }
+
+      main.topic-pane-collapsed.case-pane-collapsed {
+        grid-template-columns: 46px 46px minmax(0, 1fr);
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        height: auto;
+        min-height: 100%;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto;
+        overflow: visible;
+      }
+
+      header {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        overflow: visible;
+      }
+
+      .toolbar {
+        overflow: visible;
+      }
+
+      main,
+      main.topic-pane-collapsed,
+      main.case-pane-collapsed,
+      main.topic-pane-collapsed.case-pane-collapsed {
+        grid-template-columns: 1fr;
+        padding: 10px;
+        height: auto;
+        overflow: visible;
+      }
+
+      .pane,
+      .editor {
+        height: auto;
+        min-height: auto;
+      }
+
+      .pane.collapsed {
+        min-height: 52px;
+      }
+
+      .pane.collapsed .pane-header {
+        align-items: center;
+      }
+
+      .pane.collapsed .pane-title {
+        flex-direction: row;
+        justify-content: space-between;
+      }
+
+      .pane.collapsed .pane-title h2 {
+        writing-mode: horizontal-tb;
+        letter-spacing: 0;
+      }
+
+      .pane-body {
+        max-height: 430px;
+      }
+
+      .editor-body {
+        overflow: auto;
+      }
+
+      .field-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        height: auto;
+        overflow: visible;
+      }
+
+      .editor-split {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+      }
+
+      .split-resizer {
+        display: none;
+      }
+
+      .editor-column {
+        height: auto;
+        overflow: visible;
+        max-height: none;
+      }
+
+      .reference-column .rich-source {
+        min-height: 240px;
+      }
+
+      .selected-title,
+      .folder-move,
+      .bulk-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand-mark">
+        <div class="brand-icon" aria-hidden="true">判</div>
+        <div>
+          <h1>판례 정리함</h1>
+          <div class="subtitle">한 줄 판례 목록을 가져와서 주제별 깊이로 정리</div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <label class="file-button" title="메모장 파일의 각 줄을 판례 하나로 가져옵니다.">
+          목록 가져오기
+          <input id="txtImport" type="file" accept=".txt,text/plain" />
+        </label>
+        <button id="newCaseBtn" class="secondary" type="button" title="사건번호를 입력하면 API에서 판례를 불러옵니다.">+ 사건번호</button>
+        <button id="openTopicBtn" class="secondary" type="button" aria-expanded="false" aria-controls="topicPane">목차</button>
+        <button id="openSearchBtn" class="secondary" type="button" aria-expanded="false" aria-controls="casePane">검색</button>
+        <button id="undoBtn" class="secondary" type="button" disabled title="삭제, 이동, 폴더 변경을 되돌립니다.">되돌리기</button>
+        <input id="apiKeyInput" class="api-key" type="password" placeholder="API 키(OC)" title="국가법령정보 공동활용 API 인증값" />
+        <span id="saveStatus" class="selected-count">자동 저장 준비 중</span>
+        <button id="chooseSaveFileBtn" class="secondary" type="button" title="자동 저장할 JSON 파일을 선택합니다.">저장 파일 선택</button>
+        <button id="manualSaveBtn" class="brand" type="button" title="선택한 JSON 파일을 지금 갱신합니다.">지금 저장</button>
+        <label class="file-button" title="내보낸 백업 파일을 불러옵니다.">
+          JSON 불러오기
+          <input id="jsonImport" type="file" accept=".json,application/json" />
+        </label>
+      </div>
+    </header>
+
+    <main id="mainLayout">
+      <section id="topicPane" class="pane" aria-labelledby="topicHeading">
+        <div class="pane-header">
+          <div class="pane-title">
+            <h2 id="topicHeading">목차</h2>
+            <span id="topicCount" class="count">0</span>
+            <button id="closeTopicPaneBtn" class="pane-toggle secondary" type="button" title="목차 닫기">닫기</button>
+          </div>
+          <div class="topic-actions">
+            <input id="topicNameInput" type="text" placeholder="예: 양도담보" />
+            <button id="addTopicBtn" class="brand icon" type="button" title="선택한 목차 아래에 추가">+</button>
+          </div>
+          <p class="compact-note">목차를 끌어서 위아래 순서를 바꾸거나 다른 목차 안으로 넣을 수 있습니다.</p>
+        </div>
+        <div class="pane-body">
+          <div id="topicTree" class="tree"></div>
+        </div>
+      </section>
+
+      <section id="casePane" class="pane" aria-labelledby="caseHeading">
+        <div class="pane-header">
+          <div class="pane-title">
+            <h2 id="caseHeading">검색</h2>
+            <span id="caseCount" class="count">0</span>
+            <button id="closeCasePaneBtn" class="pane-toggle secondary" type="button" title="검색 닫기">닫기</button>
+          </div>
+          <div class="case-search">
+            <input id="searchInput" type="search" placeholder="판례명, 판시사항, 판결요지, 주요 문구 검색" />
+          </div>
+        </div>
+        <div class="pane-body">
+          <div id="caseList" class="case-list"></div>
+        </div>
+      </section>
+
+      <section class="editor" aria-labelledby="editorHeading">
+        <div class="editor-head">
+          <div class="selected-title">
+            <h2 id="editorHeading">판례를 선택하세요</h2>
+            <div id="assignRow" class="folder-move hidden">
+              <span class="field-label">폴더 이동</span>
+              <select id="topicSelect" title="판례를 보관할 목차"></select>
+            </div>
+          </div>
+          <div id="editorTools" class="editor-tools hidden">
+            <button id="highlightBtn" class="secondary" type="button">형광펜</button>
+            <button id="clearHighlightBtn" class="secondary" type="button">지우개</button>
+          </div>
+          <p id="editorPath" class="compact-note hidden">미분류 판례나 목차 안의 판례를 고르면 정리 양식이 열립니다.</p>
+        </div>
+        <div class="editor-body">
+          <div id="emptyEditor" class="empty">왼쪽 목록에서 판례를 선택하면 참고자료와 내 정리를 나란히 열어 볼 수 있습니다.</div>
+          <form id="caseForm" class="field-grid hidden" spellcheck="false">
+            <div class="editor-case-actions">
+              <button id="deleteCaseBtn" class="warn" type="button">현재 판례 삭제</button>
+            </div>
+            <div class="editor-split">
+              <section class="editor-column reference-column" aria-label="참고자료">
+              <div class="column-heading">
+                <h3>참고자료</h3>
+              </div>
+
+              <section class="field wide collapsible" data-field="holding">
+                <div class="field-header">
+                  <label for="holdingInput">판시사항</label>
+                  <button class="collapse-toggle secondary" type="button" data-toggle-field="holding">접기</button>
+                </div>
+                <div class="field-body">
+                  <div id="holdingInput" class="rich-note autogrow" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" data-name="holding" data-placeholder="API에서 판시사항을 가져오면 여기에 표시됩니다."></div>
+                </div>
+              </section>
+
+              <section id="judgmentSummaryField" class="field wide collapsible" data-field="judgmentSummary">
+                <div class="field-header">
+                  <label for="judgmentSummaryInput">판결요지</label>
+                  <button class="collapse-toggle secondary" type="button" data-toggle-field="judgmentSummary">접기</button>
+                </div>
+                <div class="field-body">
+                  <div id="judgmentSummaryInput" class="rich-note autogrow" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" data-name="judgmentSummary" data-placeholder="API에 판결요지가 있으면 여기에 표시됩니다."></div>
+                </div>
+              </section>
+
+              <section class="field wide collapsible" data-field="source">
+                <div class="field-header">
+                  <span class="field-label">판례 원문</span>
+                  <button class="collapse-toggle secondary" type="button" data-toggle-field="source">접기</button>
+                </div>
+                <div class="field-body">
+                  <div id="sourceEditor" class="rich-source" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" data-placeholder="형광펜이나 지우개를 누른 뒤 원문 위에서 드래그하세요. 우클릭하면 도구가 꺼집니다."></div>
+                </div>
+              </section>
+            </section>
+
+            <div id="splitResizer" class="split-resizer" role="separator" aria-label="참고자료와 내 정리 너비 조절" tabindex="0"></div>
+
+            <section class="editor-column note-column" aria-label="내 정리">
+              <div class="column-heading">
+                <h3>내 정리</h3>
+              </div>
+
+              <section class="field wide collapsible primary-note" data-field="summary">
+                <div class="field-header">
+                  <label for="summaryInput">내 요약 / 결론 정리</label>
+                  <button class="collapse-toggle secondary" type="button" data-toggle-field="summary">접기</button>
+                </div>
+                <div class="field-body">
+                  <div id="summaryInput" class="rich-note autogrow" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" data-name="summary" data-placeholder="판시사항, 판결요지, 원문을 보면서 직접 요약하세요."></div>
+                </div>
+              </section>
+
+              <section class="field wide collapsible" data-field="keyPhrases">
+                <div class="field-header">
+                  <label for="keyPhrasesInput">주요 문구</label>
+                  <button class="collapse-toggle secondary" type="button" data-toggle-field="keyPhrases">접기</button>
+                </div>
+                <div class="field-body">
+                  <div id="keyPhrasesInput" class="rich-note autogrow" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" data-name="keyPhrases" data-placeholder="원문에서 중요하다고 본 문구나 키워드를 적어두세요."></div>
+                </div>
+              </section>
+
+              <div class="field">
+                <label for="majorityInput">다수의견</label>
+                <div id="majorityInput" class="rich-note autogrow" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" data-name="majority"></div>
+              </div>
+              <div class="field">
+                <label for="dissentInput">반대의견</label>
+                <div id="dissentInput" class="rich-note autogrow" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" data-name="dissent"></div>
+              </div>
+              <div class="field">
+                <label for="concurringInput">별개의견 / 보충의견</label>
+                <div id="concurringInput" class="rich-note autogrow" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" data-name="concurring"></div>
+              </div>
+              <div class="field">
+                <label for="tagsInput">태그</label>
+                <div id="tagsInput" class="rich-note autogrow" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" data-name="tags" data-placeholder="쉼표로 구분"></div>
+              </div>
+            </section>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="nameDialog">
+    <form class="modal" method="dialog">
+      <h3 id="dialogTitle">이름 입력</h3>
+      <input id="dialogInput" type="text" />
+      <div class="modal-actions">
+        <button id="dialogCancel" class="secondary" value="cancel" type="submit">취소</button>
+        <button id="dialogOk" class="brand" value="ok" type="submit">확인</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const STORAGE_KEY = "law-case-organizer-v1";
+    const STORAGE_FILE = "case-notes-organizer-data.json";
+    const SAVE_HANDLE_DB = "case-notes-organizer-file-v1";
+    const SAVE_HANDLE_STORE = "handles";
+    const SAVE_HANDLE_ID = "main";
+    const API_KEY_STORAGE_KEY = "law-case-organizer-api-key-v1";
+    const LAW_API_BASE = "https://www.law.go.kr/DRF";
+    const formFields = ["title", "caseNo", "holding", "judgmentSummary", "source", "keyPhrases", "summary", "majority", "dissent", "concurring", "tags"];
+    const inputFields = ["holding", "judgmentSummary", "keyPhrases", "summary", "majority", "dissent", "concurring", "tags"];
+    const UNCLASSIFIED_TOPIC_ID = "__unclassified__";
+
+    const state = {
+      topics: [],
+      cases: [],
+      selectedTopicId: null,
+      selectedCaseId: null,
+      selectedCaseIds: new Set(),
+      lastSelectedCaseId: null,
+      expandedTopicIds: new Set(),
+      collapsedFields: new Set(),
+      undoStack: [],
+      scope: "all",
+      query: "",
+      dragTopicId: null,
+      saveTimer: null,
+      opfsAvailable: false,
+      sourceTool: null,
+      splitDragging: false,
+      apiKey: "",
+      saveFileHandle: null
+    };
+
+    const els = {
+      txtImport: document.getElementById("txtImport"),
+      jsonImport: document.getElementById("jsonImport"),
+      mainLayout: document.getElementById("mainLayout"),
+      topicPane: document.getElementById("topicPane"),
+      casePane: document.getElementById("casePane"),
+      openTopicBtn: document.getElementById("openTopicBtn"),
+      openSearchBtn: document.getElementById("openSearchBtn"),
+      closeTopicPaneBtn: document.getElementById("closeTopicPaneBtn"),
+      closeCasePaneBtn: document.getElementById("closeCasePaneBtn"),
+      newCaseBtn: document.getElementById("newCaseBtn"),
+      undoBtn: document.getElementById("undoBtn"),
+      apiKeyInput: document.getElementById("apiKeyInput"),
+      saveStatus: document.getElementById("saveStatus"),
+      chooseSaveFileBtn: document.getElementById("chooseSaveFileBtn"),
+      manualSaveBtn: document.getElementById("manualSaveBtn"),
+      topicNameInput: document.getElementById("topicNameInput"),
+      addTopicBtn: document.getElementById("addTopicBtn"),
+      topicTree: document.getElementById("topicTree"),
+      topicCount: document.getElementById("topicCount"),
+      caseCount: document.getElementById("caseCount"),
+      searchInput: document.getElementById("searchInput"),
+      caseList: document.getElementById("caseList"),
+      editorHeading: document.getElementById("editorHeading"),
+      editorPath: document.getElementById("editorPath"),
+      assignRow: document.getElementById("assignRow"),
+      topicSelect: document.getElementById("topicSelect"),
+      refetchCaseBtn: document.getElementById("refetchCaseBtn"),
+      deleteCaseBtn: document.getElementById("deleteCaseBtn"),
+      editorTools: document.getElementById("editorTools"),
+      emptyEditor: document.getElementById("emptyEditor"),
+      caseForm: document.getElementById("caseForm"),
+      splitResizer: document.getElementById("splitResizer"),
+      sourceEditor: document.getElementById("sourceEditor"),
+      highlightBtn: document.getElementById("highlightBtn"),
+      clearHighlightBtn: document.getElementById("clearHighlightBtn"),
+      nameDialog: document.getElementById("nameDialog"),
+      dialogTitle: document.getElementById("dialogTitle"),
+      dialogInput: document.getElementById("dialogInput"),
+      toast: document.getElementById("toast")
+    };
+
+    const fieldInputs = Object.fromEntries(inputFields.map((name) => [name, document.querySelector(`[data-name="${name}"], [name="${name}"]`)]));
+    let savedSourceRange = null;
+    let sourceDragStartRange = null;
+
+    function uid(prefix) {
+      return `${prefix}_${Math.random().toString(36).slice(2, 9)}_${Date.now().toString(36)}`;
+    }
+
+    function clone(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function defaultState() {
+      return {
+        topics: [
+          {
+            id: uid("topic"),
+            name: "민법3",
+            children: [
+              {
+                id: uid("topic"),
+                name: "양도담보",
+                children: [
+                  { id: uid("topic"), name: "가담법의 법적 성질", children: [] }
+                ]
+              },
+              { id: uid("topic"), name: "법정지상권", children: [] }
+            ]
+          }
+        ],
+        cases: []
+      };
+    }
+
+    async function load() {
+      setSaveStatus("자동 저장 불러오는 중");
+      state.apiKey = readStoredApiKey();
+      if (els.apiKeyInput) els.apiKeyInput.value = state.apiKey;
+      const raw = await readPersistentData();
+      if (!raw) {
+        const starter = defaultState();
+        state.topics = starter.topics;
+        state.cases = starter.cases;
+        expandAll(state.topics);
+        save();
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        state.topics = Array.isArray(parsed.topics) ? parsed.topics : [];
+        state.cases = Array.isArray(parsed.cases) ? parsed.cases.map(normalizeCase) : [];
+        expandAll(state.topics);
+      } catch {
+        const starter = defaultState();
+        state.topics = starter.topics;
+        state.cases = starter.cases;
+        save();
+      }
+    }
+
+    function normalizeCase(item) {
+      const sourceText = normalizeTextLines(item.source || sourceHtmlToPlainText(item.sourceHtml || ""));
+      let judgmentSummary = cleanJudgmentSummary(item.judgmentSummary || "", sourceText);
+      let source = sourceText;
+      let sourceHtml = item.sourceHtml || plainTextToHtml(sourceText || "");
+      if (!source && looksLikeFullCaseText(item.judgmentSummary || "")) {
+        source = sourceHtmlToPlainText(item.judgmentSummary || "");
+        sourceHtml = plainTextToHtml(source);
+        judgmentSummary = "";
+      }
+      const normalized = {
+        ...item,
+        source,
+        sourceHtml,
+        judgmentSummary,
+        apiStatus: item.apiStatus || (item.caseNo ? "pending" : "idle"),
+        apiError: item.apiError || "",
+        caseNo: item.caseNo || "",
+        topicId: item.topicId || null
+      };
+      inputFields.forEach((field) => {
+        const htmlField = `${field}Html`;
+        normalized[htmlField] = normalized[htmlField] || plainTextToHtml(normalized[field] || "");
+      });
+      return normalized;
+    }
+
+    function readStoredApiKey() {
+      try {
+        return localStorage.getItem(API_KEY_STORAGE_KEY) || "";
+      } catch {
+        return "";
+      }
+    }
+
+    function saveApiKey(value) {
+      try {
+        localStorage.setItem(API_KEY_STORAGE_KEY, value || "");
+      } catch {
+        // Ignore storage errors.
+      }
+      state.apiKey = value || "";
+    }
+
+    function normalizeCaseNo(value) {
+      return String(value || "")
+        .replace(/\uFEFF/g, "")
+        .replace(/[\s\u3000]+/g, "")
+        .trim();
+    }
+
+    function findCaseNoInText(value) {
+      const text = String(value || "").replace(/\uFEFF/g, " ").trim();
+      const match = text.match(/\b\d{2,4}\s*[가-힣A-Za-z]{1,6}\s*\d{1,8}\b/);
+      return match ? normalizeCaseNo(match[0]) : "";
+    }
+
+    function buildPrecListUrl(apiKey, caseNo) {
+      const params = new URLSearchParams({
+        OC: apiKey,
+        target: "prec",
+        type: "JSON",
+        nb: caseNo
+      });
+      return `${LAW_API_BASE}/lawSearch.do?${params.toString()}`;
+    }
+
+    function buildPrecDetailUrl(apiKey, precId) {
+      const params = new URLSearchParams({
+        OC: apiKey,
+        target: "prec",
+        ID: String(precId),
+        type: "JSON"
+      });
+      return `${LAW_API_BASE}/lawService.do?${params.toString()}`;
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url, { mode: "cors" });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error("JSON 응답이 아닙니다.");
+      }
+    }
+
+    function collectObjects(root, out = []) {
+      if (!root || typeof root !== "object") return out;
+      if (Array.isArray(root)) {
+        root.forEach((item) => collectObjects(item, out));
+        return out;
+      }
+      out.push(root);
+      Object.values(root).forEach((value) => collectObjects(value, out));
+      return out;
+    }
+
+    function objectHasAnyKey(obj, keys) {
+      return keys.some((key) => Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== undefined && obj[key] !== null && String(obj[key]).trim() !== "");
+    }
+
+    function extractPrecSearchRecords(data) {
+      return collectObjects(data).filter((obj) => objectHasAnyKey(obj, ["사건번호", "사건명", "판례일련번호", "판례상세링크", "prec id", "id", "ID"]));
+    }
+
+    function extractPrecDetailRecord(data) {
+      const candidates = collectObjects(data).filter((obj) => objectHasAnyKey(obj, ["판례내용", "판시사항", "판결요지", "사건명", "사건번호"]));
+      return candidates.find((obj) => objectHasAnyKey(obj, ["판례내용", "판시사항", "판결요지"])) || candidates[0] || null;
+    }
+
+    function extractRecordId(record) {
+      if (!record || typeof record !== "object") return "";
+      return String(record["판례일련번호"] || record["prec id"] || record.ID || record.id || record["id"] || "").trim();
+    }
+
+    function extractRecordCaseNo(record) {
+      if (!record || typeof record !== "object") return "";
+      return String(record["사건번호"] || record.caseNo || "").trim();
+    }
+
+    function extractRecordTitle(record) {
+      if (!record || typeof record !== "object") return "";
+      return String(record["사건명"] || record.title || "").trim();
+    }
+
+    function extractRecordDecisionDate(record) {
+      if (!record || typeof record !== "object") return "";
+      return String(record["선고일자"] || record["선고일"] || record.prncYd || record.date || "").trim();
+    }
+
+    function formatDecisionDate(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return "";
+      const digits = raw.replace(/\D/g, "");
+      if (digits.length === 8) {
+        const year = digits.slice(0, 4);
+        const month = String(Number(digits.slice(4, 6)));
+        const day = String(Number(digits.slice(6, 8)));
+        if (month !== "NaN" && day !== "NaN") return `${year}. ${month}. ${day}.`;
+      }
+      return raw.replace(/\s*선고\s*$/, "").trim();
+    }
+
+    function makeBracketedCaseName(value) {
+      const text = sourceHtmlToPlainText(value).replace(/\s+/g, " ").trim();
+      if (!text) return "";
+      const bracketMatch = text.match(/\[([^\]]+)\]/);
+      const inner = bracketMatch ? bracketMatch[1].trim() : text.replace(/^\[|\]$/g, "").trim();
+      return inner ? `[${inner}]` : "";
+    }
+
+    function buildCaseDisplayTitle(record, fallbackCaseNo, fallbackTitle) {
+      const date = formatDecisionDate(extractRecordDecisionDate(record));
+      const caseNo = extractRecordCaseNo(record) || fallbackCaseNo || "";
+      const caseName = makeBracketedCaseName(extractRecordTitle(record) || fallbackTitle || "");
+      const parts = [date, caseNo, caseName].filter(Boolean);
+      return parts.length ? parts.join(" - ") : (fallbackTitle || caseNo || "");
+    }
+
+    function normalizeTextLines(value) {
+      return String(value || "")
+        .replace(/\u00a0/g, " ")
+        .replace(/\r\n?/g, "\n")
+        .replace(/[\t ]+\n/g, "\n")
+        .replace(/\n[\t ]+/g, "\n")
+        .replace(/[\t ]{2,}/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+
+    function sourceHtmlToPlainText(value) {
+      let text = String(value || "");
+      if (!text.trim()) return "";
+
+      const convertBreakTags = (input) => input
+        .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+        .replace(/<\s*\/\s*(p|div|li|tr|h[1-6])\s*>/gi, "\n")
+        .replace(/<\s*(p|div|li|tr|h[1-6])\b[^>]*>/gi, "\n")
+        .replace(/<\s*\/\s*(td|th)\s*>/gi, "\t");
+
+      for (let i = 0; i < 2; i += 1) {
+        text = convertBreakTags(text);
+        const mayContainHtml = /<\/?[a-z][\s\S]*?>/i.test(text) || /&(?:[a-z]+|#\d+|#x[\da-f]+);/i.test(text);
+        if (!mayContainHtml) break;
+        const root = document.createElement("div");
+        root.innerHTML = text;
+        text = root.textContent || root.innerText || text;
+      }
+
+      return normalizeTextLines(text);
+    }
+
+
+    function normalizeComparableText(value) {
+      return normalizeTextLines(value)
+        .replace(/[\s\u3000]+/g, "")
+        .replace(/[<>\[\]【】()（）,.;:·ㆍ\-_'\"“”‘’]/g, "")
+        .trim();
+    }
+
+    function looksLikeFullCaseText(value) {
+      const text = normalizeTextLines(value);
+      if (!text) return false;
+      if (/【\s*전\s*문\s*】/.test(text)) return true;
+      if (/【\s*주\s*문\s*】/.test(text) && /【\s*이\s*유\s*】/.test(text)) return true;
+      if (/\b주\s*문\b/.test(text) && /\b이\s*유\b/.test(text) && text.length > 1200) return true;
+      const fullTextSignals = ["원고", "피고", "상고", "항소", "환송", "소송대리인", "변론종결", "이 법원"];
+      const signalCount = fullTextSignals.filter((word) => text.includes(word)).length;
+      return text.length > 1800 && signalCount >= 3;
+    }
+
+    function cleanJudgmentSummary(judgmentSummary, sourceText) {
+      const summary = normalizeTextLines(judgmentSummary || "");
+      if (!summary) return "";
+      const source = normalizeTextLines(sourceText || "");
+      const comparableSummary = normalizeComparableText(summary);
+      const comparableSource = normalizeComparableText(source);
+      if (comparableSource && comparableSummary) {
+        if (comparableSummary === comparableSource) return "";
+        if (comparableSummary.length > 800 && (comparableSource.includes(comparableSummary) || comparableSummary.includes(comparableSource))) return "";
+      }
+      if (looksLikeFullCaseText(summary)) return "";
+      return summary;
+    }
+
+    function pickBestSearchRecord(records, caseNo) {
+      const target = normalizeCaseNo(caseNo);
+      if (!records.length) return null;
+      const exact = records.find((record) => normalizeCaseNo(extractRecordCaseNo(record)) === target);
+      if (exact) return exact;
+      const starts = records.find((record) => normalizeCaseNo(extractRecordCaseNo(record)).includes(target));
+      if (starts) return starts;
+      return records[0];
+    }
+
+    function applyFetchedPrecData(item, record, fallbackCaseNo) {
+      const caseNo = extractRecordCaseNo(record) || fallbackCaseNo || item.caseNo || "";
+      const title = buildCaseDisplayTitle(record, caseNo, item.title || "");
+      const holding = sourceHtmlToPlainText(record?.["판시사항"] || "");
+      let source = sourceHtmlToPlainText(record?.["판례내용"] || "");
+      let rawJudgmentSummary = sourceHtmlToPlainText(record?.["판결요지"] || "");
+      let judgmentSummary = cleanJudgmentSummary(rawJudgmentSummary, source);
+
+      if (!source && looksLikeFullCaseText(rawJudgmentSummary)) {
+        source = rawJudgmentSummary;
+        judgmentSummary = "";
+      }
+
+      item.caseNo = caseNo;
+      item.title = title;
+      item.holding = holding;
+      item.holdingHtml = plainTextToHtml(holding);
+      item.judgmentSummary = judgmentSummary;
+      item.judgmentSummaryHtml = plainTextToHtml(judgmentSummary);
+      item.source = source;
+      item.sourceHtml = plainTextToHtml(source);
+      item.apiStatus = "loaded";
+      item.apiError = "";
+      item.updatedAt = new Date().toISOString();
+    }
+
+    function markFetchPending(item) {
+      item.apiStatus = "pending";
+      item.apiError = "";
+      item.updatedAt = new Date().toISOString();
+    }
+
+    function markFetchFailed(item, message) {
+      item.apiStatus = "failed";
+      item.apiError = message || "불러오지 못했습니다.";
+      item.updatedAt = new Date().toISOString();
+    }
+
+    async function fetchAndPopulateCase(itemId, caseNo) {
+      const item = state.cases.find((caseItem) => caseItem.id === itemId);
+      if (!item) return;
+      const apiKey = state.apiKey || readStoredApiKey();
+      if (!apiKey) {
+        markFetchFailed(item, "API 키(OC)가 없습니다.");
+        save();
+        render();
+        return;
+      }
+
+      try {
+        const listUrl = buildPrecListUrl(apiKey, caseNo);
+        const listData = await fetchJson(listUrl);
+        const searchRecords = extractPrecSearchRecords(listData);
+        const searchRecord = pickBestSearchRecord(searchRecords, caseNo);
+
+        let detailRecord = searchRecord;
+        const precId = extractRecordId(searchRecord);
+        if (precId) {
+          try {
+            const detailUrl = buildPrecDetailUrl(apiKey, precId);
+            const detailData = await fetchJson(detailUrl);
+            const extractedDetail = extractPrecDetailRecord(detailData);
+            if (extractedDetail) {
+              detailRecord = { ...searchRecord, ...extractedDetail };
+            }
+          } catch (detailError) {
+            // Search result may already be enough. Keep the search record if detail fails.
+          }
+        }
+
+        if (!detailRecord) {
+          throw new Error("해당 사건번호의 판례를 찾지 못했습니다.");
+        }
+
+        applyFetchedPrecData(item, detailRecord, caseNo);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "불러오지 못했습니다.";
+        markFetchFailed(item, message);
+      }
+
+      save();
+      render();
+    }
+
+    function serializeData() {
+      return JSON.stringify({
+        app: "판례 정리함",
+        version: 5,
+        topics: state.topics,
+        cases: state.cases,
+        savedAt: new Date().toISOString()
+      });
+    }
+
+    async function readPersistentData() {
+      const selectedFileRaw = await readSelectedJsonFile();
+      if (selectedFileRaw) return selectedFileRaw;
+      const opfsRaw = await readOpfsData();
+      if (opfsRaw) return opfsRaw;
+      try {
+        return localStorage.getItem(STORAGE_KEY);
+      } catch {
+        return null;
+      }
+    }
+
+    function openSaveHandleDb() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(SAVE_HANDLE_DB, 1);
+        request.onupgradeneeded = () => request.result.createObjectStore(SAVE_HANDLE_STORE);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function storeSaveFileHandle(handle) {
+      try {
+        const db = await openSaveHandleDb();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(SAVE_HANDLE_STORE, "readwrite");
+          tx.objectStore(SAVE_HANDLE_STORE).put(handle, SAVE_HANDLE_ID);
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(tx.error);
+        });
+        db.close();
+      } catch {
+        // File handles are optional; browser storage remains as fallback.
+      }
+    }
+
+    async function restoreSaveFileHandle() {
+      if (!("indexedDB" in window)) return;
+      try {
+        const db = await openSaveHandleDb();
+        const handle = await new Promise((resolve, reject) => {
+          const tx = db.transaction(SAVE_HANDLE_STORE, "readonly");
+          const request = tx.objectStore(SAVE_HANDLE_STORE).get(SAVE_HANDLE_ID);
+          request.onsuccess = () => resolve(request.result || null);
+          request.onerror = () => reject(request.error);
+        });
+        db.close();
+        if (handle) {
+          state.saveFileHandle = handle;
+          setSaveStatus("저장 파일 연결됨");
+        }
+      } catch {
+        // Ignore unsupported or unavailable handle restoration.
+      }
+    }
+
+    async function readSelectedJsonFile() {
+      if (!state.saveFileHandle) return null;
+      try {
+        const permission = await state.saveFileHandle.queryPermission({ mode: "readwrite" });
+        if (permission !== "granted") return null;
+        const file = await state.saveFileHandle.getFile();
+        if (!file.size) return null;
+        return await file.text();
+      } catch {
+        return null;
+      }
+    }
+
+    async function readOpfsData() {
+      if (!navigator.storage || !navigator.storage.getDirectory) return null;
+      try {
+        const root = await navigator.storage.getDirectory();
+        state.opfsAvailable = true;
+        const handle = await root.getFileHandle(STORAGE_FILE);
+        const file = await handle.getFile();
+        if (!file.size) return null;
+        return await file.text();
+      } catch {
+        return null;
+      }
+    }
+
+    function save(options = {}) {
+      const raw = serializeData();
+      try {
+        localStorage.setItem(STORAGE_KEY, raw);
+      } catch {
+        setSaveStatus("자동 저장 제한됨");
+      }
+      window.clearTimeout(state.saveTimer);
+      if (options.immediate) {
+        void writePersistentData(raw, options.manual);
+      } else {
+        state.saveTimer = window.setTimeout(() => writePersistentData(raw, false), 2000);
+      }
+      setSaveStatus("저장 중");
+    }
+
+    async function writePersistentData(raw, manual = false) {
+      const fileOk = await writeSelectedJsonFile(raw);
+      const opfsOk = await writeOpfsData(raw);
+      if (fileOk) {
+        setSaveStatus(manual ? "JSON 파일 저장됨" : "JSON 파일 자동 저장됨");
+        return;
+      }
+      setSaveStatus(opfsOk ? "브라우저 저장됨" : "임시 저장됨");
+    }
+
+    async function chooseSaveFile() {
+      if (!window.showSaveFilePicker) {
+        toast("이 브라우저에서는 저장 파일 선택을 지원하지 않습니다.");
+        return;
+      }
+      try {
+        state.saveFileHandle = await window.showSaveFilePicker({
+          suggestedName: "case-notes-organizer-data.json",
+          types: [
+            {
+              description: "JSON 파일",
+              accept: { "application/json": [".json"] }
+            }
+          ]
+        });
+        await storeSaveFileHandle(state.saveFileHandle);
+        await writePersistentData(serializeData(), true);
+        toast("앞으로 이 JSON 파일을 자동 갱신합니다.");
+      } catch (error) {
+        if (error?.name !== "AbortError") toast("저장 파일을 선택하지 못했습니다.");
+      }
+    }
+
+    async function writeSelectedJsonFile(raw) {
+      if (!state.saveFileHandle) return false;
+      try {
+        const permission = await state.saveFileHandle.queryPermission({ mode: "readwrite" });
+        if (permission !== "granted") {
+          const requested = await state.saveFileHandle.requestPermission({ mode: "readwrite" });
+          if (requested !== "granted") return false;
+        }
+        const writable = await state.saveFileHandle.createWritable();
+        await writable.write(raw);
+        await writable.close();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    async function writeOpfsData(raw) {
+      if (!navigator.storage || !navigator.storage.getDirectory) return false;
+      try {
+        const root = await navigator.storage.getDirectory();
+        state.opfsAvailable = true;
+        const handle = await root.getFileHandle(STORAGE_FILE, { create: true });
+        const writable = await handle.createWritable();
+        await writable.write(raw);
+        await writable.close();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function setSaveStatus(message) {
+      if (!els.saveStatus) return;
+      els.saveStatus.textContent = message;
+    }
+
+    function pushUndo(label) {
+      state.undoStack.push({
+        label,
+        topics: clone(state.topics),
+        cases: clone(state.cases),
+        selectedTopicId: state.selectedTopicId,
+        selectedCaseId: state.selectedCaseId,
+        selectedCaseIds: [...state.selectedCaseIds],
+        expandedTopicIds: [...state.expandedTopicIds],
+        scope: state.scope
+      });
+      if (state.undoStack.length > 30) state.undoStack.shift();
+      renderUndo();
+    }
+
+    function undoLast() {
+      const snapshot = state.undoStack.pop();
+      if (!snapshot) return;
+      state.topics = snapshot.topics;
+      state.cases = snapshot.cases;
+      state.selectedTopicId = snapshot.selectedTopicId;
+      state.selectedCaseId = snapshot.selectedCaseId;
+      state.selectedCaseIds = new Set(snapshot.selectedCaseIds);
+      state.expandedTopicIds = new Set(snapshot.expandedTopicIds);
+      state.scope = snapshot.scope;
+      render();
+      toast(`${snapshot.label}을 되돌렸습니다.`);
+    }
+
+    function renderUndo() {
+      const next = state.undoStack[state.undoStack.length - 1];
+      els.undoBtn.disabled = !next;
+      els.undoBtn.title = next ? `${next.label} 되돌리기` : "삭제, 이동, 폴더 변경을 되돌립니다.";
+    }
+
+    function expandAll(nodes) {
+      nodes.forEach((node) => {
+        state.expandedTopicIds.add(node.id);
+        expandAll(node.children || []);
+      });
+    }
+
+    function toast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      window.clearTimeout(toast.timer);
+      toast.timer = window.setTimeout(() => els.toast.classList.remove("show"), 2300);
+    }
+
+    function flattenTopics(nodes = state.topics, depth = 0, path = []) {
+      return nodes.flatMap((node) => {
+        const currentPath = [...path, node.name];
+        return [
+          { id: node.id, name: node.name, depth, path: currentPath, node },
+          ...flattenTopics(node.children || [], depth + 1, currentPath)
+        ];
+      });
+    }
+
+    function findTopic(id, nodes = state.topics, parent = null) {
+      for (const node of nodes) {
+        if (node.id === id) return { node, parent, siblings: nodes };
+        const found = findTopic(id, node.children || [], node);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    function collectTopicIds(node) {
+      return [node.id, ...(node.children || []).flatMap(collectTopicIds)];
+    }
+
+    function deleteTopic(id) {
+      const found = findTopic(id);
+      if (!found) return false;
+      const removedIds = collectTopicIds(found.node);
+      const index = found.siblings.findIndex((node) => node.id === id);
+      found.siblings.splice(index, 1);
+      state.cases.forEach((item) => {
+        if (removedIds.includes(item.topicId)) item.topicId = null;
+      });
+      if (removedIds.includes(state.selectedTopicId)) state.selectedTopicId = null;
+      removedIds.forEach((topicId) => state.expandedTopicIds.delete(topicId));
+      return true;
+    }
+
+    function getTopicPath(id) {
+      if (!id) return "미분류";
+      const found = flattenTopics().find((topic) => topic.id === id);
+      return found ? found.path.join(" > ") : "미분류";
+    }
+
+    function countTopics(nodes = state.topics) {
+      return nodes.reduce((sum, node) => sum + 1 + countTopics(node.children || []), 0);
+    }
+
+    function topicAndDescendantIds(id) {
+      if (!id) return [null];
+      const found = findTopic(id);
+      if (!found) return [];
+      return collectTopicIds(found.node);
+    }
+
+    function selectedCase() {
+      return state.cases.find((item) => item.id === state.selectedCaseId) || null;
+    }
+
+    function pruneSelection() {
+      const existingIds = new Set(state.cases.map((item) => item.id));
+      [...state.selectedCaseIds].forEach((id) => {
+        if (!existingIds.has(id)) state.selectedCaseIds.delete(id);
+      });
+      if (state.selectedCaseId && !existingIds.has(state.selectedCaseId)) state.selectedCaseId = null;
+      if (state.lastSelectedCaseId && !existingIds.has(state.lastSelectedCaseId)) state.lastSelectedCaseId = null;
+    }
+
+    function renderPaneLayout() {
+      els.openTopicBtn.setAttribute("aria-expanded", String(els.topicPane.classList.contains("open")));
+      els.openSearchBtn.setAttribute("aria-expanded", String(els.casePane.classList.contains("open")));
+    }
+
+    function togglePane(name) {
+      const pane = name === "topic" ? els.topicPane : els.casePane;
+      const other = name === "topic" ? els.casePane : els.topicPane;
+      const shouldOpen = !pane.classList.contains("open");
+      pane.classList.toggle("open", shouldOpen);
+      if (shouldOpen) other.classList.remove("open");
+      renderPaneLayout();
+    }
+
+    function renderJudgmentSummaryVisibility(item) {
+      const field = document.getElementById("judgmentSummaryField");
+      if (!field) return;
+      const hasJudgmentSummary = Boolean(normalizeTextLines(item?.judgmentSummary || ""));
+      field.classList.toggle("hidden", !hasJudgmentSummary);
+    }
+
+    function render() {
+      pruneSelection();
+      renderPaneLayout();
+      renderTopics();
+      renderTopicSelects();
+      renderCases();
+      renderEditor();
+      renderUndo();
+      save();
+    }
+
+    function directTopicCases(topicId) {
+      const normalizedTopicId = topicId || null;
+      return state.cases
+        .filter((item) => (item.topicId || null) === normalizedTopicId)
+        .sort((a, b) => (a.title || a.caseNo || "").localeCompare(b.title || b.caseNo || "", "ko"));
+    }
+
+    function countCasesInTopicTree(topicId) {
+      if (!topicId) return directTopicCases(null).length;
+      const ids = topicAndDescendantIds(topicId);
+      return state.cases.filter((item) => ids.includes(item.topicId || null)).length;
+    }
+
+    function renderTopics() {
+      els.topicCount.textContent = countTopics(state.topics);
+      els.topicTree.innerHTML = "";
+
+      const unclassifiedCases = directTopicCases(null);
+      const unclassifiedExpanded = state.expandedTopicIds.has(UNCLASSIFIED_TOPIC_ID);
+      const unclassified = document.createElement("div");
+      unclassified.className = "topic-node";
+
+      const unclassifiedLine = document.createElement("div");
+      unclassifiedLine.className = `topic-line ${state.selectedTopicId === null ? "active" : ""}`;
+      unclassifiedLine.style.cursor = "pointer";
+
+      const unclassifiedTwisty = document.createElement("button");
+      unclassifiedTwisty.type = "button";
+      unclassifiedTwisty.className = "twisty";
+      unclassifiedTwisty.textContent = unclassifiedCases.length ? (unclassifiedExpanded ? "▾" : "▸") : "";
+      unclassifiedTwisty.title = unclassifiedCases.length ? "미분류 판례 접기/펼치기" : "";
+      unclassifiedTwisty.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (!unclassifiedCases.length) return;
+        if (unclassifiedExpanded) state.expandedTopicIds.delete(UNCLASSIFIED_TOPIC_ID);
+        else state.expandedTopicIds.add(UNCLASSIFIED_TOPIC_ID);
+        render();
+      });
+
+      const unclassifiedName = document.createElement("button");
+      unclassifiedName.type = "button";
+      unclassifiedName.className = "topic-name";
+      unclassifiedName.innerHTML = "<span>미분류</span>";
+      unclassifiedName.addEventListener("click", () => {
+        state.selectedTopicId = null;
+        state.scope = "topic";
+        els.topicPane.classList.remove("open");
+        render();
+      });
+
+      const unclassifiedCount = document.createElement("span");
+      unclassifiedCount.className = "count";
+      unclassifiedCount.textContent = String(unclassifiedCases.length);
+      unclassifiedLine.append(unclassifiedTwisty, unclassifiedName, unclassifiedCount);
+      unclassified.appendChild(unclassifiedLine);
+
+      if (unclassifiedCases.length && unclassifiedExpanded) {
+        const children = document.createElement("div");
+        children.className = "children";
+        unclassifiedCases.forEach((item) => children.appendChild(renderTopicCaseLine(item)));
+        unclassified.appendChild(children);
+      }
+      els.topicTree.appendChild(unclassified);
+
+      state.topics.forEach((topic) => els.topicTree.appendChild(renderTopicNode(topic)));
+    }
+
+    function renderTopicCaseLine(item) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `tree-case-line ${state.selectedCaseId === item.id ? "active" : ""}`;
+      button.title = item.title || item.caseNo || "제목 없음";
+      button.innerHTML = `
+        <span class="tree-case-dot">•</span>
+        <span class="tree-case-copy">
+          <span class="tree-case-title">${escapeHtml(item.title || item.caseNo || "제목 없음")}</span>
+          ${item.caseNo ? `<span class="tree-case-no">${escapeHtml(item.caseNo)}</span>` : ""}
+        </span>
+      `;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        state.selectedCaseId = item.id;
+        state.selectedCaseIds = new Set([item.id]);
+        state.lastSelectedCaseId = item.id;
+        state.selectedTopicId = item.topicId || null;
+        state.scope = "topic";
+        render();
+      });
+      return button;
+    }
+
+    function renderTopicNode(topic) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "topic-node";
+      const topicChildren = topic.children || [];
+      const topicCases = directTopicCases(topic.id);
+      const hasChildren = topicChildren.length > 0 || topicCases.length > 0;
+      const expanded = state.expandedTopicIds.has(topic.id);
+
+      const line = document.createElement("div");
+      line.className = `topic-line ${state.selectedTopicId === topic.id ? "active" : ""}`;
+      line.draggable = true;
+      line.dataset.topicId = topic.id;
+      addTopicDragHandlers(line, topic);
+
+      const twisty = document.createElement("button");
+      twisty.type = "button";
+      twisty.className = "twisty";
+      twisty.textContent = hasChildren ? (expanded ? "▾" : "▸") : "";
+      twisty.title = hasChildren ? "하위 목차와 판례 접기/펼치기" : "";
+      twisty.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (!hasChildren) return;
+        if (expanded) state.expandedTopicIds.delete(topic.id);
+        else state.expandedTopicIds.add(topic.id);
+        render();
+      });
+
+      const name = document.createElement("button");
+      name.type = "button";
+      name.className = "topic-name";
+      name.innerHTML = `<span>${escapeHtml(topic.name)}</span>`;
+      name.addEventListener("click", () => {
+        state.selectedTopicId = topic.id;
+        state.scope = "topic";
+        els.topicPane.classList.remove("open");
+        render();
+      });
+
+      const buttons = document.createElement("span");
+      buttons.className = "node-buttons";
+      buttons.append(
+        smallButton("+", "하위 목차 추가", () => promptTopic("하위 목차 추가", "", (value) => {
+          pushUndo("목차 추가");
+          topic.children = topic.children || [];
+          topic.children.push({ id: uid("topic"), name: value, children: [] });
+          state.expandedTopicIds.add(topic.id);
+          render();
+        })),
+        smallButton("✎", "목차 이름 변경", () => promptTopic("목차 이름 변경", topic.name, (value) => {
+          pushUndo("목차 이름 변경");
+          topic.name = value;
+          render();
+        })),
+        smallButton("×", "목차 삭제", () => {
+          if (confirm(`'${topic.name}' 목차와 하위 목차를 삭제할까요? 안의 판례는 미분류로 이동합니다.`)) {
+            pushUndo("목차 삭제");
+            deleteTopic(topic.id);
+            render();
+          }
+        })
+      );
+
+      const caseCount = document.createElement("span");
+      caseCount.className = "count";
+      caseCount.textContent = String(countCasesInTopicTree(topic.id));
+
+      line.append(twisty, name, buttons, caseCount);
+      wrapper.appendChild(line);
+
+      if (hasChildren && expanded) {
+        const children = document.createElement("div");
+        children.className = "children";
+        topicChildren.forEach((child) => children.appendChild(renderTopicNode(child)));
+        topicCases.forEach((item) => children.appendChild(renderTopicCaseLine(item)));
+        wrapper.appendChild(children);
+      }
+      return wrapper;
+    }
+
+    function smallButton(text, title, onClick) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "ghost icon";
+      button.textContent = text;
+      button.title = title;
+      button.draggable = false;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        onClick();
+      });
+      return button;
+    }
+
+    function addTopicDragHandlers(line, topic) {
+      line.addEventListener("dragstart", (event) => {
+        state.dragTopicId = topic.id;
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", topic.id);
+        line.classList.add("dragging");
+      });
+
+      line.addEventListener("dragover", (event) => {
+        if (!canDropTopic(state.dragTopicId, topic.id)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        clearDropMarkers();
+        line.classList.add(dropClass(event, line));
+      });
+
+      line.addEventListener("dragleave", () => {
+        line.classList.remove("drop-before", "drop-inside", "drop-after");
+      });
+
+      line.addEventListener("drop", (event) => {
+        if (!canDropTopic(state.dragTopicId, topic.id)) return;
+        event.preventDefault();
+        const position = dropClass(event, line).replace("drop-", "");
+        moveTopic(state.dragTopicId, topic.id, position);
+        clearDropMarkers();
+      });
+
+      line.addEventListener("dragend", () => {
+        state.dragTopicId = null;
+        clearDropMarkers();
+      });
+    }
+
+    function dropClass(event, element) {
+      const rect = element.getBoundingClientRect();
+      const ratio = (event.clientY - rect.top) / rect.height;
+      if (ratio < 0.28) return "drop-before";
+      if (ratio > 0.72) return "drop-after";
+      return "drop-inside";
+    }
+
+    function clearDropMarkers() {
+      document.querySelectorAll(".topic-line").forEach((line) => {
+        line.classList.remove("dragging", "drop-before", "drop-inside", "drop-after");
+      });
+    }
+
+    function canDropTopic(dragId, targetId) {
+      if (!dragId || !targetId || dragId === targetId) return false;
+      const drag = findTopic(dragId);
+      if (!drag) return false;
+      return !collectTopicIds(drag.node).includes(targetId);
+    }
+
+    function moveTopic(dragId, targetId, position) {
+      if (!canDropTopic(dragId, targetId)) return false;
+      const drag = findTopic(dragId);
+      const movingNode = drag.node;
+      const dragIndex = drag.siblings.findIndex((node) => node.id === dragId);
+      pushUndo("목차 이동");
+      drag.siblings.splice(dragIndex, 1);
+
+      if (position === "inside") {
+        const target = findTopic(targetId);
+        target.node.children = target.node.children || [];
+        target.node.children.push(movingNode);
+        state.expandedTopicIds.add(targetId);
+      } else {
+        const target = findTopic(targetId);
+        const targetIndex = target.siblings.findIndex((node) => node.id === targetId);
+        target.siblings.splice(position === "before" ? targetIndex : targetIndex + 1, 0, movingNode);
+      }
+
+      render();
+      toast("목차 위치를 옮겼습니다.");
+      return true;
+    }
+
+    function renderCases() {
+      const cases = filteredCases();
+      els.caseCount.textContent = cases.length;
+      els.caseList.innerHTML = "";
+
+      if (!cases.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = state.query ? "검색 결과가 없습니다." : "목록 가져오기 또는 + 판례로 판례를 추가하세요.";
+        els.caseList.appendChild(empty);
+        return;
+      }
+
+      cases.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = `case-item ${state.selectedCaseId === item.id ? "active" : ""}`;
+        row.setAttribute("role", "button");
+        row.tabIndex = 0;
+        row.dataset.caseId = item.id;
+
+        const copy = document.createElement("div");
+        copy.className = "case-copy";
+        const hasNote = Boolean(item.summary || item.holding || item.judgmentSummary || item.keyPhrases || item.majority || item.dissent || item.source);
+        const statusPill = item.apiStatus === "pending"
+          ? '<span class="pill pending">불러오는 중</span>'
+          : item.apiStatus === "failed"
+            ? '<span class="pill failed">불러오기 실패</span>'
+            : "";
+        copy.innerHTML = `
+          <span class="case-title">${escapeHtml(item.title || item.caseNo || "제목 없음")}</span>
+          <span class="case-meta">
+            <span>${escapeHtml(getTopicPath(item.topicId))}</span>
+            ${item.caseNo ? `<span>${escapeHtml(item.caseNo)}</span>` : ""}
+            ${hasNote ? '<span class="pill">정리됨</span>' : ""}
+            ${statusPill}
+          </span>
+        `;
+
+        row.append(copy);
+        row.addEventListener("click", (event) => handleCaseRowClick(item.id, event));
+        row.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") handleCaseRowClick(item.id, event);
+        });
+        els.caseList.appendChild(row);
+      });
+    }
+
+    function filteredCases() {
+      const query = state.query.trim().toLowerCase();
+      return state.cases
+        .filter((item) => {
+          if (!query) return true;
+          return formFields.some((field) => String(item[field] || "").toLowerCase().includes(query));
+        })
+        .sort((a, b) => (a.title || "").localeCompare(b.title || "", "ko"));
+    }
+
+    function renderBulkControls(cases) {
+      const visibleIds = cases.map((item) => item.id);
+      const selectedVisibleCount = visibleIds.filter((id) => state.selectedCaseIds.has(id)).length;
+      els.selectedCount.textContent = `${state.selectedCaseIds.size}개 선택`;
+      els.selectAllCases.checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+      els.selectAllCases.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
+      els.selectAllCases.disabled = visibleIds.length === 0;
+      const hasSelection = state.selectedCaseIds.size > 0;
+      els.bulkTopicSelect.disabled = !hasSelection;
+      els.bulkMoveBtn.disabled = !hasSelection;
+      els.bulkDeleteBtn.disabled = !hasSelection;
+    }
+
+    function handleCaseRowClick(id, event) {
+      if (event.target.closest("input, button, select")) return;
+      state.selectedCaseIds = new Set([id]);
+      state.lastSelectedCaseId = id;
+      state.selectedCaseId = id;
+      els.casePane.classList.remove("open");
+      render();
+    }
+
+    function handleCaseCheckboxClick(id, event) {
+      if (event.shiftKey) {
+        selectCaseRange(id);
+      } else if (event.target.checked) {
+        state.selectedCaseIds.add(id);
+        state.lastSelectedCaseId = id;
+      } else {
+        state.selectedCaseIds.delete(id);
+        state.lastSelectedCaseId = id;
+      }
+      state.selectedCaseId = id;
+      render();
+    }
+
+    function toggleCaseSelected(id) {
+      if (state.selectedCaseIds.has(id)) state.selectedCaseIds.delete(id);
+      else state.selectedCaseIds.add(id);
+    }
+
+    function selectCaseRange(toId) {
+      const ids = filteredCases().map((item) => item.id);
+      const anchor = state.lastSelectedCaseId && ids.includes(state.lastSelectedCaseId)
+        ? state.lastSelectedCaseId
+        : toId;
+      const start = ids.indexOf(anchor);
+      const end = ids.indexOf(toId);
+      if (start < 0 || end < 0) {
+        state.selectedCaseIds.add(toId);
+      } else {
+        const [from, to] = start < end ? [start, end] : [end, start];
+        ids.slice(from, to + 1).forEach((id) => state.selectedCaseIds.add(id));
+      }
+      state.lastSelectedCaseId = toId;
+    }
+
+    function toggleSelectAllVisible() {
+      const ids = filteredCases().map((item) => item.id);
+      const allSelected = ids.length > 0 && ids.every((id) => state.selectedCaseIds.has(id));
+      ids.forEach((id) => {
+        if (allSelected) state.selectedCaseIds.delete(id);
+        else state.selectedCaseIds.add(id);
+      });
+      if (!allSelected && ids.length) {
+        state.selectedCaseId = ids[ids.length - 1];
+        state.lastSelectedCaseId = ids[0];
+      }
+      render();
+    }
+
+    function renderTopicSelects() {
+      fillTopicSelect(els.topicSelect);
+    }
+
+    function fillTopicSelect(select) {
+      if (!select) return;
+      select.innerHTML = "";
+      select.appendChild(new Option("미분류", ""));
+      flattenTopics().forEach((topic) => {
+        select.appendChild(new Option(`${"　".repeat(topic.depth)}${topic.name}`, topic.id));
+      });
+    }
+
+    function renderEditor() {
+      const item = selectedCase();
+      els.emptyEditor.classList.toggle("hidden", Boolean(item));
+      els.caseForm.classList.toggle("hidden", !item);
+      els.assignRow.classList.toggle("hidden", !item);
+      els.deleteCaseBtn.classList.toggle("hidden", !item);
+      els.editorTools.classList.toggle("hidden", !item);
+
+      if (!item) {
+        els.editorHeading.textContent = "판례를 선택하세요";
+        els.editorPath.textContent = "미분류 판례나 목차 안의 판례를 고르면 정리 양식이 열립니다.";
+        return;
+      }
+
+      els.editorHeading.textContent = item.title || "제목 없음";
+      els.editorPath.textContent = item.caseNo ? `${getTopicPath(item.topicId)} · ${item.caseNo}` : getTopicPath(item.topicId);
+      els.topicSelect.value = item.topicId || "";
+
+      inputFields.forEach((field) => {
+        const input = fieldInputs[field];
+        if (!input) return;
+        input.innerHTML = sanitizeSourceHtml(item[`${field}Html`] || plainTextToHtml(item[field] || ""));
+      });
+
+      savedSourceRange = null;
+      setSourceTool(null);
+      els.sourceEditor.innerHTML = sanitizeSourceHtml(item.sourceHtml || plainTextToHtml(item.source || ""));
+      renderJudgmentSummaryVisibility(item);
+      document.querySelectorAll(".field.collapsible").forEach((field) => {
+        const key = field.dataset.field;
+        const collapsed = state.collapsedFields.has(key);
+        field.classList.toggle("collapsed", collapsed);
+        const button = field.querySelector(".collapse-toggle");
+        if (button) button.textContent = collapsed ? "펼치기" : "접기";
+      });
+      autoResizeAll();
+    }
+
+    function createCase(input) {
+      const now = new Date().toISOString();
+      const data = typeof input === "string" ? { title: input } : (input || {});
+      const rawTitle = String(data.title || data.caseNo || "").trim();
+      const caseNo = normalizeCaseNo(data.caseNo || findCaseNoInText(rawTitle) || rawTitle || "");
+      const title = rawTitle || caseNo;
+      return {
+        id: uid("case"),
+        title: title || caseNo,
+        caseNo,
+        topicId: state.selectedTopicId || null,
+        source: "",
+        sourceHtml: "",
+        holding: "",
+        holdingHtml: "",
+        judgmentSummary: "",
+        judgmentSummaryHtml: "",
+        keyPhrases: "",
+        keyPhrasesHtml: "",
+        summary: "",
+        summaryHtml: "",
+        majority: "",
+        majorityHtml: "",
+        dissent: "",
+        dissentHtml: "",
+        concurring: "",
+        concurringHtml: "",
+        tags: "",
+        tagsHtml: "",
+        apiStatus: caseNo ? "pending" : "idle",
+        apiError: "",
+        createdAt: now,
+        updatedAt: now
+      };
+    }
+
+    async function addCasesFromLines(text) {
+      const lines = text
+        .split(/\r?\n/)
+        .map((line) => String(line || "").replace(/\uFEFF/g, "").trim())
+        .filter(Boolean);
+
+      let added = 0;
+      let skipped = 0;
+      const existingCaseNos = new Set(state.cases.map((item) => normalizeCaseNo(item.caseNo)).filter(Boolean));
+      const importedItems = [];
+      pushUndo("판례 가져오기");
+
+      for (const line of lines) {
+        const caseNo = findCaseNoInText(line) || normalizeCaseNo(line);
+        if (existingCaseNos.has(caseNo)) {
+          skipped += 1;
+          continue;
+        }
+
+        const item = createCase({ caseNo, title: line });
+        state.cases.push(item);
+        importedItems.push(item);
+        existingCaseNos.add(caseNo);
+        added += 1;
+        markFetchPending(item);
+      }
+
+      if (!added) {
+        state.undoStack.pop();
+        toast("중복이거나 비어 있는 줄만 있어 추가할 항목이 없습니다.");
+        return;
+      }
+
+      state.selectedCaseIds = new Set(importedItems.map((item) => item.id));
+      state.selectedCaseId = importedItems[importedItems.length - 1].id;
+      state.lastSelectedCaseId = importedItems[importedItems.length - 1].id;
+
+      render();
+      toast(`${added}개 판례를 추가했고, ${skipped}개는 중복으로 건너뛰었습니다.`);
+
+      for (const item of importedItems) {
+        void fetchAndPopulateCase(item.id, item.caseNo);
+      }
+    }
+
+    function promptTopic(title, initialValue, onDone) {
+      els.dialogTitle.textContent = title;
+      els.dialogInput.value = initialValue;
+      els.nameDialog.showModal();
+      els.dialogInput.focus();
+      els.dialogInput.select();
+
+      const handleClose = () => {
+        els.nameDialog.removeEventListener("close", handleClose);
+        if (els.nameDialog.returnValue !== "ok") return;
+        const value = els.dialogInput.value.trim();
+        if (!value) return;
+        onDone(value);
+      };
+      els.nameDialog.addEventListener("close", handleClose);
+    }
+
+    function exportData() {
+      const data = JSON.stringify({
+        app: "판례 정리함",
+        version: 5,
+        exportedAt: new Date().toISOString(),
+        topics: state.topics,
+        cases: state.cases
+      }, null, 2);
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `판례정리함-백업-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importBackup(text) {
+      try {
+        const data = JSON.parse(text);
+        if (!Array.isArray(data.topics) || !Array.isArray(data.cases)) throw new Error("bad format");
+        pushUndo("백업 불러오기");
+        state.topics = data.topics;
+        state.cases = data.cases.map(normalizeCase);
+        state.selectedTopicId = null;
+        state.selectedCaseId = null;
+        state.selectedCaseIds.clear();
+        state.expandedTopicIds.clear();
+        state.expandedTopicIds.add(UNCLASSIFIED_TOPIC_ID);
+        expandAll(state.topics);
+        render();
+        toast("백업을 불러왔습니다.");
+      } catch {
+        toast("백업 파일 형식이 맞지 않습니다.");
+      }
+    }
+
+    function moveSelectedCases() {
+      const ids = selectedExistingIds();
+      if (!ids.length) return;
+      const targetTopicId = els.bulkTopicSelect.value || null;
+      pushUndo("폴더 변경");
+      state.cases.forEach((item) => {
+        if (ids.includes(item.id)) {
+          item.topicId = targetTopicId;
+          item.updatedAt = new Date().toISOString();
+        }
+      });
+      state.selectedTopicId = targetTopicId;
+      state.scope = "topic";
+      render();
+      toast(`${ids.length}개 판례를 옮겼습니다.`);
+    }
+
+    function deleteSelectedCases() {
+      const ids = selectedExistingIds();
+      if (!ids.length) return;
+      if (!confirm(`선택한 ${ids.length}개 판례를 삭제할까요?`)) return;
+      pushUndo("판례 삭제");
+      state.cases = state.cases.filter((item) => !ids.includes(item.id));
+      state.selectedCaseIds.clear();
+      if (ids.includes(state.selectedCaseId)) state.selectedCaseId = null;
+      render();
+    }
+
+    function selectedExistingIds() {
+      const existing = new Set(state.cases.map((item) => item.id));
+      return [...state.selectedCaseIds].filter((id) => existing.has(id));
+    }
+
+    function autoResizeTextarea(textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.max(textarea.scrollHeight + 2, 86)}px`;
+    }
+
+    function autoResizeAll() {
+      document.querySelectorAll("textarea.autogrow").forEach(autoResizeTextarea);
+    }
+
+    function applySavedSplitWidth() {
+      try {
+        const saved = localStorage.getItem("case-notes-reference-width");
+        if (saved) els.caseForm.style.setProperty("--reference-width", saved);
+      } catch {
+        // Ignore storage errors.
+      }
+    }
+
+    function updateSplitWidth(clientX) {
+      const split = els.caseForm.querySelector(".editor-split");
+      if (!split) return;
+      const rect = split.getBoundingClientRect();
+      const percent = Math.min(72, Math.max(28, ((clientX - rect.left) / rect.width) * 100));
+      const value = `${percent.toFixed(1)}%`;
+      els.caseForm.style.setProperty("--reference-width", value);
+      try {
+        localStorage.setItem("case-notes-reference-width", value);
+      } catch {
+        // Ignore storage errors.
+      }
+    }
+
+    function startSplitDrag(event) {
+      state.splitDragging = true;
+      els.splitResizer.classList.add("dragging");
+      document.body.style.cursor = "col-resize";
+      event.preventDefault();
+    }
+
+    function stopSplitDrag() {
+      if (!state.splitDragging) return;
+      state.splitDragging = false;
+      els.splitResizer.classList.remove("dragging");
+      document.body.style.cursor = "";
+    }
+
+    function saveCurrentSource() {
+      const item = selectedCase();
+      if (!item) return;
+      item.sourceHtml = els.sourceEditor.innerHTML;
+      item.source = els.sourceEditor.innerText || "";
+      item.updatedAt = new Date().toISOString();
+      save();
+      renderCases();
+    }
+
+    function setSourceTool(tool) {
+      state.sourceTool = state.sourceTool === tool ? null : tool;
+      if (!state.sourceTool) sourceDragStartRange = null;
+      els.highlightBtn.classList.toggle("active-tool", state.sourceTool === "highlight");
+      els.clearHighlightBtn.classList.toggle("active-tool", state.sourceTool === "erase");
+      document.querySelectorAll(".rich-source, .rich-note").forEach((editable) => {
+        editable.classList.toggle("tool-highlight", state.sourceTool === "highlight");
+        editable.classList.toggle("tool-erase", state.sourceTool === "erase");
+      });
+    }
+
+    function applySourceToolToSelection() {
+      const item = selectedCase();
+      if (!item || !state.sourceTool) return;
+      rememberSourceSelection();
+      restoreSourceSelection();
+      const editable = selectedEditableRoot();
+      if (!editable) return;
+      editable.focus();
+      restoreSourceSelection();
+      document.execCommand("styleWithCSS", false, true);
+      if (state.sourceTool === "erase") {
+        document.execCommand("removeFormat", false, null);
+      } else if (!document.execCommand("hiliteColor", false, "#fff29a")) {
+        document.execCommand("backColor", false, "#fff29a");
+      }
+      saveEditableContent(editable);
+      savedSourceRange = null;
+    }
+
+    function rememberSourceSelection() {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+      const range = selection.getRangeAt(0);
+      const node = range.commonAncestorContainer.nodeType === 1
+        ? range.commonAncestorContainer
+        : range.commonAncestorContainer.parentNode;
+      if (editableRootForNode(node)) savedSourceRange = range.cloneRange();
+    }
+
+    function restoreSourceSelection() {
+      if (!savedSourceRange) return;
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(savedSourceRange);
+    }
+
+    function rangeFromPoint(x, y) {
+      let range = null;
+      if (document.caretRangeFromPoint) {
+        range = document.caretRangeFromPoint(x, y);
+      } else if (document.caretPositionFromPoint) {
+        const position = document.caretPositionFromPoint(x, y);
+        if (position) {
+          range = document.createRange();
+          range.setStart(position.offsetNode, position.offset);
+          range.collapse(true);
+        }
+      }
+      if (!range) return null;
+      const node = range.startContainer.nodeType === 1
+        ? range.startContainer
+        : range.startContainer.parentNode;
+      return editableRootForNode(node) ? range : null;
+    }
+
+    function rangeBetween(startRange, endRange) {
+      if (!startRange || !endRange) return null;
+      const range = document.createRange();
+      if (startRange.compareBoundaryPoints(Range.START_TO_START, endRange) <= 0) {
+        range.setStart(startRange.startContainer, startRange.startOffset);
+        range.setEnd(endRange.startContainer, endRange.startOffset);
+      } else {
+        range.setStart(endRange.startContainer, endRange.startOffset);
+        range.setEnd(startRange.startContainer, startRange.startOffset);
+      }
+      return range.collapsed ? null : range;
+    }
+
+    function showSourceRange(range) {
+      if (!range) return;
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      savedSourceRange = range.cloneRange();
+    }
+
+    function beginSourceToolDrag(event) {
+      if (!state.sourceTool || event.button !== 0 || !editableRootForNode(event.target)) return;
+      sourceDragStartRange = rangeFromPoint(event.clientX, event.clientY);
+      if (sourceDragStartRange) event.preventDefault();
+    }
+
+    function updateSourceToolDrag(event) {
+      if (!state.sourceTool || !sourceDragStartRange || event.buttons !== 1) return;
+      event.preventDefault();
+      showSourceRange(rangeBetween(sourceDragStartRange, rangeFromPoint(event.clientX, event.clientY)));
+    }
+
+    function finishSourceToolDrag(event) {
+      if (!state.sourceTool || !sourceDragStartRange) return false;
+      event.preventDefault();
+      const range = rangeBetween(sourceDragStartRange, rangeFromPoint(event.clientX, event.clientY));
+      sourceDragStartRange = null;
+      if (!range) return true;
+      showSourceRange(range);
+      applySourceToolToSelection();
+      return true;
+    }
+
+    function selectionInsideSource() {
+      return Boolean(selectedEditableRoot());
+    }
+
+    function editableRootForNode(node) {
+      if (!node) return null;
+      const element = node.nodeType === 1 ? node : node.parentNode;
+      return element?.closest?.(".rich-source, .rich-note") || null;
+    }
+
+    function selectedEditableRoot() {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return false;
+      const range = selection.getRangeAt(0);
+      const node = range.commonAncestorContainer.nodeType === 1
+        ? range.commonAncestorContainer
+        : range.commonAncestorContainer.parentNode;
+      return editableRootForNode(node);
+    }
+
+    function saveEditableContent(editable) {
+      if (editable === els.sourceEditor) {
+        saveCurrentSource();
+        return;
+      }
+      const item = selectedCase();
+      const field = editable.dataset.name;
+      if (!item || !field) return;
+      item[`${field}Html`] = sanitizeSourceHtml(editable.innerHTML);
+      item[field] = editable.innerText || "";
+      item.updatedAt = new Date().toISOString();
+      save();
+      renderCases();
+    }
+
+    function sanitizeSourceHtml(html) {
+      const raw = String(html || "");
+      const hasHighlightMarkup = /<\s*(mark|span)\b/i.test(raw);
+      const hasEscapedBreakTags = /&lt;\s*\/?\s*(br|p|div|li|tr|h[1-6])\b/i.test(raw);
+      if (!hasHighlightMarkup && hasEscapedBreakTags) {
+        return plainTextToHtml(sourceHtmlToPlainText(raw));
+      }
+
+      const root = document.createElement("div");
+      root.innerHTML = raw;
+      root.querySelectorAll("script, style, iframe, object, embed, link, meta").forEach((node) => node.remove());
+      root.querySelectorAll("*").forEach((node) => {
+        const allowed = ["MARK", "SPAN", "BR", "DIV", "P", "B", "I", "STRONG", "EM", "U"].includes(node.tagName);
+        if (!allowed) {
+          node.replaceWith(...Array.from(node.childNodes));
+          return;
+        }
+        const hadBackground = node.getAttribute("style")?.includes("background");
+        [...node.attributes].forEach((attr) => node.removeAttribute(attr.name));
+        if ((node.tagName === "SPAN" || node.tagName === "MARK") && hadBackground) {
+          node.style.backgroundColor = "#fff29a";
+        }
+      });
+      return root.innerHTML;
+    }
+
+    function plainTextToHtml(text) {
+      return escapeHtml(normalizeTextLines(text || "")).replace(/\n/g, "<br>");
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      })[char]);
+    }
+
+    els.txtImport.addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      await addCasesFromLines(await file.text());
+      event.target.value = "";
+    });
+
+    els.jsonImport.addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      importBackup(await file.text());
+      event.target.value = "";
+    });
+
+    els.openTopicBtn.addEventListener("click", () => togglePane("topic"));
+    els.openSearchBtn.addEventListener("click", () => {
+      state.scope = "all";
+      togglePane("case");
+      window.setTimeout(() => els.searchInput.focus(), 0);
+    });
+    els.closeTopicPaneBtn.addEventListener("click", () => togglePane("topic"));
+    els.closeCasePaneBtn.addEventListener("click", () => togglePane("case"));
+
+    els.newCaseBtn.addEventListener("click", () => {
+      promptTopic("사건번호로 추가", "", (value) => {
+        const caseNo = findCaseNoInText(value) || normalizeCaseNo(value);
+        if (!caseNo) return;
+        const existing = state.cases.find((caseItem) => normalizeCaseNo(caseItem.caseNo) === caseNo);
+        if (existing) {
+          state.selectedCaseId = existing.id;
+          state.selectedCaseIds = new Set([existing.id]);
+          render();
+          toast("이미 있는 사건번호입니다.");
+          return;
+        }
+
+        pushUndo("판례 추가");
+        const item = createCase({ caseNo, title: caseNo });
+        state.cases.push(item);
+        state.selectedCaseId = item.id;
+        state.selectedCaseIds = new Set([item.id]);
+        state.lastSelectedCaseId = item.id;
+        markFetchPending(item);
+        render();
+        void fetchAndPopulateCase(item.id, item.caseNo);
+      });
+    });
+
+    els.undoBtn.addEventListener("click", undoLast);
+    els.chooseSaveFileBtn.addEventListener("click", chooseSaveFile);
+    els.manualSaveBtn.addEventListener("click", () => save({ immediate: true, manual: true }));
+    if (els.apiKeyInput) {
+      els.apiKeyInput.addEventListener("input", (event) => {
+        saveApiKey(event.target.value.trim());
+      });
+    }
+
+
+    els.addTopicBtn.addEventListener("click", () => {
+      const value = els.topicNameInput.value.trim();
+      if (!value) return;
+      pushUndo("목차 추가");
+      const newTopic = { id: uid("topic"), name: value, children: [] };
+      if (state.selectedTopicId) {
+        const found = findTopic(state.selectedTopicId);
+        if (found) {
+          found.node.children = found.node.children || [];
+          found.node.children.push(newTopic);
+          state.expandedTopicIds.add(found.node.id);
+        }
+      } else {
+        state.topics.push(newTopic);
+      }
+      state.selectedTopicId = newTopic.id;
+      state.expandedTopicIds.add(newTopic.id);
+      els.topicNameInput.value = "";
+      render();
+    });
+
+    els.topicNameInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") els.addTopicBtn.click();
+    });
+
+    els.dialogInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      els.nameDialog.returnValue = "ok";
+      els.nameDialog.close("ok");
+    });
+
+    els.searchInput.addEventListener("input", (event) => {
+      state.query = event.target.value;
+      renderCases();
+    });
+
+    els.topicSelect.addEventListener("change", (event) => {
+      const item = selectedCase();
+      if (!item) return;
+      pushUndo("폴더 변경");
+      item.topicId = event.target.value || null;
+      item.updatedAt = new Date().toISOString();
+      state.selectedTopicId = item.topicId;
+      render();
+    });
+
+    els.deleteCaseBtn.addEventListener("click", () => {
+      const item = selectedCase();
+      if (!item) return;
+      if (!confirm(`'${item.title}' 판례를 삭제할까요?`)) return;
+      pushUndo("판례 삭제");
+      state.cases = state.cases.filter((caseItem) => caseItem.id !== item.id);
+      state.selectedCaseIds.delete(item.id);
+      state.selectedCaseId = null;
+      render();
+    });
+
+    els.caseForm.addEventListener("input", (event) => {
+      const item = selectedCase();
+      const field = event.target.dataset.name || event.target.name;
+      if (!item || !field) return;
+      if (event.target.isContentEditable) {
+        item[`${field}Html`] = sanitizeSourceHtml(event.target.innerHTML);
+        item[field] = event.target.innerText || "";
+      } else {
+        item[field] = event.target.value;
+      }
+      item.updatedAt = new Date().toISOString();
+      if (field === "title") els.editorHeading.textContent = event.target.value || "제목 없음";
+      if (event.target.matches("textarea")) autoResizeTextarea(event.target);
+      save();
+      renderCases();
+    });
+    els.caseForm.addEventListener("blur", (event) => {
+      if (!event.target.isContentEditable || event.target === els.sourceEditor) return;
+      saveEditableContent(event.target);
+      event.target.innerHTML = sanitizeSourceHtml(event.target.innerHTML);
+    }, true);
+
+    els.sourceEditor.addEventListener("input", saveCurrentSource);
+    els.caseForm.addEventListener("mousedown", beginSourceToolDrag);
+    els.caseForm.addEventListener("mousemove", updateSourceToolDrag);
+    els.caseForm.addEventListener("keyup", rememberSourceSelection);
+    els.caseForm.addEventListener("mouseup", (event) => {
+      if (finishSourceToolDrag(event)) return;
+      if (!state.sourceTool) {
+        rememberSourceSelection();
+        return;
+      }
+      window.setTimeout(applySourceToolToSelection, 0);
+    });
+    els.caseForm.addEventListener("contextmenu", (event) => {
+      if (!state.sourceTool) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setSourceTool(null);
+      toast("원문 도구를 껐습니다.");
+    });
+    els.caseForm.addEventListener("paste", (event) => {
+      if (!event.target.isContentEditable) return;
+      event.preventDefault();
+      const text = event.clipboardData.getData("text/plain");
+      document.execCommand("insertText", false, text);
+    });
+    els.sourceEditor.addEventListener("blur", () => {
+      const item = selectedCase();
+      if (!item) return;
+      item.sourceHtml = sanitizeSourceHtml(els.sourceEditor.innerHTML);
+      els.sourceEditor.innerHTML = item.sourceHtml;
+      saveCurrentSource();
+    });
+
+    [els.highlightBtn, els.clearHighlightBtn].forEach((button) => {
+      button.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+      });
+    });
+    els.highlightBtn.addEventListener("click", () => setSourceTool("highlight"));
+    els.clearHighlightBtn.addEventListener("click", () => setSourceTool("erase"));
+
+    els.splitResizer.addEventListener("mousedown", startSplitDrag);
+    document.addEventListener("mousemove", (event) => {
+      if (!state.splitDragging) return;
+      updateSplitWidth(event.clientX);
+    });
+    document.addEventListener("mouseup", stopSplitDrag);
+
+    document.addEventListener("selectionchange", rememberSourceSelection);
+    document.addEventListener("contextmenu", () => {
+      if (!state.sourceTool) return;
+      setSourceTool(null);
+      toast("원문 도구를 껐습니다.");
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      els.topicPane.classList.remove("open");
+      els.casePane.classList.remove("open");
+      renderPaneLayout();
+    });
+
+    document.querySelectorAll(".collapse-toggle").forEach((button) => {
+      button.addEventListener("click", () => {
+        const field = button.dataset.toggleField;
+        if (state.collapsedFields.has(field)) state.collapsedFields.delete(field);
+        else state.collapsedFields.add(field);
+        renderEditor();
+      });
+    });
+
+    (async function init() {
+      applySavedSplitWidth();
+      await restoreSaveFileHandle();
+      await load();
+      render();
+    })();
+  </script>
+</body>
+</html>

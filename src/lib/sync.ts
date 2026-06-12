@@ -1,6 +1,6 @@
 import type { AppSnapshot, CaseItem, CaseNotes, Topic, UiState } from "../types";
 import { makeId, nowIso } from "./id";
-import { clearStore, enqueue, getAll, put, queueItems, remove } from "./localDb";
+import { enqueue, getAll, put, queueItems, remove } from "./localDb";
 import { supabase } from "./supabase";
 
 type Syncable = Topic | CaseItem | CaseNotes | UiState;
@@ -13,10 +13,16 @@ function newer<T extends { updated_at: string }>(local: T | undefined, remote: T
 export async function recordChange(userId: string, table: "topics" | "cases" | "case_notes" | "user_ui_state", payload: Syncable, op?: string) {
   const recordId =
     "case_id" in payload ? payload.case_id : "id" in payload ? payload.id : payload.user_id;
+  const defaultOps = {
+    topics: "upsert_topic",
+    cases: "upsert_case",
+    case_notes: "upsert_notes",
+    user_ui_state: "upsert_ui_state"
+  } as const;
   await enqueue({
     id: makeId("queue"),
     user_id: userId,
-    op: (op || `upsert_${table.replace("case_notes", "notes").replace("user_ui_state", "ui_state").slice(0, -1)}`) as never,
+    op: (op || defaultOps[table]) as never,
     table_name: table,
     record_id: recordId,
     payload,
@@ -65,8 +71,7 @@ export async function syncNow(userId: string) {
   await pullRemote(userId);
 }
 
-export async function replaceLocalSnapshot(snapshot: AppSnapshot) {
-  await Promise.all(["topics", "cases", "case_notes", "user_ui_state"].map((store) => clearStore(store as never)));
+export async function mergeLocalSnapshot(snapshot: AppSnapshot) {
   await Promise.all(snapshot.topics.map((item) => put("topics", item)));
   await Promise.all(snapshot.cases.map((item) => put("cases", item)));
   await Promise.all(snapshot.notes.map((item) => put("case_notes", item)));

@@ -4,7 +4,7 @@ import { FIELD_LABELS } from "../types";
 import { fetchLawCase } from "../lib/lawApi";
 import { localUserId, makeId, nowIso } from "../lib/id";
 import { put, readSnapshot } from "../lib/localDb";
-import { recordChange, replaceLocalSnapshot, syncNow } from "../lib/sync";
+import { mergeLocalSnapshot, recordChange, syncNow } from "../lib/sync";
 import { sanitizeHtml } from "../lib/html";
 
 function emptyUiState(userId: string): UiState {
@@ -242,19 +242,24 @@ export function useAppStore(userId: string | null) {
   }, [persistNotes]);
 
   const importSnapshot = useCallback(async (snapshot: AppSnapshot) => {
-    await replaceLocalSnapshot(snapshot);
-    setTopics(snapshot.topics);
-    setCases(snapshot.cases);
-    setNotes(snapshot.notes);
-    setUiState(snapshot.uiState);
-    setSelectedCaseId(snapshot.cases[0]?.id || null);
+    await mergeLocalSnapshot(snapshot);
+    setTopics((current) => [...current, ...snapshot.topics]);
+    setCases((current) => [...current, ...snapshot.cases]);
+    setNotes((current) => [...current, ...snapshot.notes]);
+    setUiState((current) => ({
+      ...current,
+      expanded_topic_ids: Array.from(new Set([...current.expanded_topic_ids, ...snapshot.uiState.expanded_topic_ids])),
+      collapsed_fields: Array.from(new Set([...current.collapsed_fields, ...snapshot.uiState.collapsed_fields])),
+      updated_at: nowIso()
+    }));
+    setSelectedCaseId(snapshot.cases[0]?.id || selectedCaseId);
     await Promise.all([
       ...snapshot.topics.map((item) => recordChange(activeUserId, "topics", item)),
       ...snapshot.cases.map((item) => recordChange(activeUserId, "cases", item)),
       ...snapshot.notes.map((item) => recordChange(activeUserId, "case_notes", item)),
       recordChange(activeUserId, "user_ui_state", snapshot.uiState)
     ]);
-  }, [activeUserId]);
+  }, [activeUserId, selectedCaseId]);
 
   const visibleTopics = useMemo(() => topics.filter((topic) => !topic.deleted_at), [topics]);
   const visibleCases = useMemo(() => cases.filter((item) => !item.deleted_at), [cases]);

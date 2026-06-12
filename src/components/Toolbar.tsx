@@ -1,4 +1,4 @@
-type Panel = "topics" | "search" | "import";
+type Panel = "topics" | "search" | "import" | "status";
 
 type Props = {
   activePanel: Panel | null;
@@ -22,6 +22,7 @@ export function Toolbar({ activePanel, configured, signedIn, online, syncMessage
       <button className={activePanel === "search" ? "active" : ""} onClick={() => onPanelChange("search")}>검색</button>
       <button onClick={onAddBlank}>빈 판례</button>
       <button className={activePanel === "import" ? "active" : ""} onClick={() => onPanelChange("import")}>JSON</button>
+      <button className={activePanel === "status" ? "active" : ""} onClick={() => onPanelChange("status")}>상태</button>
       <button onClick={onSync}>동기화</button>
       {configured && <button onClick={onSignOut}>로그아웃</button>}
       <div className={`toolbar-status ${online ? "online" : "offline"}`} aria-live="polite">

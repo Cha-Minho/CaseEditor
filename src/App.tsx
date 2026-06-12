@@ -4,13 +4,14 @@ import { AuthView } from "./components/AuthView";
 import { CaseSearchPanel } from "./components/CaseSearchPanel";
 import { Editor } from "./components/Editor";
 import { JsonImportView } from "./components/JsonImportView";
+import { StatusPanel } from "./components/StatusPanel";
 import { Toolbar } from "./components/Toolbar";
 import { TopicTree } from "./components/TopicTree";
 import { useAppStore } from "./hooks/useAppStore";
 import { localUserId } from "./lib/id";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 
-type Panel = "topics" | "search" | "import" | null;
+type Panel = "topics" | "search" | "import" | "status" | null;
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -99,6 +100,18 @@ export default function App() {
       {panel === "import" && (
         <aside className="floating-panel import-panel">
           <JsonImportView userId={userId} onImport={store.importSnapshot} />
+        </aside>
+      )}
+
+      {panel === "status" && (
+        <aside className="floating-panel status-panel">
+          <StatusPanel
+            configured={supabaseConfigured}
+            signedIn={Boolean(session)}
+            online={online}
+            syncMessage={store.syncMessage}
+            userEmail={session?.user.email}
+          />
         </aside>
       )}
 

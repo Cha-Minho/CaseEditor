@@ -9,6 +9,8 @@
 3. Authentication에서 Email 로그인을 켭니다.
 4. Project Settings에서 `Project URL`과 `anon public key`를 복사합니다.
 
+마이그레이션은 Realtime publication도 같이 설정합니다. 그래서 PC에서 저장한 내용이 폰 화면에 열려 있으면 자동으로 내려옵니다.
+
 ## 2. 국가법령정보 API 연결
 
 Supabase Edge Function을 배포한 뒤 환경변수에 API 값을 넣습니다.

@@ -88,3 +88,26 @@ for each row execute function public.set_updated_at();
 drop trigger if exists user_ui_state_set_updated_at on public.user_ui_state;
 create trigger user_ui_state_set_updated_at before update on public.user_ui_state
 for each row execute function public.set_updated_at();
+
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.topics;
+  exception when duplicate_object then null;
+  end;
+
+  begin
+    alter publication supabase_realtime add table public.cases;
+  exception when duplicate_object then null;
+  end;
+
+  begin
+    alter publication supabase_realtime add table public.case_notes;
+  exception when duplicate_object then null;
+  end;
+
+  begin
+    alter publication supabase_realtime add table public.user_ui_state;
+  exception when duplicate_object then null;
+  end;
+end $$;

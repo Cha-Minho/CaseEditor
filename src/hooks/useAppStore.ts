@@ -4,7 +4,8 @@ import { FIELD_LABELS } from "../types";
 import { fetchLawCase } from "../lib/lawApi";
 import { localUserId, makeId, nowIso } from "../lib/id";
 import { put, readSnapshot } from "../lib/localDb";
-import { mergeLocalSnapshot, recordChange, syncNow } from "../lib/sync";
+import { mergeLocalSnapshot, pullRemote, recordChange, syncNow } from "../lib/sync";
+import { supabase } from "../lib/supabase";
 import { sanitizeHtml } from "../lib/html";
 
 function emptyUiState(userId: string): UiState {
@@ -69,6 +70,7 @@ export function useAppStore(userId: string | null) {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState("로컬 저장 준비 중");
   const syncTimer = useRef<number | null>(null);
+  const remotePullTimer = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     const snapshot = await readSnapshot(activeUserId);
@@ -116,9 +118,22 @@ export function useAppStore(userId: string | null) {
     }, 900);
   }, [activeUserId, load, userId]);
 
+  const scheduleRemotePull = useCallback(() => {
+    if (!userId || !navigator.onLine) return;
+    if (remotePullTimer.current) window.clearTimeout(remotePullTimer.current);
+    remotePullTimer.current = window.setTimeout(() => {
+      remotePullTimer.current = null;
+      pullRemote(activeUserId)
+        .then(load)
+        .then(() => setSyncMessage("최신 내용을 불러옴"))
+        .catch((error) => setSyncMessage(`동기화 보류: ${error.message}`));
+    }, 500);
+  }, [activeUserId, load, userId]);
+
   useEffect(() => {
     return () => {
       if (syncTimer.current) window.clearTimeout(syncTimer.current);
+      if (remotePullTimer.current) window.clearTimeout(remotePullTimer.current);
     };
   }, []);
 
@@ -145,6 +160,32 @@ export function useAppStore(userId: string | null) {
     window.addEventListener("online", handler);
     return () => window.removeEventListener("online", handler);
   }, [activeUserId, load, userId]);
+
+  useEffect(() => {
+    if (!userId || !supabase) return;
+    const client = supabase;
+
+    const channel = client
+      .channel(`case-editor-${activeUserId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "topics", filter: `user_id=eq.${activeUserId}` }, scheduleRemotePull)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cases", filter: `user_id=eq.${activeUserId}` }, scheduleRemotePull)
+      .on("postgres_changes", { event: "*", schema: "public", table: "case_notes", filter: `user_id=eq.${activeUserId}` }, scheduleRemotePull)
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_ui_state", filter: `user_id=eq.${activeUserId}` }, scheduleRemotePull)
+      .subscribe();
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") scheduleRemotePull();
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", scheduleRemotePull);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", scheduleRemotePull);
+      client.removeChannel(channel);
+    };
+  }, [activeUserId, scheduleRemotePull, userId]);
 
   const persistTopic = useCallback(async (topic: Topic) => {
     await put("topics", topic);

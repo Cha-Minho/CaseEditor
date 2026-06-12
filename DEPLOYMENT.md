@@ -31,6 +31,8 @@ VITE_SUPABASE_ANON_KEY=Supabase anon public key
 
 4. Deploy를 누릅니다.
 5. 배포 주소를 Supabase Authentication의 Site URL과 Redirect URL에 추가합니다.
+   - 예: `https://내앱주소.vercel.app`
+   - 회원가입 확인 메일을 누르면 이 주소로 돌아옵니다.
 
 ## 4. Netlify 배포
 

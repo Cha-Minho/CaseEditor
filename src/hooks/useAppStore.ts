@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AppSnapshot, CaseItem, CaseNotes, EditableFieldKey, Topic, UiState } from "../types";
 import { FIELD_LABELS } from "../types";
 import { fetchLawCase } from "../lib/lawApi";
@@ -68,6 +68,7 @@ export function useAppStore(userId: string | null) {
   const [uiState, setUiState] = useState<UiState>(() => emptyUiState(activeUserId));
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState("로컬 저장 준비 중");
+  const syncTimer = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     const snapshot = await readSnapshot(activeUserId);
@@ -102,6 +103,25 @@ export function useAppStore(userId: string | null) {
     return true;
   }, [activeUserId, userId]);
 
+  const scheduleSync = useCallback(() => {
+    if (!userId || !navigator.onLine) return;
+    if (syncTimer.current) window.clearTimeout(syncTimer.current);
+    syncTimer.current = window.setTimeout(() => {
+      syncTimer.current = null;
+      setSyncMessage("동기화 중");
+      syncNow(activeUserId)
+        .then(load)
+        .then(() => setSyncMessage("계정에 저장됨"))
+        .catch((error) => setSyncMessage(`동기화 보류: ${error.message}`));
+    }, 900);
+  }, [activeUserId, load, userId]);
+
+  useEffect(() => {
+    return () => {
+      if (syncTimer.current) window.clearTimeout(syncTimer.current);
+    };
+  }, []);
+
   useEffect(() => {
     load();
   }, [load]);
@@ -129,23 +149,27 @@ export function useAppStore(userId: string | null) {
   const persistTopic = useCallback(async (topic: Topic) => {
     await put("topics", topic);
     await recordChange(activeUserId, "topics", topic);
-  }, [activeUserId]);
+    scheduleSync();
+  }, [activeUserId, scheduleSync]);
 
   const persistCase = useCallback(async (caseItem: CaseItem) => {
     await put("cases", caseItem);
     await recordChange(activeUserId, "cases", caseItem);
-  }, [activeUserId]);
+    scheduleSync();
+  }, [activeUserId, scheduleSync]);
 
   const persistNotes = useCallback(async (caseNotes: CaseNotes) => {
     await put("case_notes", caseNotes);
     await recordChange(activeUserId, "case_notes", caseNotes);
-  }, [activeUserId]);
+    scheduleSync();
+  }, [activeUserId, scheduleSync]);
 
   const persistUi = useCallback(async (next: UiState) => {
     const stored = { ...next, id: activeUserId };
     await put("user_ui_state", stored);
     await recordChange(activeUserId, "user_ui_state", next);
-  }, [activeUserId]);
+    scheduleSync();
+  }, [activeUserId, scheduleSync]);
 
   const saveUiState = useCallback((patch: Partial<UiState>) => {
     setUiState((current) => {
@@ -301,7 +325,8 @@ export function useAppStore(userId: string | null) {
       ...snapshot.notes.map((item) => recordChange(activeUserId, "case_notes", item)),
       recordChange(activeUserId, "user_ui_state", mergedUiState)
     ]);
-  }, [activeUserId, selectedCaseId, uiState]);
+    scheduleSync();
+  }, [activeUserId, scheduleSync, selectedCaseId, uiState]);
 
   const visibleTopics = useMemo(() => topics.filter((topic) => !topic.deleted_at), [topics]);
   const visibleCases = useMemo(() => cases.filter((item) => !item.deleted_at), [cases]);

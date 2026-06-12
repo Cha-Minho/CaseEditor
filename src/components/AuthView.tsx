@@ -13,7 +13,13 @@ export function AuthView() {
     const result =
       mode === "login"
         ? await supabase!.auth.signInWithPassword({ email, password })
-        : await supabase!.auth.signUp({ email, password });
+        : await supabase!.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: window.location.origin
+            }
+          });
     setMessage(result.error ? result.error.message : mode === "login" ? "로그인되었습니다." : "가입 메일을 확인해주세요.");
   }
 

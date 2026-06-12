@@ -269,14 +269,40 @@
       left: 204px;
       top: 12px;
       bottom: 12px;
-      width: min(390px, calc(100vw - 230px));
+      width: min(var(--pane-width, 585px), calc(100vw - 230px));
       height: auto;
       z-index: 30;
       display: none;
     }
 
     #casePane {
-      width: min(460px, calc(100vw - 230px));
+      width: min(var(--pane-width, 690px), calc(100vw - 230px));
+    }
+
+    .pane-resizer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 10px;
+      cursor: ew-resize;
+      z-index: 3;
+    }
+
+    .pane-resizer::after {
+      content: "";
+      position: absolute;
+      top: 12px;
+      right: 3px;
+      bottom: 12px;
+      width: 3px;
+      border-radius: 999px;
+      background: transparent;
+    }
+
+    .pane-resizer:hover::after,
+    .pane-resizer.dragging::after {
+      background: var(--brand);
     }
 
     .pane.open {
@@ -515,10 +541,15 @@
       gap: 3px;
     }
 
+    .tree {
+      position: relative;
+      user-select: none;
+    }
+
     .tree-case-line {
       min-height: 32px;
       display: grid;
-      grid-template-columns: 18px 1fr;
+      grid-template-columns: 18px minmax(0, 1fr);
       align-items: start;
       gap: 5px;
       border: 1px solid transparent;
@@ -528,6 +559,7 @@
       color: var(--ink);
       text-align: left;
       transform: none;
+      cursor: grab;
     }
 
     .tree-case-line:hover {
@@ -547,6 +579,31 @@
       border-color: rgba(23, 107, 95, 0.26);
       color: var(--brand);
       font-weight: 800;
+    }
+
+    .tree-case-line.selected {
+      background: rgba(210, 163, 58, 0.16);
+      border-color: rgba(210, 163, 58, 0.42);
+    }
+
+    .tree-case-line.dragging {
+      opacity: 0.58;
+      cursor: grabbing;
+    }
+
+    .tree-case-star {
+      color: #d2a33a;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .tree-selection-box {
+      position: fixed;
+      z-index: 30;
+      pointer-events: none;
+      border: 1px solid rgba(23, 107, 95, 0.62);
+      background: rgba(23, 107, 95, 0.10);
+      border-radius: 4px;
     }
 
     .tree-case-dot {
@@ -720,7 +777,7 @@
 
     .selected-title {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
       gap: 10px;
       align-items: center;
     }
@@ -731,14 +788,36 @@
       overflow-wrap: anywhere;
     }
 
+    #editorHeading[contenteditable="true"] {
+      border-radius: 6px;
+      padding: 2px 4px;
+      margin-left: -4px;
+      cursor: text;
+    }
+
+    #editorHeading[contenteditable="true"]:focus {
+      outline: 2px solid rgba(23, 107, 95, 0.22);
+      background: rgba(255, 255, 255, 0.82);
+    }
+
     .folder-move {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-columns: auto minmax(190px, 1fr);
       align-items: center;
       gap: 8px;
+      min-width: 0;
     }
 
     .folder-move .field-label {
+      white-space: nowrap;
+    }
+
+    #topicPickerBtn {
+      min-width: 0;
+      max-width: 100%;
+      justify-content: flex-start;
+      overflow: hidden;
+      text-overflow: ellipsis;
       white-space: nowrap;
     }
 
@@ -910,9 +989,16 @@
     .rich-note {
       min-height: 124px;
       padding: 11px 12px;
+      font-size: inherit;
       line-height: 1.65;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
+    }
+
+    .rich-source *,
+    .rich-note * {
+      font-size: inherit !important;
+      line-height: inherit !important;
     }
 
     .rich-source:empty::before,
@@ -923,9 +1009,9 @@
     }
 
     .rich-source mark,
-    .rich-source span[style*="background"],
+    .rich-source .case-highlight,
     .rich-note mark,
-    .rich-note span[style*="background"] {
+    .rich-note .case-highlight {
       background-color: var(--mark) !important;
       border-radius: 2px;
       padding: 0 1px;
@@ -971,11 +1057,55 @@
       font-size: 17px;
     }
 
+    .stacked-control {
+      display: grid;
+      gap: 6px;
+    }
+
+    .topic-picker-modal {
+      min-width: min(420px, calc(100vw - 40px));
+    }
+
+    .topic-picker-tree {
+      max-height: 420px;
+      overflow: auto;
+      display: grid;
+      gap: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+    }
+
+    .topic-picker-option {
+      min-height: 34px;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+      padding: 7px 9px;
+      font-size: 13px;
+      justify-content: flex-start;
+    }
+
+    .topic-picker-option:hover,
+    .topic-picker-option.active {
+      background: rgba(23, 107, 95, 0.10);
+      border-color: rgba(23, 107, 95, 0.26);
+      transform: none;
+    }
+
     .modal-actions {
       display: flex;
       justify-content: flex-end;
       gap: 8px;
       margin-top: 2px;
+    }
+
+    .modal-actions.split {
+      justify-content: space-between;
+      flex-wrap: wrap;
     }
 
     .toast {
@@ -1131,26 +1261,20 @@
         <div class="brand-icon" aria-hidden="true">判</div>
         <div>
           <h1>판례 정리함</h1>
-          <div class="subtitle">한 줄 판례 목록을 가져와서 주제별 깊이로 정리</div>
         </div>
       </div>
       <div class="toolbar">
-        <label class="file-button" title="메모장 파일의 각 줄을 판례 하나로 가져옵니다.">
-          목록 가져오기
-          <input id="txtImport" type="file" accept=".txt,text/plain" />
-        </label>
-        <button id="newCaseBtn" class="secondary" type="button" title="사건번호를 입력하면 API에서 판례를 불러옵니다.">+ 사건번호</button>
+        <button id="addCaseMenuBtn" class="secondary" type="button" title="TXT 파일 또는 사건번호로 판례를 추가합니다.">판례 추가</button>
+        <input id="txtImport" class="hidden" type="file" accept=".txt,text/plain" />
+        <input id="jsonImport" class="hidden" type="file" accept=".json,application/json" />
         <button id="openTopicBtn" class="secondary" type="button" aria-expanded="false" aria-controls="topicPane">목차</button>
         <button id="openSearchBtn" class="secondary" type="button" aria-expanded="false" aria-controls="casePane">검색</button>
+        <button id="openStarredBtn" class="secondary" type="button" aria-expanded="false" aria-controls="casePane">☆ 중요</button>
         <button id="undoBtn" class="secondary" type="button" disabled title="삭제, 이동, 폴더 변경을 되돌립니다.">되돌리기</button>
         <input id="apiKeyInput" class="api-key" type="password" placeholder="API 키(OC)" title="국가법령정보 공동활용 API 인증값" />
-        <span id="saveStatus" class="selected-count">자동 저장 준비 중</span>
-        <button id="chooseSaveFileBtn" class="secondary" type="button" title="자동 저장할 JSON 파일을 선택합니다.">저장 파일 선택</button>
+        <span id="saveStatus" class="selected-count hidden">자동 저장 준비 중</span>
+        <button id="chooseSaveFileBtn" class="secondary" type="button" title="새 JSON 파일을 만들거나 기존 저장 파일을 선택합니다.">저장 파일</button>
         <button id="manualSaveBtn" class="brand" type="button" title="선택한 JSON 파일을 지금 갱신합니다.">지금 저장</button>
-        <label class="file-button" title="내보낸 백업 파일을 불러옵니다.">
-          JSON 불러오기
-          <input id="jsonImport" type="file" accept=".json,application/json" />
-        </label>
       </div>
     </header>
 
@@ -1171,6 +1295,7 @@
         <div class="pane-body">
           <div id="topicTree" class="tree"></div>
         </div>
+        <div id="topicPaneResizer" class="pane-resizer" aria-hidden="true"></div>
       </section>
 
       <section id="casePane" class="pane" aria-labelledby="caseHeading">
@@ -1187,29 +1312,30 @@
         <div class="pane-body">
           <div id="caseList" class="case-list"></div>
         </div>
+        <div id="casePaneResizer" class="pane-resizer" aria-hidden="true"></div>
       </section>
 
       <section class="editor" aria-labelledby="editorHeading">
         <div class="editor-head">
           <div class="selected-title">
-            <h2 id="editorHeading">판례를 선택하세요</h2>
+            <h2 id="editorHeading" contenteditable="false" spellcheck="false">판례를 선택하세요</h2>
             <div id="assignRow" class="folder-move hidden">
               <span class="field-label">폴더 이동</span>
-              <select id="topicSelect" title="판례를 보관할 목차"></select>
+              <select id="topicSelect" class="hidden" title="판례를 보관할 목차"></select>
+              <button id="topicPickerBtn" class="secondary" type="button">목차 선택</button>
             </div>
           </div>
           <div id="editorTools" class="editor-tools hidden">
+            <button id="starCaseBtn" class="secondary" type="button">☆ 중요</button>
             <button id="highlightBtn" class="secondary" type="button">형광펜</button>
             <button id="clearHighlightBtn" class="secondary" type="button">지우개</button>
+            <button id="deleteCaseBtn" class="warn" type="button">판례 삭제</button>
           </div>
           <p id="editorPath" class="compact-note hidden">미분류 판례나 목차 안의 판례를 고르면 정리 양식이 열립니다.</p>
         </div>
         <div class="editor-body">
           <div id="emptyEditor" class="empty">왼쪽 목록에서 판례를 선택하면 참고자료와 내 정리를 나란히 열어 볼 수 있습니다.</div>
           <form id="caseForm" class="field-grid hidden" spellcheck="false">
-            <div class="editor-case-actions">
-              <button id="deleteCaseBtn" class="warn" type="button">현재 판례 삭제</button>
-            </div>
             <div class="editor-split">
               <section class="editor-column reference-column" aria-label="참고자료">
               <div class="column-heading">
@@ -1309,6 +1435,45 @@
     </form>
   </dialog>
 
+  <dialog id="caseAddDialog">
+    <form class="modal" method="dialog">
+      <h3>판례 추가</h3>
+      <button id="pickTxtBtn" class="secondary" type="button">TXT 파일 가져오기</button>
+      <div class="stacked-control">
+        <label for="caseNoInput">사건번호 직접 입력</label>
+        <input id="caseNoInput" type="text" placeholder="예: 2020다12345" />
+      </div>
+      <div class="modal-actions split">
+        <button class="secondary" value="cancel" type="submit">닫기</button>
+        <span class="modal-actions">
+          <button id="addManualCaseBtn" class="secondary" type="button">빈 판례 만들기</button>
+          <button id="addCaseNoBtn" class="brand" type="button">추가(API 불러오기)</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="saveFileDialog">
+    <form class="modal" method="dialog">
+      <h3>저장 파일</h3>
+      <button id="createSaveFileBtn" class="brand" type="button">새 JSON 파일 만들기</button>
+      <button id="openSaveFileBtn" class="secondary" type="button">기존 저장 파일 선택</button>
+      <div class="modal-actions">
+        <button class="secondary" value="cancel" type="submit">닫기</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="topicPickerDialog">
+    <form class="modal topic-picker-modal" method="dialog">
+      <h3>목차 선택</h3>
+      <div id="topicPickerTree" class="topic-picker-tree"></div>
+      <div class="modal-actions">
+        <button class="secondary" value="cancel" type="submit">닫기</button>
+      </div>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script>
@@ -1335,11 +1500,17 @@
       undoStack: [],
       scope: "all",
       query: "",
+      showImportantOnly: false,
       dragTopicId: null,
+      dragCaseIds: [],
+      caseBoxSelect: null,
+      renderedCaseId: null,
       saveTimer: null,
       opfsAvailable: false,
       sourceTool: null,
+      deleteEditing: false,
       splitDragging: false,
+      paneResize: null,
       apiKey: "",
       saveFileHandle: null
     };
@@ -1350,11 +1521,14 @@
       mainLayout: document.getElementById("mainLayout"),
       topicPane: document.getElementById("topicPane"),
       casePane: document.getElementById("casePane"),
+      topicPaneResizer: document.getElementById("topicPaneResizer"),
+      casePaneResizer: document.getElementById("casePaneResizer"),
       openTopicBtn: document.getElementById("openTopicBtn"),
       openSearchBtn: document.getElementById("openSearchBtn"),
+      openStarredBtn: document.getElementById("openStarredBtn"),
+      addCaseMenuBtn: document.getElementById("addCaseMenuBtn"),
       closeTopicPaneBtn: document.getElementById("closeTopicPaneBtn"),
       closeCasePaneBtn: document.getElementById("closeCasePaneBtn"),
-      newCaseBtn: document.getElementById("newCaseBtn"),
       undoBtn: document.getElementById("undoBtn"),
       apiKeyInput: document.getElementById("apiKeyInput"),
       saveStatus: document.getElementById("saveStatus"),
@@ -1365,15 +1539,17 @@
       topicTree: document.getElementById("topicTree"),
       topicCount: document.getElementById("topicCount"),
       caseCount: document.getElementById("caseCount"),
+      caseHeading: document.getElementById("caseHeading"),
       searchInput: document.getElementById("searchInput"),
       caseList: document.getElementById("caseList"),
       editorHeading: document.getElementById("editorHeading"),
       editorPath: document.getElementById("editorPath"),
       assignRow: document.getElementById("assignRow"),
       topicSelect: document.getElementById("topicSelect"),
-      refetchCaseBtn: document.getElementById("refetchCaseBtn"),
+      topicPickerBtn: document.getElementById("topicPickerBtn"),
       deleteCaseBtn: document.getElementById("deleteCaseBtn"),
       editorTools: document.getElementById("editorTools"),
+      starCaseBtn: document.getElementById("starCaseBtn"),
       emptyEditor: document.getElementById("emptyEditor"),
       caseForm: document.getElementById("caseForm"),
       splitResizer: document.getElementById("splitResizer"),
@@ -1383,6 +1559,16 @@
       nameDialog: document.getElementById("nameDialog"),
       dialogTitle: document.getElementById("dialogTitle"),
       dialogInput: document.getElementById("dialogInput"),
+      caseAddDialog: document.getElementById("caseAddDialog"),
+      pickTxtBtn: document.getElementById("pickTxtBtn"),
+      caseNoInput: document.getElementById("caseNoInput"),
+      addCaseNoBtn: document.getElementById("addCaseNoBtn"),
+      addManualCaseBtn: document.getElementById("addManualCaseBtn"),
+      saveFileDialog: document.getElementById("saveFileDialog"),
+      createSaveFileBtn: document.getElementById("createSaveFileBtn"),
+      openSaveFileBtn: document.getElementById("openSaveFileBtn"),
+      topicPickerDialog: document.getElementById("topicPickerDialog"),
+      topicPickerTree: document.getElementById("topicPickerTree"),
       toast: document.getElementById("toast")
     };
 
@@ -1429,7 +1615,6 @@
         const starter = defaultState();
         state.topics = starter.topics;
         state.cases = starter.cases;
-        expandAll(state.topics);
         save();
         return;
       }
@@ -1437,7 +1622,7 @@
         const parsed = JSON.parse(raw);
         state.topics = Array.isArray(parsed.topics) ? parsed.topics : [];
         state.cases = Array.isArray(parsed.cases) ? parsed.cases.map(normalizeCase) : [];
-        expandAll(state.topics);
+        state.expandedTopicIds = new Set(Array.isArray(parsed.expandedTopicIds) ? parsed.expandedTopicIds : []);
       } catch {
         const starter = defaultState();
         state.topics = starter.topics;
@@ -1464,7 +1649,8 @@
         apiStatus: item.apiStatus || (item.caseNo ? "pending" : "idle"),
         apiError: item.apiError || "",
         caseNo: item.caseNo || "",
-        topicId: item.topicId || null
+        topicId: item.topicId || null,
+        important: Boolean(item.important)
       };
       inputFields.forEach((field) => {
         const htmlField = `${field}Html`;
@@ -1723,6 +1909,14 @@
       item.updatedAt = new Date().toISOString();
     }
 
+    function queueFetchForCase(item) {
+      if (!item?.caseNo) return;
+      markFetchPending(item);
+      save();
+      renderCases();
+      void fetchAndPopulateCase(item.id, item.caseNo);
+    }
+
     async function fetchAndPopulateCase(itemId, caseNo) {
       const item = state.cases.find((caseItem) => caseItem.id === itemId);
       if (!item) return;
@@ -1772,9 +1966,10 @@
     function serializeData() {
       return JSON.stringify({
         app: "판례 정리함",
-        version: 5,
+        version: 6,
         topics: state.topics,
         cases: state.cases,
+        expandedTopicIds: [...state.expandedTopicIds],
         savedAt: new Date().toISOString()
       });
     }
@@ -1888,9 +2083,9 @@
       setSaveStatus(opfsOk ? "브라우저 저장됨" : "임시 저장됨");
     }
 
-    async function chooseSaveFile() {
+    async function createSaveFile() {
       if (!window.showSaveFilePicker) {
-        toast("이 브라우저에서는 저장 파일 선택을 지원하지 않습니다.");
+        toast("이 브라우저에서는 새 저장 파일 만들기를 지원하지 않습니다.");
         return;
       }
       try {
@@ -1905,7 +2100,37 @@
         });
         await storeSaveFileHandle(state.saveFileHandle);
         await writePersistentData(serializeData(), true);
-        toast("앞으로 이 JSON 파일을 자동 갱신합니다.");
+        els.saveFileDialog.close();
+        toast("새 JSON 파일을 만들고 자동 저장 대상으로 연결했습니다.");
+      } catch (error) {
+        if (error?.name !== "AbortError") toast("새 저장 파일을 만들지 못했습니다.");
+      }
+    }
+
+    async function openSaveFile() {
+      if (!window.showOpenFilePicker) {
+        els.jsonImport.click();
+        return;
+      }
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          multiple: false,
+          types: [
+            {
+              description: "JSON 파일",
+              accept: { "application/json": [".json"] }
+            }
+          ]
+        });
+        if (!handle) return;
+        const file = await handle.getFile();
+        const text = await file.text();
+        importBackup(text);
+        state.saveFileHandle = handle;
+        await storeSaveFileHandle(handle);
+        await writePersistentData(serializeData(), true);
+        els.saveFileDialog.close();
+        toast("기존 JSON 파일을 불러오고 자동 저장 대상으로 연결했습니다.");
       } catch (error) {
         if (error?.name !== "AbortError") toast("저장 파일을 선택하지 못했습니다.");
       }
@@ -2067,6 +2292,11 @@
     function renderPaneLayout() {
       els.openTopicBtn.setAttribute("aria-expanded", String(els.topicPane.classList.contains("open")));
       els.openSearchBtn.setAttribute("aria-expanded", String(els.casePane.classList.contains("open")));
+      if (els.openStarredBtn) {
+        const starredOpen = els.casePane.classList.contains("open") && state.showImportantOnly;
+        els.openStarredBtn.setAttribute("aria-expanded", String(starredOpen));
+        els.openStarredBtn.textContent = starredOpen ? "★ 중요" : "☆ 중요";
+      }
     }
 
     function togglePane(name) {
@@ -2081,8 +2311,7 @@
     function renderJudgmentSummaryVisibility(item) {
       const field = document.getElementById("judgmentSummaryField");
       if (!field) return;
-      const hasJudgmentSummary = Boolean(normalizeTextLines(item?.judgmentSummary || ""));
-      field.classList.toggle("hidden", !hasJudgmentSummary);
+      field.classList.remove("hidden");
     }
 
     function render() {
@@ -2121,6 +2350,8 @@
       const unclassifiedLine = document.createElement("div");
       unclassifiedLine.className = `topic-line ${state.selectedTopicId === null ? "active" : ""}`;
       unclassifiedLine.style.cursor = "pointer";
+      unclassifiedLine.dataset.topicId = "";
+      addCaseDropHandlers(unclassifiedLine, null);
 
       const unclassifiedTwisty = document.createElement("button");
       unclassifiedTwisty.type = "button";
@@ -2166,10 +2397,12 @@
     function renderTopicCaseLine(item) {
       const button = document.createElement("button");
       button.type = "button";
-      button.className = `tree-case-line ${state.selectedCaseId === item.id ? "active" : ""}`;
+      button.className = `tree-case-line ${state.selectedCaseId === item.id ? "active" : ""} ${state.selectedCaseIds.has(item.id) ? "selected" : ""}`;
       button.title = item.title || item.caseNo || "제목 없음";
+      button.draggable = true;
+      button.dataset.caseId = item.id;
       button.innerHTML = `
-        <span class="tree-case-dot">•</span>
+        <span class="${item.important ? "tree-case-star" : "tree-case-dot"}">${item.important ? "★" : "•"}</span>
         <span class="tree-case-copy">
           <span class="tree-case-title">${escapeHtml(item.title || item.caseNo || "제목 없음")}</span>
           ${item.caseNo ? `<span class="tree-case-no">${escapeHtml(item.caseNo)}</span>` : ""}
@@ -2177,13 +2410,21 @@
       `;
       button.addEventListener("click", (event) => {
         event.stopPropagation();
+        if (event.shiftKey) {
+          selectCaseRange(item.id);
+        } else if (event.ctrlKey || event.metaKey) {
+          toggleCaseSelected(item.id);
+          state.lastSelectedCaseId = item.id;
+        } else {
+          state.selectedCaseIds = new Set([item.id]);
+          state.lastSelectedCaseId = item.id;
+        }
         state.selectedCaseId = item.id;
-        state.selectedCaseIds = new Set([item.id]);
-        state.lastSelectedCaseId = item.id;
         state.selectedTopicId = item.topicId || null;
         state.scope = "topic";
         render();
       });
+      addCaseDragHandlers(button, item);
       return button;
     }
 
@@ -2200,6 +2441,7 @@
       line.draggable = true;
       line.dataset.topicId = topic.id;
       addTopicDragHandlers(line, topic);
+      addCaseDropHandlers(line, topic.id);
 
       const twisty = document.createElement("button");
       twisty.type = "button";
@@ -2280,8 +2522,139 @@
       return button;
     }
 
+    function caseIdsForDrag(itemId) {
+      if (!state.selectedCaseIds.has(itemId)) {
+        state.selectedCaseIds = new Set([itemId]);
+        state.lastSelectedCaseId = itemId;
+      }
+      return [...state.selectedCaseIds].filter((id) => state.cases.some((item) => item.id === id));
+    }
+
+    function addCaseDragHandlers(line, item) {
+      line.addEventListener("dragstart", (event) => {
+        event.stopPropagation();
+        const ids = caseIdsForDrag(item.id);
+        state.dragCaseIds = ids;
+        state.selectedCaseId = item.id;
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("application/x-case-ids", JSON.stringify(ids));
+        event.dataTransfer.setData("text/plain", ids.join(","));
+        line.classList.add("dragging");
+      });
+
+      line.addEventListener("dragend", () => {
+        state.dragCaseIds = [];
+        clearDropMarkers();
+        document.querySelectorAll(".tree-case-line.dragging").forEach((caseLine) => caseLine.classList.remove("dragging"));
+      });
+    }
+
+    function addCaseDropHandlers(line, topicId) {
+      line.addEventListener("dragover", (event) => {
+        const ids = draggedCaseIds(event);
+        if (!ids.length) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        clearDropMarkers();
+        line.classList.add("drop-inside");
+      });
+
+      line.addEventListener("drop", (event) => {
+        const ids = draggedCaseIds(event);
+        if (!ids.length) return;
+        event.preventDefault();
+        event.stopPropagation();
+        moveCasesToTopic(ids, topicId);
+        clearDropMarkers();
+      });
+    }
+
+    function draggedCaseIds(event) {
+      if (state.dragCaseIds.length) return state.dragCaseIds;
+      try {
+        const raw = event.dataTransfer.getData("application/x-case-ids");
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function moveCasesToTopic(ids, topicId) {
+      const targetId = topicId || null;
+      const moving = state.cases.filter((item) => ids.includes(item.id) && (item.topicId || null) !== targetId);
+      if (!moving.length) return false;
+      pushUndo("판례 목차 이동");
+      moving.forEach((item) => {
+        item.topicId = targetId;
+        item.updatedAt = new Date().toISOString();
+      });
+      state.selectedCaseIds = new Set(ids);
+      state.selectedCaseId = ids[ids.length - 1] || state.selectedCaseId;
+      state.selectedTopicId = targetId;
+      if (targetId) state.expandedTopicIds.add(targetId);
+      else state.expandedTopicIds.add(UNCLASSIFIED_TOPIC_ID);
+      render();
+      toast(`${moving.length}개 판례를 이동했습니다.`);
+      return true;
+    }
+
+    function beginCaseBoxSelect(event) {
+      if (event.button !== 0) return;
+      if (event.target.closest("button, input, select, textarea, .topic-line, .tree-case-line")) return;
+      const paneBody = event.target.closest(".pane-body");
+      if (!paneBody || !els.topicTree.contains(event.target)) return;
+      const box = document.createElement("div");
+      box.className = "tree-selection-box";
+      document.body.appendChild(box);
+      state.caseBoxSelect = {
+        startX: event.clientX,
+        startY: event.clientY,
+        box,
+        additive: event.ctrlKey || event.metaKey,
+        baseIds: new Set(state.selectedCaseIds)
+      };
+      event.preventDefault();
+    }
+
+    function updateCaseBoxSelect(event) {
+      if (!state.caseBoxSelect) return;
+      const selection = state.caseBoxSelect;
+      const left = Math.min(selection.startX, event.clientX);
+      const top = Math.min(selection.startY, event.clientY);
+      const width = Math.abs(event.clientX - selection.startX);
+      const height = Math.abs(event.clientY - selection.startY);
+      Object.assign(selection.box.style, {
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        height: `${height}px`
+      });
+
+      const rect = selection.box.getBoundingClientRect();
+      const picked = new Set(selection.additive ? selection.baseIds : []);
+      document.querySelectorAll(".tree-case-line[data-case-id]").forEach((line) => {
+        const lineRect = line.getBoundingClientRect();
+        const intersects = !(lineRect.right < rect.left || lineRect.left > rect.right || lineRect.bottom < rect.top || lineRect.top > rect.bottom);
+        if (intersects) picked.add(line.dataset.caseId);
+      });
+      state.selectedCaseIds = picked;
+      if (picked.size) state.selectedCaseId = [...picked][picked.size - 1];
+      document.querySelectorAll(".tree-case-line[data-case-id]").forEach((line) => {
+        line.classList.toggle("selected", state.selectedCaseIds.has(line.dataset.caseId));
+        line.classList.toggle("active", state.selectedCaseId === line.dataset.caseId);
+      });
+    }
+
+    function finishCaseBoxSelect() {
+      if (!state.caseBoxSelect) return;
+      state.caseBoxSelect.box.remove();
+      state.caseBoxSelect = null;
+      render();
+    }
+
     function addTopicDragHandlers(line, topic) {
       line.addEventListener("dragstart", (event) => {
+        if (Array.from(event.dataTransfer.types || []).includes("application/x-case-ids")) return;
         state.dragTopicId = topic.id;
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", topic.id);
@@ -2289,6 +2662,7 @@
       });
 
       line.addEventListener("dragover", (event) => {
+        if (draggedCaseIds(event).length) return;
         if (!canDropTopic(state.dragTopicId, topic.id)) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
@@ -2301,6 +2675,7 @@
       });
 
       line.addEventListener("drop", (event) => {
+        if (draggedCaseIds(event).length) return;
         if (!canDropTopic(state.dragTopicId, topic.id)) return;
         event.preventDefault();
         const position = dropClass(event, line).replace("drop-", "");
@@ -2362,12 +2737,13 @@
     function renderCases() {
       const cases = filteredCases();
       els.caseCount.textContent = cases.length;
+      if (els.caseHeading) els.caseHeading.textContent = state.showImportantOnly ? "중요 판례" : "검색";
       els.caseList.innerHTML = "";
 
       if (!cases.length) {
         const empty = document.createElement("div");
         empty.className = "empty";
-        empty.textContent = state.query ? "검색 결과가 없습니다." : "목록 가져오기 또는 + 판례로 판례를 추가하세요.";
+        empty.textContent = state.showImportantOnly ? "별표한 판례가 없습니다." : (state.query ? "검색 결과가 없습니다." : "판례 추가 버튼으로 판례를 추가하세요.");
         els.caseList.appendChild(empty);
         return;
       }
@@ -2388,7 +2764,7 @@
             ? '<span class="pill failed">불러오기 실패</span>'
             : "";
         copy.innerHTML = `
-          <span class="case-title">${escapeHtml(item.title || item.caseNo || "제목 없음")}</span>
+          <span class="case-title">${item.important ? "★ " : ""}${escapeHtml(item.title || item.caseNo || "제목 없음")}</span>
           <span class="case-meta">
             <span>${escapeHtml(getTopicPath(item.topicId))}</span>
             ${item.caseNo ? `<span>${escapeHtml(item.caseNo)}</span>` : ""}
@@ -2409,24 +2785,12 @@
     function filteredCases() {
       const query = state.query.trim().toLowerCase();
       return state.cases
+        .filter((item) => !state.showImportantOnly || item.important)
         .filter((item) => {
           if (!query) return true;
           return formFields.some((field) => String(item[field] || "").toLowerCase().includes(query));
         })
         .sort((a, b) => (a.title || "").localeCompare(b.title || "", "ko"));
-    }
-
-    function renderBulkControls(cases) {
-      const visibleIds = cases.map((item) => item.id);
-      const selectedVisibleCount = visibleIds.filter((id) => state.selectedCaseIds.has(id)).length;
-      els.selectedCount.textContent = `${state.selectedCaseIds.size}개 선택`;
-      els.selectAllCases.checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
-      els.selectAllCases.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
-      els.selectAllCases.disabled = visibleIds.length === 0;
-      const hasSelection = state.selectedCaseIds.size > 0;
-      els.bulkTopicSelect.disabled = !hasSelection;
-      els.bulkMoveBtn.disabled = !hasSelection;
-      els.bulkDeleteBtn.disabled = !hasSelection;
     }
 
     function handleCaseRowClick(id, event) {
@@ -2500,6 +2864,43 @@
       });
     }
 
+    function renderTopicPicker() {
+      if (!els.topicPickerTree) return;
+      const item = selectedCase();
+      els.topicPickerTree.innerHTML = "";
+      const options = [
+        { id: "", name: "미분류", depth: 0 },
+        ...flattenTopics()
+      ];
+      options.forEach((topic) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `topic-picker-option ${(item?.topicId || "") === topic.id ? "active" : ""}`;
+        button.style.paddingLeft = `${9 + topic.depth * 18}px`;
+        button.textContent = topic.name;
+        button.addEventListener("click", () => moveSelectedCaseToTopic(topic.id || null));
+        els.topicPickerTree.appendChild(button);
+      });
+    }
+
+    function moveSelectedCaseToTopic(topicId) {
+      const item = selectedCase();
+      if (!item) return;
+      const targetId = topicId || null;
+      if ((item.topicId || null) === targetId) {
+        els.topicPickerDialog.close();
+        return;
+      }
+      pushUndo("폴더 변경");
+      item.topicId = targetId;
+      item.updatedAt = new Date().toISOString();
+      state.selectedTopicId = targetId;
+      if (targetId) state.expandedTopicIds.add(targetId);
+      els.topicPickerDialog.close();
+      render();
+      toast("판례 위치를 옮겼습니다.");
+    }
+
     function renderEditor() {
       const item = selectedCase();
       els.emptyEditor.classList.toggle("hidden", Boolean(item));
@@ -2509,24 +2910,38 @@
       els.editorTools.classList.toggle("hidden", !item);
 
       if (!item) {
+        state.renderedCaseId = null;
+        els.editorHeading.contentEditable = "false";
         els.editorHeading.textContent = "판례를 선택하세요";
         els.editorPath.textContent = "미분류 판례나 목차 안의 판례를 고르면 정리 양식이 열립니다.";
         return;
       }
 
+      els.editorHeading.contentEditable = "true";
       els.editorHeading.textContent = item.title || "제목 없음";
       els.editorPath.textContent = item.caseNo ? `${getTopicPath(item.topicId)} · ${item.caseNo}` : getTopicPath(item.topicId);
-      els.topicSelect.value = item.topicId || "";
+      if (els.topicSelect) els.topicSelect.value = item.topicId || "";
+      if (els.topicPickerBtn) els.topicPickerBtn.textContent = getTopicPath(item.topicId);
+      if (els.starCaseBtn) {
+        els.starCaseBtn.textContent = item.important ? "★ 중요" : "☆ 중요";
+        els.starCaseBtn.classList.toggle("active-tool", item.important);
+        els.starCaseBtn.title = item.important ? "중요 판례 표시 해제" : "중요 판례로 표시";
+      }
 
-      inputFields.forEach((field) => {
-        const input = fieldInputs[field];
-        if (!input) return;
-        input.innerHTML = sanitizeSourceHtml(item[`${field}Html`] || plainTextToHtml(item[field] || ""));
-      });
+      const activeEditable = document.activeElement?.closest?.(".rich-source, .rich-note");
+      const keepEditorDom = state.renderedCaseId === item.id && activeEditable && els.caseForm.contains(activeEditable);
+      if (!keepEditorDom) {
+        inputFields.forEach((field) => {
+          const input = fieldInputs[field];
+          if (!input) return;
+          input.innerHTML = sanitizeSourceHtml(item[`${field}Html`] || plainTextToHtml(item[field] || ""));
+        });
 
-      savedSourceRange = null;
-      setSourceTool(null);
-      els.sourceEditor.innerHTML = sanitizeSourceHtml(item.sourceHtml || plainTextToHtml(item.source || ""));
+        savedSourceRange = null;
+        setSourceTool(null);
+        els.sourceEditor.innerHTML = sanitizeSourceHtml(item.sourceHtml || plainTextToHtml(item.source || ""));
+        state.renderedCaseId = item.id;
+      }
       renderJudgmentSummaryVisibility(item);
       document.querySelectorAll(".field.collapsible").forEach((field) => {
         const key = field.dataset.field;
@@ -2567,6 +2982,7 @@
         concurringHtml: "",
         tags: "",
         tagsHtml: "",
+        important: Boolean(data.important),
         apiStatus: caseNo ? "pending" : "idle",
         apiError: "",
         createdAt: now,
@@ -2598,7 +3014,6 @@
         importedItems.push(item);
         existingCaseNos.add(caseNo);
         added += 1;
-        markFetchPending(item);
       }
 
       if (!added) {
@@ -2614,9 +3029,58 @@
       render();
       toast(`${added}개 판례를 추가했고, ${skipped}개는 중복으로 건너뛰었습니다.`);
 
-      for (const item of importedItems) {
-        void fetchAndPopulateCase(item.id, item.caseNo);
+      importedItems.forEach(queueFetchForCase);
+    }
+
+    function addCaseByNumber(value) {
+      const caseNo = findCaseNoInText(value) || normalizeCaseNo(value);
+      if (!caseNo) return false;
+      const existing = state.cases.find((caseItem) => normalizeCaseNo(caseItem.caseNo) === caseNo);
+      if (existing) {
+        state.selectedCaseId = existing.id;
+        state.selectedCaseIds = new Set([existing.id]);
+        render();
+        toast("이미 있는 사건번호입니다.");
+        return true;
       }
+
+      pushUndo("판례 추가");
+      const item = createCase({ caseNo, title: caseNo });
+      state.cases.push(item);
+      state.selectedCaseId = item.id;
+      state.selectedCaseIds = new Set([item.id]);
+      state.lastSelectedCaseId = item.id;
+      render();
+      queueFetchForCase(item);
+      return true;
+    }
+
+    function addManualCase(value) {
+      const baseTitle = String(value || "").trim() || "빈 판례";
+      const title = uniqueCaseTitle(baseTitle);
+      const caseNo = findCaseNoInText(baseTitle) || "";
+      const item = createCase({ caseNo, title });
+      item.topicId = null;
+      item.apiStatus = "idle";
+      item.apiError = "";
+      pushUndo("빈 판례 추가");
+      state.cases.push(item);
+      state.selectedCaseId = item.id;
+      state.selectedCaseIds = new Set([item.id]);
+      state.lastSelectedCaseId = item.id;
+      state.selectedTopicId = null;
+      render();
+      toast("API 없이 빈 판례를 만들었습니다.");
+      return true;
+    }
+
+    function uniqueCaseTitle(baseTitle) {
+      const base = String(baseTitle || "").trim() || "빈 판례";
+      const titles = new Set(state.cases.map((item) => String(item.title || "").trim()));
+      if (!titles.has(base)) return base;
+      let index = 2;
+      while (titles.has(`${base} (${index})`)) index += 1;
+      return `${base} (${index})`;
     }
 
     function promptTopic(title, initialValue, onDone) {
@@ -2639,10 +3103,11 @@
     function exportData() {
       const data = JSON.stringify({
         app: "판례 정리함",
-        version: 5,
+        version: 6,
         exportedAt: new Date().toISOString(),
         topics: state.topics,
-        cases: state.cases
+        cases: state.cases,
+        expandedTopicIds: [...state.expandedTopicIds]
       }, null, 2);
       const blob = new Blob([data], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -2663,31 +3128,12 @@
         state.selectedTopicId = null;
         state.selectedCaseId = null;
         state.selectedCaseIds.clear();
-        state.expandedTopicIds.clear();
-        state.expandedTopicIds.add(UNCLASSIFIED_TOPIC_ID);
-        expandAll(state.topics);
+        state.expandedTopicIds = new Set(Array.isArray(data.expandedTopicIds) ? data.expandedTopicIds : []);
         render();
         toast("백업을 불러왔습니다.");
       } catch {
         toast("백업 파일 형식이 맞지 않습니다.");
       }
-    }
-
-    function moveSelectedCases() {
-      const ids = selectedExistingIds();
-      if (!ids.length) return;
-      const targetTopicId = els.bulkTopicSelect.value || null;
-      pushUndo("폴더 변경");
-      state.cases.forEach((item) => {
-        if (ids.includes(item.id)) {
-          item.topicId = targetTopicId;
-          item.updatedAt = new Date().toISOString();
-        }
-      });
-      state.selectedTopicId = targetTopicId;
-      state.scope = "topic";
-      render();
-      toast(`${ids.length}개 판례를 옮겼습니다.`);
     }
 
     function deleteSelectedCases() {
@@ -2724,6 +3170,58 @@
       }
     }
 
+    function applySavedPaneWidths() {
+      try {
+        applyPaneWidth(els.topicPane, localStorage.getItem("case-notes-topic-pane-width"));
+        applyPaneWidth(els.casePane, localStorage.getItem("case-notes-case-pane-width"));
+      } catch {
+        // Ignore storage errors.
+      }
+    }
+
+    function applyPaneWidth(pane, value) {
+      if (!pane || !value) return;
+      const numeric = Number.parseFloat(value);
+      if (!Number.isFinite(numeric)) return;
+      pane.style.setProperty("--pane-width", `${numeric}px`);
+    }
+
+    function startPaneResize(event, pane, storageKey) {
+      if (!pane) return;
+      state.paneResize = {
+        pane,
+        storageKey,
+        startX: event.clientX,
+        startWidth: pane.getBoundingClientRect().width,
+        handle: event.currentTarget
+      };
+      event.currentTarget.classList.add("dragging");
+      document.body.style.cursor = "ew-resize";
+      event.preventDefault();
+    }
+
+    function updatePaneResize(clientX) {
+      const resize = state.paneResize;
+      if (!resize) return;
+      const maxWidth = Math.max(320, window.innerWidth - 230);
+      const width = Math.min(maxWidth, Math.max(320, resize.startWidth + clientX - resize.startX));
+      resize.pane.style.setProperty("--pane-width", `${width}px`);
+    }
+
+    function stopPaneResize() {
+      const resize = state.paneResize;
+      if (!resize) return;
+      const width = Math.round(resize.pane.getBoundingClientRect().width);
+      try {
+        localStorage.setItem(resize.storageKey, String(width));
+      } catch {
+        // Ignore storage errors.
+      }
+      resize.handle?.classList.remove("dragging");
+      document.body.style.cursor = "";
+      state.paneResize = null;
+    }
+
     function updateSplitWidth(clientX) {
       const split = els.caseForm.querySelector(".editor-split");
       if (!split) return;
@@ -2755,9 +3253,11 @@
     function saveCurrentSource() {
       const item = selectedCase();
       if (!item) return;
-      item.sourceHtml = els.sourceEditor.innerHTML;
+      if (state.deleteEditing) normalizeEditableFormatting(els.sourceEditor);
+      item.sourceHtml = sanitizeSourceHtml(els.sourceEditor.innerHTML, { preserveLegacyHighlights: !state.deleteEditing });
       item.source = els.sourceEditor.innerText || "";
       item.updatedAt = new Date().toISOString();
+      state.deleteEditing = false;
       save();
       renderCases();
     }
@@ -2782,14 +3282,114 @@
       if (!editable) return;
       editable.focus();
       restoreSourceSelection();
-      document.execCommand("styleWithCSS", false, true);
       if (state.sourceTool === "erase") {
-        document.execCommand("removeFormat", false, null);
-      } else if (!document.execCommand("hiliteColor", false, "#fff29a")) {
-        document.execCommand("backColor", false, "#fff29a");
+        eraseHighlightsFromSelection(editable);
+      } else {
+        highlightSelection(editable);
       }
       saveEditableContent(editable);
       savedSourceRange = null;
+    }
+
+    function selectedRangeInEditable(editable) {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
+      const range = selection.getRangeAt(0);
+      return editable.contains(range.commonAncestorContainer) ? range : null;
+    }
+
+    function highlightSelection(editable) {
+      const range = selectedRangeInEditable(editable);
+      if (!range) return;
+      const marker = document.createElement("mark");
+      marker.className = "case-highlight";
+      marker.dataset.caseHighlight = "true";
+      marker.appendChild(range.extractContents());
+      range.insertNode(marker);
+      mergeSiblingHighlights(marker);
+      placeCaretAfter(marker);
+    }
+
+    function eraseHighlightsFromSelection(editable) {
+      const range = selectedRangeInEditable(editable);
+      if (!range) return;
+      const walker = document.createTreeWalker(editable, NodeFilter.SHOW_ELEMENT);
+      const targets = [];
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (!isHighlightNode(node)) continue;
+        try {
+          if (range.intersectsNode(node)) targets.push(node);
+        } catch {
+          // Ignore nodes the range cannot compare with.
+        }
+      }
+      let node = range.commonAncestorContainer.nodeType === 1
+        ? range.commonAncestorContainer
+        : range.commonAncestorContainer.parentElement;
+      while (node && node !== editable) {
+        if (isHighlightNode(node)) targets.push(node);
+        node = node.parentElement;
+      }
+      [...new Set(targets)].forEach(unwrapElement);
+      editable.normalize();
+    }
+
+    function isHighlightNode(node) {
+      if (!node || node.nodeType !== 1) return false;
+      const style = node.getAttribute("style") || "";
+      return node.matches("mark, .case-highlight, [data-case-highlight='true']") || /background/i.test(style);
+    }
+
+    function isTransientHighlightNode(node) {
+      if (!node || node.nodeType !== 1) return false;
+      const style = node.getAttribute("style") || "";
+      return !node.matches("mark, .case-highlight, [data-case-highlight='true']") && /background/i.test(style);
+    }
+
+    function normalizeEditableFormatting(editable) {
+      editable.querySelectorAll("font").forEach(unwrapElement);
+      editable.querySelectorAll("*").forEach((node) => {
+        if (isHighlightNode(node)) return;
+        node.removeAttribute("style");
+        node.removeAttribute("class");
+      });
+      editable.querySelectorAll("span").forEach((node) => {
+        if (!isHighlightNode(node)) unwrapElement(node);
+      });
+    }
+
+    function unwrapElement(element) {
+      const parent = element.parentNode;
+      if (!parent) return;
+      while (element.firstChild) parent.insertBefore(element.firstChild, element);
+      parent.removeChild(element);
+      parent.normalize();
+    }
+
+    function mergeSiblingHighlights(marker) {
+      if (!marker?.parentNode) return;
+      ["previousSibling", "nextSibling"].forEach((side) => {
+        const sibling = marker[side];
+        if (!isHighlightNode(sibling)) return;
+        if (side === "previousSibling") {
+          while (marker.firstChild) sibling.appendChild(marker.firstChild);
+          marker.remove();
+          marker = sibling;
+        } else {
+          while (sibling.firstChild) marker.appendChild(sibling.firstChild);
+          sibling.remove();
+        }
+      });
+    }
+
+    function placeCaretAfter(node) {
+      const range = document.createRange();
+      range.setStartAfter(node);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
     }
 
     function rememberSourceSelection() {
@@ -2907,7 +3507,8 @@
       renderCases();
     }
 
-    function sanitizeSourceHtml(html) {
+    function sanitizeSourceHtml(html, options = {}) {
+      const preserveLegacyHighlights = options.preserveLegacyHighlights !== false;
       const raw = String(html || "");
       const hasHighlightMarkup = /<\s*(mark|span)\b/i.test(raw);
       const hasEscapedBreakTags = /&lt;\s*\/?\s*(br|p|div|li|tr|h[1-6])\b/i.test(raw);
@@ -2924,10 +3525,15 @@
           node.replaceWith(...Array.from(node.childNodes));
           return;
         }
-        const hadBackground = node.getAttribute("style")?.includes("background");
+        const hadBackground = /background/i.test(node.getAttribute("style") || "");
+        const hadHighlightClass = node.classList?.contains("case-highlight") || node.dataset?.caseHighlight === "true";
         [...node.attributes].forEach((attr) => node.removeAttribute(attr.name));
-        if ((node.tagName === "SPAN" || node.tagName === "MARK") && hadBackground) {
-          node.style.backgroundColor = "#fff29a";
+        if ((node.tagName === "SPAN" || node.tagName === "MARK") && (hadHighlightClass || (preserveLegacyHighlights && hadBackground))) {
+          const mark = document.createElement("mark");
+          mark.className = "case-highlight";
+          mark.dataset.caseHighlight = "true";
+          while (node.firstChild) mark.appendChild(node.firstChild);
+          node.replaceWith(mark);
         }
       });
       return root.innerHTML;
@@ -2952,6 +3558,7 @@
       if (!file) return;
       await addCasesFromLines(await file.text());
       event.target.value = "";
+      if (els.caseAddDialog.open) els.caseAddDialog.close();
     });
 
     els.jsonImport.addEventListener("change", async (event) => {
@@ -2959,44 +3566,67 @@
       if (!file) return;
       importBackup(await file.text());
       event.target.value = "";
+      if (els.saveFileDialog.open) els.saveFileDialog.close();
     });
 
     els.openTopicBtn.addEventListener("click", () => togglePane("topic"));
     els.openSearchBtn.addEventListener("click", () => {
       state.scope = "all";
+      state.showImportantOnly = false;
+      state.query = "";
+      els.searchInput.value = "";
       togglePane("case");
+      renderCases();
+      window.setTimeout(() => els.searchInput.focus(), 0);
+    });
+    els.openStarredBtn.addEventListener("click", () => {
+      state.scope = "all";
+      state.showImportantOnly = true;
+      state.query = "";
+      els.searchInput.value = "";
+      els.casePane.classList.add("open");
+      els.topicPane.classList.remove("open");
+      renderPaneLayout();
+      renderCases();
       window.setTimeout(() => els.searchInput.focus(), 0);
     });
     els.closeTopicPaneBtn.addEventListener("click", () => togglePane("topic"));
     els.closeCasePaneBtn.addEventListener("click", () => togglePane("case"));
+    els.topicTree.addEventListener("mousedown", beginCaseBoxSelect);
+    document.addEventListener("mousemove", updateCaseBoxSelect);
+    document.addEventListener("mouseup", finishCaseBoxSelect);
 
-    els.newCaseBtn.addEventListener("click", () => {
-      promptTopic("사건번호로 추가", "", (value) => {
-        const caseNo = findCaseNoInText(value) || normalizeCaseNo(value);
-        if (!caseNo) return;
-        const existing = state.cases.find((caseItem) => normalizeCaseNo(caseItem.caseNo) === caseNo);
-        if (existing) {
-          state.selectedCaseId = existing.id;
-          state.selectedCaseIds = new Set([existing.id]);
-          render();
-          toast("이미 있는 사건번호입니다.");
-          return;
-        }
-
-        pushUndo("판례 추가");
-        const item = createCase({ caseNo, title: caseNo });
-        state.cases.push(item);
-        state.selectedCaseId = item.id;
-        state.selectedCaseIds = new Set([item.id]);
-        state.lastSelectedCaseId = item.id;
-        markFetchPending(item);
-        render();
-        void fetchAndPopulateCase(item.id, item.caseNo);
-      });
+    els.addCaseMenuBtn.addEventListener("click", () => {
+      els.caseNoInput.value = "";
+      els.caseAddDialog.showModal();
+      window.setTimeout(() => els.caseNoInput.focus(), 0);
+    });
+    els.pickTxtBtn.addEventListener("click", () => els.txtImport.click());
+    els.addCaseNoBtn.addEventListener("click", () => {
+      if (addCaseByNumber(els.caseNoInput.value)) {
+        els.caseNoInput.value = "";
+        els.caseAddDialog.close();
+      }
+    });
+    els.addManualCaseBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (addManualCase(els.caseNoInput.value)) {
+        els.caseNoInput.value = "";
+        els.caseAddDialog.close();
+      }
+    });
+    els.caseNoInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        els.addCaseNoBtn.click();
+      }
     });
 
     els.undoBtn.addEventListener("click", undoLast);
-    els.chooseSaveFileBtn.addEventListener("click", chooseSaveFile);
+    els.chooseSaveFileBtn.addEventListener("click", () => els.saveFileDialog.showModal());
+    els.createSaveFileBtn.addEventListener("click", createSaveFile);
+    els.openSaveFileBtn.addEventListener("click", openSaveFile);
     els.manualSaveBtn.addEventListener("click", () => save({ immediate: true, manual: true }));
     if (els.apiKeyInput) {
       els.apiKeyInput.addEventListener("input", (event) => {
@@ -3037,9 +3667,40 @@
       els.nameDialog.close("ok");
     });
 
+    els.editorHeading.addEventListener("input", () => {
+      const item = selectedCase();
+      if (!item || els.editorHeading.contentEditable !== "true") return;
+      item.title = normalizeTextLines(els.editorHeading.innerText || "").replace(/\n/g, " ").trim();
+      item.updatedAt = new Date().toISOString();
+      save();
+      renderCases();
+      renderTopics();
+    });
+
+    els.editorHeading.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      els.editorHeading.blur();
+    });
+
+    els.editorHeading.addEventListener("blur", () => {
+      const item = selectedCase();
+      if (!item) return;
+      if (!item.title) item.title = item.caseNo || "제목 없음";
+      els.editorHeading.textContent = item.title;
+      save();
+      renderCases();
+      renderTopics();
+    });
+
     els.searchInput.addEventListener("input", (event) => {
       state.query = event.target.value;
       renderCases();
+    });
+
+    els.topicPickerBtn.addEventListener("click", () => {
+      renderTopicPicker();
+      els.topicPickerDialog.showModal();
     });
 
     els.topicSelect.addEventListener("change", (event) => {
@@ -3063,29 +3724,46 @@
       render();
     });
 
+    els.starCaseBtn.addEventListener("click", () => {
+      const item = selectedCase();
+      if (!item) return;
+      pushUndo("중요 표시 변경");
+      item.important = !item.important;
+      item.updatedAt = new Date().toISOString();
+      save();
+      renderTopics();
+      renderCases();
+      renderEditor();
+      toast(item.important ? "중요 판례로 표시했습니다." : "중요 표시를 해제했습니다.");
+    });
+
     els.caseForm.addEventListener("input", (event) => {
       const item = selectedCase();
       const field = event.target.dataset.name || event.target.name;
       if (!item || !field) return;
       if (event.target.isContentEditable) {
-        item[`${field}Html`] = sanitizeSourceHtml(event.target.innerHTML);
+        if (state.deleteEditing) normalizeEditableFormatting(event.target);
+        item[`${field}Html`] = sanitizeSourceHtml(event.target.innerHTML, { preserveLegacyHighlights: !state.deleteEditing });
         item[field] = event.target.innerText || "";
+        state.deleteEditing = false;
       } else {
         item[field] = event.target.value;
       }
       item.updatedAt = new Date().toISOString();
-      if (field === "title") els.editorHeading.textContent = event.target.value || "제목 없음";
       if (event.target.matches("textarea")) autoResizeTextarea(event.target);
       save();
       renderCases();
+      renderTopics();
     });
     els.caseForm.addEventListener("blur", (event) => {
       if (!event.target.isContentEditable || event.target === els.sourceEditor) return;
       saveEditableContent(event.target);
-      event.target.innerHTML = sanitizeSourceHtml(event.target.innerHTML);
     }, true);
 
     els.sourceEditor.addEventListener("input", saveCurrentSource);
+    els.caseForm.addEventListener("keydown", (event) => {
+      if (event.key === "Backspace" || event.key === "Delete") state.deleteEditing = true;
+    }, true);
     els.caseForm.addEventListener("mousedown", beginSourceToolDrag);
     els.caseForm.addEventListener("mousemove", updateSourceToolDrag);
     els.caseForm.addEventListener("keyup", rememberSourceSelection);
@@ -3114,7 +3792,6 @@
       const item = selectedCase();
       if (!item) return;
       item.sourceHtml = sanitizeSourceHtml(els.sourceEditor.innerHTML);
-      els.sourceEditor.innerHTML = item.sourceHtml;
       saveCurrentSource();
     });
 
@@ -3127,11 +3804,20 @@
     els.clearHighlightBtn.addEventListener("click", () => setSourceTool("erase"));
 
     els.splitResizer.addEventListener("mousedown", startSplitDrag);
+    els.topicPaneResizer.addEventListener("mousedown", (event) => startPaneResize(event, els.topicPane, "case-notes-topic-pane-width"));
+    els.casePaneResizer.addEventListener("mousedown", (event) => startPaneResize(event, els.casePane, "case-notes-case-pane-width"));
     document.addEventListener("mousemove", (event) => {
+      if (state.paneResize) {
+        updatePaneResize(event.clientX);
+        return;
+      }
       if (!state.splitDragging) return;
       updateSplitWidth(event.clientX);
     });
-    document.addEventListener("mouseup", stopSplitDrag);
+    document.addEventListener("mouseup", () => {
+      stopPaneResize();
+      stopSplitDrag();
+    });
 
     document.addEventListener("selectionchange", rememberSourceSelection);
     document.addEventListener("contextmenu", () => {
@@ -3158,6 +3844,7 @@
 
     (async function init() {
       applySavedSplitWidth();
+      applySavedPaneWidths();
       await restoreSaveFileHandle();
       await load();
       render();

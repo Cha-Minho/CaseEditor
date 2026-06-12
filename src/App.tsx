@@ -16,6 +16,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [panel, setPanel] = useState<Panel>("topics");
   const [authReady, setAuthReady] = useState(!supabaseConfigured);
+  const [online, setOnline] = useState(navigator.onLine);
   const userId = session?.user.id || localUserId();
   const store = useAppStore(userId);
 
@@ -30,6 +31,16 @@ export default function App() {
       setAuthReady(true);
     });
     return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
   }, []);
 
   if (!authReady) return <div className="loading-screen">앱을 여는 중입니다.</div>;
@@ -47,6 +58,9 @@ export default function App() {
         onSync={() => store.sync()}
         onSignOut={() => supabase?.auth.signOut()}
         configured={supabaseConfigured}
+        signedIn={Boolean(session)}
+        online={online}
+        syncMessage={store.syncMessage}
       />
 
       {panel === "topics" && (

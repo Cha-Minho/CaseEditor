@@ -3,13 +3,19 @@ type Panel = "topics" | "search" | "import";
 type Props = {
   activePanel: Panel | null;
   configured: boolean;
+  signedIn: boolean;
+  online: boolean;
+  syncMessage: string;
   onPanelChange: (panel: Panel) => void;
   onAddBlank: () => void;
   onSync: () => void;
   onSignOut: () => void;
 };
 
-export function Toolbar({ activePanel, configured, onPanelChange, onAddBlank, onSync, onSignOut }: Props) {
+export function Toolbar({ activePanel, configured, signedIn, online, syncMessage, onPanelChange, onAddBlank, onSync, onSignOut }: Props) {
+  const accountLabel = configured ? (signedIn ? "계정" : "로그인 필요") : "로컬";
+  const networkLabel = online ? "온라인" : "오프라인";
+
   return (
     <nav className="toolbar" aria-label="앱 도구">
       <button className={activePanel === "topics" ? "active" : ""} onClick={() => onPanelChange("topics")}>목차</button>
@@ -18,6 +24,11 @@ export function Toolbar({ activePanel, configured, onPanelChange, onAddBlank, on
       <button className={activePanel === "import" ? "active" : ""} onClick={() => onPanelChange("import")}>JSON</button>
       <button onClick={onSync}>동기화</button>
       {configured && <button onClick={onSignOut}>로그아웃</button>}
+      <div className={`toolbar-status ${online ? "online" : "offline"}`} aria-live="polite">
+        <strong>{accountLabel}</strong>
+        <span>{networkLabel}</span>
+        <small>{syncMessage}</small>
+      </div>
     </nav>
   );
 }

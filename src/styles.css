@@ -60,6 +60,44 @@ button.active,
   padding: 0 4px;
 }
 
+.toolbar-status {
+  background: rgba(255, 253, 248, 0.1);
+  border: 1px solid rgba(255, 253, 248, 0.24);
+  border-radius: 6px;
+  color: #fffdf8;
+  display: grid;
+  gap: 2px;
+  line-height: 1.2;
+  margin-top: auto;
+  overflow: hidden;
+  padding: 8px 6px;
+}
+
+.toolbar-status strong,
+.toolbar-status span,
+.toolbar-status small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toolbar-status strong {
+  font-size: 12px;
+}
+
+.toolbar-status span {
+  color: #d9e8dd;
+  font-size: 11px;
+}
+
+.toolbar-status.offline span {
+  color: #ffd29d;
+}
+
+.toolbar-status small {
+  color: #d8d1c4;
+  font-size: 10px;
+}
+
 .workspace {
   min-width: 0;
 }
@@ -348,6 +386,13 @@ small,
 
   .toolbar button {
     min-width: 74px;
+  }
+
+  .toolbar-status {
+    align-content: center;
+    flex: 0 0 118px;
+    margin-top: 0;
+    min-height: 42px;
   }
 
   .floating-panel {

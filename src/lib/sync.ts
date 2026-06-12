@@ -4,6 +4,7 @@ import { enqueue, getAll, put, queueItems, remove } from "./localDb";
 import { supabase } from "./supabase";
 
 type Syncable = Topic | CaseItem | CaseNotes | UiState;
+type RemoteRow = { updated_at?: string };
 
 function newer<T extends { updated_at: string }>(local: T | undefined, remote: T) {
   if (!local) return remote;
@@ -34,6 +35,20 @@ export async function pushQueue(userId: string) {
   if (!supabase) return;
   const queue = await queueItems(userId);
   for (const item of queue) {
+    const remoteKey = item.table_name === "case_notes" ? "case_id" : item.table_name === "user_ui_state" ? "user_id" : "id";
+    const payload = item.payload as Syncable;
+    const { data: remote, error: readError } = await supabase
+      .from(item.table_name)
+      .select("updated_at")
+      .eq(remoteKey, item.record_id)
+      .maybeSingle<RemoteRow>();
+
+    if (readError) throw readError;
+    if (remote?.updated_at && "updated_at" in payload && new Date(remote.updated_at).getTime() > new Date(payload.updated_at).getTime()) {
+      await remove("sync_queue", item.id);
+      continue;
+    }
+
     const { error } = await supabase.from(item.table_name).upsert(item.payload as never);
     if (error) throw error;
     await remove("sync_queue", item.id);
@@ -62,7 +77,10 @@ export async function pullRemote(userId: string) {
   for (const remote of topics.data || []) await put("topics", newer(localTopics.find((x) => x.id === remote.id), remote));
   for (const remote of cases.data || []) await put("cases", newer(localCases.find((x) => x.id === remote.id), remote));
   for (const remote of notes.data || []) await put("case_notes", newer(localNotes.find((x) => x.case_id === remote.case_id), remote));
-  if (uiState.data) await put("user_ui_state", newer(localStates.find((x) => x.user_id === userId), uiState.data));
+  if (uiState.data) {
+    const nextUiState = newer(localStates.find((x) => x.user_id === userId), uiState.data);
+    await put("user_ui_state", { ...nextUiState, id: userId });
+  }
 }
 
 export async function syncNow(userId: string) {

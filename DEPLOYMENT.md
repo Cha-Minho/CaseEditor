@@ -4,6 +4,13 @@
 
 ## 1. Supabase 만들기
 
+배포 전에 로컬에서 한 번 점검합니다.
+
+```bash
+npm run doctor
+npm run build
+```
+
 1. Supabase 프로젝트를 새로 만듭니다.
 2. SQL Editor에서 `supabase/migrations/0001_initial_schema.sql` 내용을 실행합니다.
 3. Authentication에서 Email 로그인을 켭니다.

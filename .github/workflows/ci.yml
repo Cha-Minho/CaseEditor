@@ -25,5 +25,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Deployment doctor
+        run: npm run doctor
+
       - name: Build
         run: npm run build

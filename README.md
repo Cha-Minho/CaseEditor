@@ -17,6 +17,12 @@ npm install
 npm run dev
 ```
 
+배포 전에는 다음 명령으로 필수 설정 파일이 있는지 확인합니다.
+
+```bash
+npm run doctor
+```
+
 Supabase를 연결하려면 `.env`에 다음 값을 넣습니다.
 
 ```bash

@@ -2370,10 +2370,14 @@
       unclassifiedName.type = "button";
       unclassifiedName.className = "topic-name";
       unclassifiedName.innerHTML = "<span>미분류</span>";
-      unclassifiedName.addEventListener("click", () => {
+      unclassifiedName.addEventListener("click", (event) => {
+        event.stopPropagation();
         state.selectedTopicId = null;
         state.scope = "topic";
-        els.topicPane.classList.remove("open");
+        if (unclassifiedCases.length) {
+          if (unclassifiedExpanded) state.expandedTopicIds.delete(UNCLASSIFIED_TOPIC_ID);
+          else state.expandedTopicIds.add(UNCLASSIFIED_TOPIC_ID);
+        }
         render();
       });
 
@@ -2460,10 +2464,14 @@
       name.type = "button";
       name.className = "topic-name";
       name.innerHTML = `<span>${escapeHtml(topic.name)}</span>`;
-      name.addEventListener("click", () => {
+      name.addEventListener("click", (event) => {
+        event.stopPropagation();
         state.selectedTopicId = topic.id;
         state.scope = "topic";
-        els.topicPane.classList.remove("open");
+        if (hasChildren) {
+          if (expanded) state.expandedTopicIds.delete(topic.id);
+          else state.expandedTopicIds.add(topic.id);
+        }
         render();
       });
 

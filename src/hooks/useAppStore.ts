@@ -46,6 +46,20 @@ function nextBlankTitle(cases: CaseItem[]) {
   return `${base} (${Date.now()})`;
 }
 
+function hasUserData(snapshot: AppSnapshot) {
+  return snapshot.topics.some((item) => !item.deleted_at) || snapshot.cases.some((item) => !item.deleted_at);
+}
+
+function reassignSnapshotUser(snapshot: AppSnapshot, userId: string): AppSnapshot {
+  const timestamp = nowIso();
+  return {
+    topics: snapshot.topics.map((item) => ({ ...item, user_id: userId, updated_at: timestamp })),
+    cases: snapshot.cases.map((item) => ({ ...item, user_id: userId, updated_at: timestamp })),
+    notes: snapshot.notes.map((item) => ({ ...item, user_id: userId, updated_at: timestamp })),
+    uiState: { ...snapshot.uiState, user_id: userId, updated_at: timestamp }
+  };
+}
+
 export function useAppStore(userId: string | null) {
   const activeUserId = userId || localUserId();
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -65,6 +79,29 @@ export function useAppStore(userId: string | null) {
     setSyncMessage("로컬 저장됨");
   }, [activeUserId]);
 
+  const promoteLocalDataToAccount = useCallback(async () => {
+    if (!userId) return false;
+
+    const [accountSnapshot, localSnapshot] = await Promise.all([
+      readSnapshot(activeUserId),
+      readSnapshot(localUserId())
+    ]);
+
+    if (hasUserData(accountSnapshot) || !hasUserData(localSnapshot)) return false;
+
+    const promoted = reassignSnapshotUser(localSnapshot, activeUserId);
+    await mergeLocalSnapshot(promoted);
+    await put("user_ui_state", { ...promoted.uiState, id: activeUserId });
+    await Promise.all([
+      ...promoted.topics.map((item) => recordChange(activeUserId, "topics", item)),
+      ...promoted.cases.map((item) => recordChange(activeUserId, "cases", item)),
+      ...promoted.notes.map((item) => recordChange(activeUserId, "case_notes", item)),
+      recordChange(activeUserId, "user_ui_state", promoted.uiState)
+    ]);
+    setSyncMessage("로컬 데이터를 계정으로 옮김");
+    return true;
+  }, [activeUserId, userId]);
+
   useEffect(() => {
     load();
   }, [load]);
@@ -72,9 +109,11 @@ export function useAppStore(userId: string | null) {
   useEffect(() => {
     if (!userId) return;
     syncNow(activeUserId)
+      .then(promoteLocalDataToAccount)
+      .then(() => syncNow(activeUserId))
       .then(load)
       .catch((error) => setSyncMessage(`동기화 보류: ${error.message}`));
-  }, [activeUserId, load, userId]);
+  }, [activeUserId, load, promoteLocalDataToAccount, userId]);
 
   useEffect(() => {
     const handler = () => {

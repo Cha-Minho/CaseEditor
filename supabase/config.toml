@@ -1,0 +1,4 @@
+project_id = "case-editor"
+
+[functions.law-case]
+verify_jwt = true

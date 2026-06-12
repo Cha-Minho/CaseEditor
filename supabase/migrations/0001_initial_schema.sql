@@ -62,3 +62,29 @@ create policy "user_ui_state own row" on public.user_ui_state for all using (aut
 create index if not exists topics_user_parent_idx on public.topics(user_id, parent_id, sort_order);
 create index if not exists cases_user_topic_idx on public.cases(user_id, topic_id);
 create index if not exists cases_user_important_idx on public.cases(user_id, important);
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists topics_set_updated_at on public.topics;
+create trigger topics_set_updated_at before update on public.topics
+for each row execute function public.set_updated_at();
+
+drop trigger if exists cases_set_updated_at on public.cases;
+create trigger cases_set_updated_at before update on public.cases
+for each row execute function public.set_updated_at();
+
+drop trigger if exists case_notes_set_updated_at on public.case_notes;
+create trigger case_notes_set_updated_at before update on public.case_notes
+for each row execute function public.set_updated_at();
+
+drop trigger if exists user_ui_state_set_updated_at on public.user_ui_state;
+create trigger user_ui_state_set_updated_at before update on public.user_ui_state
+for each row execute function public.set_updated_at();

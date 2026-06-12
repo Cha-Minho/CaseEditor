@@ -26,6 +26,11 @@ VITE_SUPABASE_ANON_KEY=...
 
 설정값이 없으면 앱은 로컬 전용 모드로 실행됩니다.
 
+## 배포
+
+PC와 폰에서 같은 계정으로 쓰려면 Supabase와 Vercel 또는 Netlify를 연결합니다.
+자세한 순서는 [DEPLOYMENT.md](./DEPLOYMENT.md)에 정리되어 있습니다.
+
 ## Supabase
 
 1. `supabase/migrations/0001_initial_schema.sql`을 적용합니다.

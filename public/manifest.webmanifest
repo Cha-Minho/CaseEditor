@@ -1,0 +1,16 @@
+{
+  "name": "판례 정리함",
+  "short_name": "판례정리",
+  "description": "판례 원문, 판시사항, 요약과 목차를 계정 기반으로 정리하는 PWA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f2e8",
+  "theme_color": "#20342f",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

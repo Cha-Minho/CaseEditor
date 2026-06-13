@@ -637,7 +637,9 @@ small,
   border-bottom: 1px solid var(--line);
   display: grid;
   margin: 0;
+  min-height: 130px;
   padding: 10px;
+  position: relative;
 }
 
 .editor-head h1 {
@@ -677,25 +679,26 @@ small,
 
 .selected-title {
   align-items: start;
-  display: flex;
+  display: block;
   gap: 10px;
-  justify-content: space-between;
   width: 100%;
 }
 
 .title-block {
-  flex: 1 1 auto;
   min-width: 0;
+  padding-right: calc(clamp(520px, 42vw, 760px) + 18px);
 }
 
 .editor-side {
   align-items: end;
   display: grid;
-  flex: 0 0 clamp(520px, 42vw, 760px);
   gap: 14px;
   justify-items: end;
-  margin-left: auto;
   max-width: 100%;
+  position: absolute;
+  right: 10px;
+  top: 12px;
+  width: clamp(520px, 42vw, 760px);
 }
 
 #editorHeading[contenteditable="true"] {
@@ -1132,6 +1135,7 @@ label,
     align-items: stretch;
     display: grid;
     gap: 10px;
+    min-height: 0;
     padding: 10px 12px;
     position: static;
   }
@@ -1150,9 +1154,15 @@ label,
     grid-template-columns: 1fr;
   }
 
+  .title-block {
+    padding-right: 0;
+  }
+
   .editor-side {
     align-items: stretch;
     justify-items: stretch;
+    position: static;
+    width: 100%;
   }
 
   .folder-move {

@@ -44,6 +44,14 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const closePanel = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPanel(null);
+    };
+    window.addEventListener("keydown", closePanel);
+    return () => window.removeEventListener("keydown", closePanel);
+  }, []);
+
   if (!authReady) return <div className="loading-screen">앱을 여는 중입니다.</div>;
 
   if (supabaseConfigured && !session) {
@@ -65,7 +73,7 @@ export default function App() {
       />
 
       {panel === "topics" && (
-        <aside className="floating-panel topic-panel">
+        <aside className="floating-panel topic-panel" aria-label="목차 팝업">
           <TopicTree
             topics={store.topics}
             cases={store.cases}
@@ -85,7 +93,7 @@ export default function App() {
       )}
 
       {panel === "search" && (
-        <aside className="floating-panel search-panel">
+        <aside className="floating-panel search-panel" aria-label="검색 팝업">
           <CaseSearchPanel
             cases={store.cases}
             topics={store.topics}
@@ -98,13 +106,13 @@ export default function App() {
       )}
 
       {panel === "import" && (
-        <aside className="floating-panel import-panel">
+        <aside className="floating-panel import-panel" aria-label="JSON 가져오기 팝업">
           <JsonImportView userId={userId} onImport={store.importSnapshot} />
         </aside>
       )}
 
       {panel === "status" && (
-        <aside className="floating-panel status-panel">
+        <aside className="floating-panel status-panel" aria-label="상태 팝업">
           <StatusPanel
             configured={supabaseConfigured}
             signedIn={Boolean(session)}

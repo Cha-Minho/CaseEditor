@@ -20,6 +20,10 @@ npm run build
 
 ## 2. 국가법령정보 API 연결
 
+Edge Function은 앱과 국가법령정보 API 사이에 두는 작은 서버 함수입니다. 브라우저에 국가법령정보 API 키를 직접 넣으면 누구나 키를 볼 수 있으므로, 프론트엔드는 사건번호만 보내고 Edge Function이 `LAW_API_OC` 비밀값으로 law.go.kr에 요청합니다.
+
+이 함수가 없더라도 로그인, 저장, PC/폰 동기화, 빈 판례 작성은 동작합니다. 다만 `API 추가`로 사건번호를 불러오는 기능은 실패합니다.
+
 Supabase Edge Function을 배포한 뒤 환경변수에 API 값을 넣습니다.
 
 ```bash

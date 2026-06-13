@@ -677,20 +677,25 @@ small,
 
 .selected-title {
   align-items: start;
-  display: grid;
+  display: flex;
   gap: 10px;
-  grid-template-columns: minmax(0, 1fr) minmax(470px, 560px);
+  justify-content: space-between;
+  width: 100%;
 }
 
 .title-block {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
 .editor-side {
   align-items: end;
   display: grid;
+  flex: 0 0 clamp(520px, 42vw, 760px);
   gap: 14px;
   justify-items: end;
+  margin-left: auto;
+  max-width: 100%;
 }
 
 #editorHeading[contenteditable="true"] {
@@ -709,10 +714,15 @@ small,
   align-items: center;
   display: grid;
   gap: 8px;
-  grid-template-columns: auto minmax(320px, 450px);
+  grid-template-columns: auto minmax(360px, 1fr);
   justify-self: end;
   min-width: 0;
-  width: min(100%, 540px);
+  width: 100%;
+}
+
+.editor-side .editor-tools {
+  justify-self: end;
+  width: 100%;
 }
 
 label,

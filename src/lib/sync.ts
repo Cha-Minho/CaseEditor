@@ -5,6 +5,25 @@ import { supabase } from "./supabase";
 
 type Syncable = Topic | CaseItem | CaseNotes | UiState;
 type RemoteRow = { updated_at?: string };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: unknown) {
+  return typeof value === "string" && UUID_RE.test(value);
+}
+
+function hasValidRemoteIds(table: string, payload: Syncable) {
+  if (!isUuid(payload.user_id)) return false;
+  if (table === "topics") {
+    const topic = payload as Topic;
+    return isUuid(topic.id) && (!topic.parent_id || isUuid(topic.parent_id));
+  }
+  if (table === "cases") {
+    const caseItem = payload as CaseItem;
+    return isUuid(caseItem.id) && (!caseItem.topic_id || isUuid(caseItem.topic_id));
+  }
+  if (table === "case_notes") return isUuid((payload as CaseNotes).case_id);
+  return true;
+}
 
 function newer<T extends { updated_at: string }>(local: T | undefined, remote: T) {
   if (!local) return remote;
@@ -64,6 +83,10 @@ export async function pushQueue(userId: string) {
   for (const item of queue) {
     const remoteKey = item.table_name === "case_notes" ? "case_id" : item.table_name === "user_ui_state" ? "user_id" : "id";
     const payload = item.payload as Syncable;
+    if (!hasValidRemoteIds(item.table_name, payload)) {
+      await remove("sync_queue", item.id);
+      continue;
+    }
     const { data: remote, error: readError } = await supabase
       .from(item.table_name)
       .select("updated_at")

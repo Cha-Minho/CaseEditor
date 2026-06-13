@@ -400,8 +400,15 @@ export function useAppStore(userId: string | null) {
       ...snapshot.notes.map((item) => recordChange(activeUserId, "case_notes", item)),
       recordChange(activeUserId, "user_ui_state", mergedUiState)
     ]);
+    if (userId && navigator.onLine) {
+      setSyncMessage("가져온 JSON 업로드 중");
+      await syncNow(activeUserId);
+      await load();
+      setSyncMessage("가져온 JSON을 계정에 저장함");
+      return;
+    }
     scheduleSync();
-  }, [activeUserId, scheduleSync, selectedCaseId, uiState]);
+  }, [activeUserId, load, scheduleSync, selectedCaseId, uiState, userId]);
 
   const visibleTopics = useMemo(() => topics.filter((topic) => !topic.deleted_at), [topics]);
   const visibleCases = useMemo(() => cases.filter((item) => !item.deleted_at), [cases]);

@@ -35,7 +35,7 @@ export function JsonImportView({ userId, onImport }: Props) {
   async function runImport() {
     if (!snapshot) return;
     await onImport(snapshot);
-    setMessage("가져오기가 끝났습니다. 온라인이면 곧 계정 저장소로 동기화됩니다.");
+    setMessage("가져오기가 끝났습니다. 온라인 상태라면 계정 DB 업로드까지 시도했습니다.");
   }
 
   return (

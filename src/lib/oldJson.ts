@@ -20,6 +20,10 @@ type OldCase = Record<string, unknown> & {
   important?: boolean;
 };
 
+function isUuid(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? value : [];
 }
@@ -65,8 +69,9 @@ export function convertOldJson(input: unknown, userId: string): AppSnapshot {
   const oldCases = asArray<OldCase>(oldState.cases);
   const cases: CaseItem[] = oldCases.map((item, index) => {
     const topicId = html(item.topicId || item.topic_id);
+    const id = isUuid(item.id) ? item.id : makeId("case");
     return {
-      id: item.id || makeId("case"),
+      id,
       user_id: userId,
       topic_id: topicId ? topicMap.get(topicId) || null : null,
       title: item.title || item.caseNo || item.case_no || `빈 판례 ${index + 1}`,

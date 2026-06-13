@@ -71,7 +71,6 @@ export default function App() {
         configured={supabaseConfigured}
         signedIn={Boolean(session)}
         online={online}
-        syncMessage={store.syncMessage}
       />
 
       {panel === "topics" && (
@@ -150,7 +149,6 @@ export default function App() {
           selectedNotes={store.selectedNotes}
           collapsedFields={store.uiState.collapsed_fields}
           splitWidth={store.uiState.split_width}
-          syncMessage={store.syncMessage}
           onSelectCase={store.setSelectedCaseId}
           onUpdateCase={store.updateCase}
           onUpdateField={store.updateNoteField}

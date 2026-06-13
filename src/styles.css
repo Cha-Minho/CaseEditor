@@ -172,8 +172,7 @@ select:focus,
 }
 
 .toolbar-status strong,
-.toolbar-status span,
-.toolbar-status small {
+.toolbar-status span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -189,11 +188,6 @@ select:focus,
 
 .toolbar-status.offline span {
   color: #ffd29d;
-}
-
-.toolbar-status small {
-  color: var(--muted);
-  font-size: 10px;
 }
 
 .workspace {
@@ -256,9 +250,9 @@ select:focus,
   font-size: 18px;
   min-height: 28px;
   padding: 0 9px;
-  position: sticky;
-  top: 10px;
-  left: calc(100% - 42px);
+  position: absolute;
+  right: 14px;
+  top: 16px;
   z-index: 3;
 }
 
@@ -276,6 +270,10 @@ select:focus,
   position: sticky;
   top: 0;
   z-index: 2;
+}
+
+.panel-header {
+  padding-right: 46px;
 }
 
 .panel-header h2,
@@ -325,6 +323,12 @@ select:focus,
 .topic-line.muted {
   color: var(--muted);
   cursor: default;
+}
+
+.topic-line.muted.active {
+  background: rgba(23, 107, 95, 0.08);
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .twisty {
@@ -1052,8 +1056,7 @@ label,
     font-size: 11px;
   }
 
-  .toolbar-status span,
-  .toolbar-status small {
+  .toolbar-status span {
     font-size: 10px;
   }
 
@@ -1082,7 +1085,6 @@ label,
   .panel-close {
     border-radius: 999px;
     right: 12px;
-    left: auto;
     top: 8px;
   }
 

@@ -1,5 +1,7 @@
 import type { CaseItem, Topic } from "../types";
 
+const UNCLASSIFIED_TOPIC_ID = "__unclassified__";
+
 type Props = {
   topics: Topic[];
   cases: CaseItem[];
@@ -16,6 +18,7 @@ type Props = {
 export function TopicTree(props: Props) {
   const roots = props.topics.filter((topic) => !topic.parent_id).sort((a, b) => a.sort_order - b.sort_order);
   const unclassified = props.cases.filter((item) => !item.topic_id);
+  const unclassifiedOpen = props.expandedIds.includes(UNCLASSIFIED_TOPIC_ID);
 
   function renameTopic(topic: Topic) {
     const nextName = window.prompt("목차 이름", topic.name)?.trim();
@@ -92,18 +95,22 @@ export function TopicTree(props: Props) {
         {unclassified.length > 0 && (
           <div className="topic-node unclassified-node">
             <div
-              className="topic-line muted"
+              className={`topic-line muted ${unclassifiedOpen ? "active" : ""}`}
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => {
                 const caseId = event.dataTransfer.getData("case-id");
                 if (caseId) props.onMoveCase(caseId, null);
               }}
             >
-              <span className="twisty ghost">•</span>
-              <span className="topic-name static"><span>미분류</span></span>
+              <button className="twisty" onClick={() => props.onToggleTopic(UNCLASSIFIED_TOPIC_ID)}>
+                {unclassifiedOpen ? "▾" : "▸"}
+              </button>
+              <button className="topic-name" onClick={() => props.onToggleTopic(UNCLASSIFIED_TOPIC_ID)}>
+                <span>미분류</span>
+              </button>
               <span className="count">{unclassified.length}</span>
             </div>
-            <div className="children">{unclassified.map((caseItem) => renderCase(caseItem))}</div>
+            {unclassifiedOpen && <div className="children">{unclassified.map((caseItem) => renderCase(caseItem))}</div>}
           </div>
         )}
       </div>

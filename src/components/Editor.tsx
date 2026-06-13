@@ -12,7 +12,6 @@ type Props = {
   selectedNotes: CaseNotes | null;
   collapsedFields: string[];
   splitWidth: number;
-  syncMessage: string;
   onSelectCase: (id: string) => void;
   onUpdateCase: (id: string, patch: Partial<CaseItem>) => void;
   onUpdateField: (caseId: string, field: EditableFieldKey, value: string) => void;
@@ -29,7 +28,6 @@ export function Editor({
   selectedNotes,
   collapsedFields,
   splitWidth,
-  syncMessage,
   onSelectCase,
   onUpdateCase,
   onUpdateField,
@@ -99,7 +97,6 @@ export function Editor({
           <div className="case-meta">
             <span>{selectedCase.case_no || "사건번호 없음"}</span>
             <span>{topicPath}</span>
-            <span>{syncMessage}</span>
           </div>
           </div>
           <div className="folder-move">

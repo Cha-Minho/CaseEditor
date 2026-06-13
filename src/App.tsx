@@ -15,7 +15,7 @@ type Panel = "topics" | "search" | "import" | "status" | null;
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
-  const [panel, setPanel] = useState<Panel>("topics");
+  const [panel, setPanel] = useState<Panel>(null);
   const [authReady, setAuthReady] = useState(!supabaseConfigured);
   const [online, setOnline] = useState(navigator.onLine);
   const userId = session?.user.id || localUserId();

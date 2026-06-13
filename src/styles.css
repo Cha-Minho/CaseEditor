@@ -1,14 +1,13 @@
 :root {
-  --bg: #f5f7f4;
+  color-scheme: light;
+  --bg: #f7f8f5;
   --panel: #ffffff;
-  --panel-soft: #f0f5f3;
-  --ink: #1f282b;
-  --muted: #69757a;
+  --panel-soft: #eef4f2;
+  --ink: #202529;
+  --muted: #6d757b;
   --line: #d7ded9;
   --line-strong: #b8c5be;
   --brand: #176b5f;
-  --brand-soft: #e5f0ed;
-  --brand-dark: #123f39;
   --brand-2: #c74634;
   --accent: #dca83f;
   --mark: #fff29a;
@@ -16,8 +15,7 @@
   --radius: 8px;
   color: var(--ink);
   background: var(--bg);
-  font-family: "Segoe UI", "Noto Sans KR", system-ui, sans-serif;
-  font-size: 15px;
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
 }
 
 * {
@@ -26,69 +24,145 @@
 
 body {
   margin: 0;
+  background:
+    linear-gradient(180deg, rgba(23, 107, 95, 0.07), rgba(247, 248, 245, 0) 260px),
+    var(--bg);
 }
 
 button,
 input,
+textarea,
 select {
   font: inherit;
 }
 
 button {
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--ink);
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: var(--ink);
+  color: #fff;
   cursor: pointer;
-  min-height: 32px;
+  min-height: 36px;
+  padding: 0 12px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button.secondary {
+  background: #fff;
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+button.brand,
 button.active {
   background: var(--brand);
-  color: var(--panel);
+  color: #fff;
 }
 
-button:hover {
-  background: var(--panel-soft);
+button.warn {
+  background: var(--brand-2);
+  color: #fff;
+}
+
+input,
+select,
+.rich-box {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink);
+  outline: none;
+}
+
+input,
+select {
+  height: 38px;
+  padding: 0 11px;
+}
+
+input:focus,
+select:focus,
+.rich-box:focus {
   border-color: var(--brand);
-}
-
-.toolbar button:hover,
-.toolbar button.active {
-  background: var(--brand);
-  color: var(--panel);
+  box-shadow: 0 0 0 3px rgba(23, 107, 95, 0.13);
 }
 
 .app-shell {
   display: grid;
-  grid-template-columns: 72px 1fr;
-  min-height: 100vh;
+  grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  height: 100vh;
+  overflow: hidden;
 }
 
 .toolbar {
   align-items: stretch;
-  background: var(--brand-dark);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+  border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 8px;
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 12px;
+  z-index: 10;
 }
 
 .toolbar button {
-  border-color: transparent;
+  width: 100%;
   font-size: 13px;
-  min-height: 42px;
-  padding: 0 4px;
+}
+
+.brand-mark {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-icon {
+  background: var(--brand);
+  border-radius: 8px;
+  color: #fff;
+  display: grid;
+  flex: 0 0 auto;
+  font-weight: 800;
+  height: 38px;
+  letter-spacing: 0;
+  place-items: center;
+  width: 38px;
+}
+
+.brand-mark h1 {
+  font-size: 18px;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  margin: 3px 0 0;
+}
+
+.toolbar button:not(.active) {
+  background: #fff;
+  border-color: var(--line-strong);
+  color: var(--ink);
 }
 
 .toolbar-status {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 6px;
-  color: var(--panel);
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
   display: grid;
   gap: 2px;
   line-height: 1.2;
@@ -109,7 +183,7 @@ button:hover {
 }
 
 .toolbar-status span {
-  color: #d9e8dd;
+  color: var(--brand);
   font-size: 11px;
 }
 
@@ -118,12 +192,16 @@ button:hover {
 }
 
 .toolbar-status small {
-  color: #c8d0cc;
+  color: var(--muted);
   font-size: 10px;
 }
 
 .workspace {
+  display: block;
+  height: 100%;
   min-width: 0;
+  overflow: hidden;
+  padding: 10px;
 }
 
 .panel-layer {
@@ -152,35 +230,35 @@ button:hover {
 .floating-panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 0 var(--radius) var(--radius) 0;
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
-  height: 100vh;
-  left: 72px;
+  bottom: 12px;
+  height: auto;
+  left: 204px;
   min-width: 360px;
   overflow: auto;
   position: fixed;
   pointer-events: auto;
   resize: horizontal;
-  top: 0;
-  width: 520px;
-  z-index: 16;
+  top: 12px;
+  width: min(585px, calc(100vw - 230px));
+  z-index: 30;
+}
+
+.search-panel {
+  width: min(690px, calc(100vw - 230px));
 }
 
 .panel-close {
-  align-items: center;
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
+  background: transparent;
+  border: 0;
   color: var(--muted);
-  display: flex;
   font-size: 18px;
-  height: 30px;
-  justify-content: center;
-  min-height: 30px;
-  padding: 0;
+  min-height: 28px;
+  padding: 0 9px;
   position: sticky;
   top: 10px;
   left: calc(100% - 42px);
-  width: 30px;
   z-index: 3;
 }
 
@@ -191,7 +269,7 @@ button:hover {
 .panel-header,
 .editor-head {
   align-items: center;
-  background: var(--panel);
+  background: #fafcf9;
   display: flex;
   gap: 10px;
   justify-content: space-between;
@@ -201,9 +279,198 @@ button:hover {
 }
 
 .panel-header h2,
-.editor-column h2 {
+.editor-column h2,
+.column-heading h3 {
   font-size: 15px;
   margin: 0;
+}
+
+.tree {
+  display: grid;
+  gap: 4px;
+  position: relative;
+  user-select: none;
+}
+
+.topic-panel-content {
+  padding-top: 0;
+}
+
+.topic-node {
+  border-radius: 7px;
+}
+
+.topic-line {
+  align-items: center;
+  border-radius: 7px;
+  cursor: grab;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: 24px minmax(0, 1fr) auto auto;
+  height: 36px;
+  padding: 0 4px 0 0;
+  position: relative;
+}
+
+.topic-line:hover {
+  background: #f1f5f1;
+}
+
+.topic-line.active {
+  background: rgba(23, 107, 95, 0.12);
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.topic-line.muted {
+  color: var(--muted);
+  cursor: default;
+}
+
+.twisty {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  transform: none;
+  width: 24px;
+}
+
+.twisty.ghost {
+  display: grid;
+  place-items: center;
+}
+
+.topic-name {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: inherit;
+  display: flex;
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 0 5px;
+  text-align: left;
+  transform: none;
+}
+
+.topic-name.static {
+  min-height: 0;
+}
+
+.topic-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  align-items: center;
+  background: var(--panel-soft);
+  border-radius: 999px;
+  color: var(--brand);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  min-width: 28px;
+  padding: 0 8px;
+}
+
+.node-buttons {
+  align-items: center;
+  display: inline-flex;
+  gap: 2px;
+  opacity: 0.2;
+}
+
+.topic-line:hover .node-buttons,
+.topic-line.active .node-buttons {
+  opacity: 1;
+}
+
+.node-buttons button {
+  background: #fff;
+  border-color: var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  min-height: 28px;
+  padding: 0 8px;
+}
+
+.children {
+  border-left: 1px solid var(--line);
+  display: grid;
+  gap: 3px;
+  margin-left: 18px;
+  padding-left: 5px;
+}
+
+.tree-case-line {
+  align-items: start;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--ink);
+  cursor: grab;
+  display: grid;
+  gap: 5px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  min-height: 32px;
+  padding: 6px 7px;
+  text-align: left;
+  transform: none;
+}
+
+.tree-case-line:hover {
+  background: #fbfcfa;
+  border-color: var(--line);
+  transform: none;
+}
+
+.tree-case-line.active {
+  background: rgba(23, 107, 95, 0.10);
+  border-color: rgba(23, 107, 95, 0.26);
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.tree-case-star {
+  color: #d2a33a;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.tree-case-dot {
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.tree-case-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tree-case-title,
+.tree-case-no {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-case-title {
+  line-height: 1.35;
+}
+
+.tree-case-no {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
 }
 
 .tree-list,
@@ -353,25 +620,28 @@ small,
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 24px);
-  margin: 12px;
-  min-height: calc(100vh - 24px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   padding: 0;
 }
 
 .editor-head {
+  align-items: stretch;
   border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
   margin: 0;
-  padding: 10px 14px;
+  padding: 10px;
 }
 
 .editor-head h1 {
   font-size: 20px;
-  line-height: 1.25;
+  line-height: 1.35;
   margin: 0 0 6px;
+  overflow-wrap: anywhere;
   outline-color: #d9a441;
 }
 
@@ -381,77 +651,151 @@ small,
   gap: 10px;
 }
 
+.editor-tools,
 .editor-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   justify-content: flex-end;
-  max-width: 560px;
 }
 
-.editor-actions select {
-  max-width: 220px;
+.editor-tools button,
+.editor-actions button {
+  font-size: 13px;
+  min-height: 32px;
 }
 
-.split-editor {
+.editor-tools button.active-tool {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1f241f;
+  font-weight: 800;
+}
+
+.selected-title {
+  align-items: center;
   display: grid;
-  flex: 1;
-  gap: 0;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+}
+
+#editorHeading[contenteditable="true"] {
+  border-radius: 6px;
+  cursor: text;
+  margin-left: -4px;
+  padding: 2px 4px;
+}
+
+#editorHeading[contenteditable="true"]:focus {
+  background: rgba(255, 255, 255, 0.82);
+  outline: 2px solid rgba(23, 107, 95, 0.22);
+}
+
+.folder-move {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(190px, 1fr);
+  min-width: 0;
+}
+
+label,
+.field-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.editor-body {
+  font-size: calc(1em - 1pt);
   min-height: 0;
   overflow: hidden;
-  padding: 0 12px 16px;
+  padding: 10px;
+}
+
+.split-editor,
+.editor-split {
+  display: grid;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .editor-column {
+  align-content: start;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 10px;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
   overflow: auto;
-  padding: 0 12px;
+  overscroll-behavior: contain;
+  padding: 10px;
   scrollbar-gutter: stable;
 }
 
+.reference-column {
+  background: rgba(238, 244, 242, 0.58);
+}
+
+.note-column {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(23, 107, 95, 0.04);
+}
+
+.column-heading,
 .editor-column h2 {
-  background: var(--panel);
+  background: #fff;
   border-bottom: 1px solid var(--line);
-  color: var(--brand);
-  padding: 8px 0 6px;
+  margin: -10px -10px 2px;
+  padding: 10px 10px 8px;
   position: sticky;
-  top: 0;
-  z-index: 1;
+  top: -10px;
+  z-index: 2;
+}
+
+.reference-column .column-heading {
+  background: var(--panel-soft);
 }
 
 .split-resizer {
-  align-self: stretch;
-  background:
-    linear-gradient(90deg, transparent 0 4px, var(--line-strong) 4px 6px, transparent 6px 100%);
+  background: var(--line);
   border-radius: 999px;
   cursor: col-resize;
-  height: auto;
-  margin: 0;
+  margin: 0 3px;
+  min-width: 2px;
+  position: relative;
   touch-action: none;
-  width: 10px;
 }
 
 .split-resizer:hover,
 .split-resizer:focus {
-  background:
-    linear-gradient(90deg, transparent 0 3px, var(--brand) 3px 7px, transparent 7px 100%);
+  background: var(--brand);
   outline: none;
 }
 
-.editable-field {
-  border-bottom: 1px solid var(--line);
-  padding: 7px 0 10px;
+.editable-field,
+.field {
+  display: grid;
+  gap: 6px;
 }
 
 .field-heading {
   align-items: center;
-  background: var(--panel-soft);
+  background: transparent;
   border: 0;
-  color: var(--brand);
+  color: var(--muted);
   display: flex;
+  font-size: 12px;
+  font-weight: 800;
   justify-content: space-between;
   margin-bottom: 8px;
-  padding: 7px 9px;
+  min-height: 28px;
+  padding: 0;
   width: 100%;
 }
 
@@ -460,11 +804,19 @@ small,
   border: 1px solid var(--line);
   border-radius: 6px;
   line-height: 1.58;
-  min-height: 96px;
+  min-height: 124px;
   outline-color: var(--accent);
   overflow-wrap: anywhere;
-  padding: 12px;
+  padding: 11px 12px;
   white-space: pre-wrap;
+}
+
+.reference-column .rich-box {
+  min-height: 360px;
+}
+
+.note-column .rich-box {
+  min-height: 180px;
 }
 
 .rich-box.tool-active {
@@ -683,6 +1035,10 @@ small,
     padding: 0 10px;
   }
 
+  .brand-mark {
+    display: none;
+  }
+
   .toolbar-status {
     align-content: center;
     border-radius: 10px;
@@ -731,7 +1087,8 @@ small,
   }
 
   .editor-head,
-  .split-editor {
+  .split-editor,
+  .editor-split {
     display: block;
   }
 
@@ -764,6 +1121,17 @@ small,
     gap: 5px 8px;
   }
 
+  .selected-title {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .folder-move {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .editor-tools,
   .editor-actions {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -771,6 +1139,7 @@ small,
     max-width: none;
   }
 
+  .editor-tools button,
   .editor-actions button,
   .editor-actions select {
     font-size: 12px;
@@ -784,18 +1153,27 @@ small,
     max-width: none;
   }
 
-  .split-editor {
+  .editor-body {
     overflow: visible;
     padding: 0 10px calc(76px + env(safe-area-inset-bottom));
   }
 
-  .editor-column {
+  .split-editor,
+  .editor-split {
     overflow: visible;
-    padding: 0;
   }
 
+  .editor-column {
+    border-radius: var(--radius);
+    height: auto;
+    margin-bottom: 10px;
+    overflow: visible;
+    padding: 10px;
+  }
+
+  .column-heading,
   .editor-column h2 {
-    background: var(--panel);
+    margin: -10px -10px 2px;
     top: 0;
   }
 

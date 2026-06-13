@@ -85,8 +85,10 @@ export function Editor({
   return (
     <section className="editor">
       <header className="editor-head">
-        <div>
+        <div className="selected-title">
+          <div>
           <h1
+            id="editorHeading"
             contentEditable
             suppressContentEditableWarning
             spellCheck={false}
@@ -99,27 +101,32 @@ export function Editor({
             <span>{topicPath}</span>
             <span>{syncMessage}</span>
           </div>
+          </div>
+          <div className="folder-move">
+            <span className="field-label">폴더 이동</span>
+            <select value={selectedCase.topic_id || ""} onChange={(event) => onUpdateCase(selectedCase.id, { topic_id: event.target.value || null })}>
+              <option value="">미분류</option>
+              {topics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name}</option>)}
+            </select>
+          </div>
         </div>
-        <div className="editor-actions">
-          <button className={selectedCase.important ? "active" : ""} onClick={() => onUpdateCase(selectedCase.id, { important: !selectedCase.important })}>
+        <div className="editor-tools">
+          <button className={selectedCase.important ? "brand" : "secondary"} onClick={() => onUpdateCase(selectedCase.id, { important: !selectedCase.important })}>
             {selectedCase.important ? "★ 중요" : "☆ 중요"}
           </button>
-          <select value={selectedCase.topic_id || ""} onChange={(event) => onUpdateCase(selectedCase.id, { topic_id: event.target.value || null })}>
-            <option value="">미분류</option>
-            {topics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name}</option>)}
-          </select>
-          <button onClick={() => onUpdateCase(selectedCase.id, { deleted_at: new Date().toISOString() })}>삭제</button>
-          <button className={toolMode === "highlight" ? "active" : ""} onClick={() => setToolMode(toolMode === "highlight" ? null : "highlight")}>형광펜</button>
-          <button className={toolMode === "erase" ? "active" : ""} onClick={() => setToolMode(toolMode === "erase" ? null : "erase")}>지우개</button>
+          <button className="warn" onClick={() => onUpdateCase(selectedCase.id, { deleted_at: new Date().toISOString() })}>삭제</button>
+          <button className={toolMode === "highlight" ? "active-tool" : "secondary"} onClick={() => setToolMode(toolMode === "highlight" ? null : "highlight")}>형광펜</button>
+          <button className={toolMode === "erase" ? "active-tool" : "secondary"} onClick={() => setToolMode(toolMode === "erase" ? null : "erase")}>지우개</button>
         </div>
       </header>
 
+      <div className="editor-body">
       <div
-        className="split-editor"
-        style={{ gridTemplateColumns: `${splitWidth}fr 10px ${100 - splitWidth}fr` }}
+        className="editor-split"
+        style={{ gridTemplateColumns: `minmax(260px, ${splitWidth}%) 8px minmax(260px, 1fr)` }}
       >
-        <div className="editor-column">
-          <h2>참고자료</h2>
+        <div className="editor-column reference-column">
+          <div className="column-heading"><h3>참고자료</h3></div>
           {leftFields.map((field) => (
             <RichEditableField
               key={field}
@@ -149,8 +156,8 @@ export function Editor({
             if (event.key === "ArrowRight") onSaveUi({ split_width: Math.min(72, splitWidth + 2) });
           }}
         />
-        <div className="editor-column">
-          <h2>내 정리</h2>
+        <div className="editor-column note-column">
+          <div className="column-heading"><h3>내 정리</h3></div>
           {rightFields.map((field) => (
             <RichEditableField
               key={field}
@@ -165,6 +172,7 @@ export function Editor({
             />
           ))}
         </div>
+      </div>
       </div>
       <select className="mobile-case-switcher" value={selectedCase.id} onChange={(event) => onSelectCase(event.target.value)}>
         {cases.map((caseItem) => <option key={caseItem.id} value={caseItem.id}>{caseItem.title}</option>)}

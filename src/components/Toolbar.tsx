@@ -18,6 +18,13 @@ export function Toolbar({ activePanel, configured, signedIn, online, syncMessage
 
   return (
     <nav className="toolbar" aria-label="앱 도구">
+      <div className="brand-mark">
+        <div className="brand-icon">判</div>
+        <div>
+          <h1>판례 정리함</h1>
+          <p className="subtitle">Case notes organizer</p>
+        </div>
+      </div>
       <button className={activePanel === "topics" ? "active" : ""} onClick={() => onPanelChange("topics")}>목차</button>
       <button className={activePanel === "search" ? "active" : ""} onClick={() => onPanelChange("search")}>검색</button>
       <button onClick={onAddBlank}>빈 판례</button>

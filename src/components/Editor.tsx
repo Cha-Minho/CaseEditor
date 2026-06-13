@@ -16,6 +16,7 @@ type Props = {
   onUpdateCase: (id: string, patch: Partial<CaseItem>) => void;
   onUpdateField: (caseId: string, field: EditableFieldKey, value: string) => void;
   onSaveUi: (patch: Partial<UiState>) => void;
+  onAddBlank: () => void;
 };
 
 const leftFields: EditableFieldKey[] = ["source_html", "holding_html", "judgment_summary_html"];
@@ -31,7 +32,8 @@ export function Editor({
   onSelectCase,
   onUpdateCase,
   onUpdateField,
-  onSaveUi
+  onSaveUi,
+  onAddBlank
 }: Props) {
   const [toolMode, setToolMode] = useState<ToolMode>(null);
   const topicPath = useMemo(() => {
@@ -75,7 +77,8 @@ export function Editor({
     return (
       <section className="empty-editor">
         <h1>판례 정리함</h1>
-        <p>왼쪽 도구막대에서 판례를 만들거나 기존 JSON을 가져오세요.</p>
+        <p>아래 도구막대에서 목차와 검색을 열거나 판례를 만들어보세요.</p>
+        <button className="brand" onClick={onAddBlank}>빈 판례 만들기</button>
       </section>
     );
   }

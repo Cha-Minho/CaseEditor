@@ -153,6 +153,7 @@ export default function App() {
           onUpdateCase={store.updateCase}
           onUpdateField={store.updateNoteField}
           onSaveUi={store.saveUiState}
+          onAddBlank={() => store.addBlankCase(null)}
         />
       </main>
     </div>

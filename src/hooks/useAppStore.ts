@@ -249,6 +249,40 @@ export function useAppStore(userId: string | null) {
     );
   }, [persistTopic]);
 
+  const deleteTopic = useCallback((id: string) => {
+    const deletedAt = nowIso();
+    const childMap = new Map<string | null, Topic[]>();
+    topics.forEach((topic) => {
+      const key = topic.parent_id || null;
+      childMap.set(key, [...(childMap.get(key) || []), topic]);
+    });
+
+    const collect = (topicId: string, out = new Set<string>()) => {
+      out.add(topicId);
+      (childMap.get(topicId) || []).forEach((child) => collect(child.id, out));
+      return out;
+    };
+
+    const ids = collect(id);
+    setTopics((current) =>
+      current.map((topic) => {
+        if (!ids.has(topic.id)) return topic;
+        const next = { ...topic, deleted_at: deletedAt, updated_at: deletedAt };
+        persistTopic(next).catch((error) => setSyncMessage(error.message));
+        return next;
+      })
+    );
+    setCases((current) =>
+      current.map((item) => {
+        if (!item.topic_id || !ids.has(item.topic_id)) return item;
+        const next = { ...item, topic_id: null, updated_at: deletedAt };
+        persistCase(next).catch((error) => setSyncMessage(error.message));
+        return next;
+      })
+    );
+    saveUiState({ expanded_topic_ids: uiState.expanded_topic_ids.filter((topicId) => !ids.has(topicId)) });
+  }, [persistCase, persistTopic, saveUiState, topics, uiState.expanded_topic_ids]);
+
   const addBlankCase = useCallback((topicId: string | null = null) => {
     const timestamp = nowIso();
     const caseItem: CaseItem = {
@@ -387,6 +421,7 @@ export function useAppStore(userId: string | null) {
     setSelectedCaseId,
     addTopic,
     updateTopic,
+    deleteTopic,
     addBlankCase,
     addApiCase,
     updateCase,

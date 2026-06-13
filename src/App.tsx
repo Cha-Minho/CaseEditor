@@ -89,11 +89,12 @@ export default function App() {
                 const expanded = new Set(store.uiState.expanded_topic_ids);
                 expanded.has(id) ? expanded.delete(id) : expanded.add(id);
                 store.saveUiState({ expanded_topic_ids: Array.from(expanded) });
-              }}
-              onAddTopic={store.addTopic}
-              onRenameTopic={(id, name) => store.updateTopic(id, { name })}
-              onMoveCase={(caseId, topicId) => store.updateCase(caseId, { topic_id: topicId })}
-            />
+            }}
+            onAddTopic={store.addTopic}
+            onRenameTopic={(id, name) => store.updateTopic(id, { name })}
+            onDeleteTopic={store.deleteTopic}
+            onMoveCase={(caseId, topicId) => store.updateCase(caseId, { topic_id: topicId })}
+          />
           </aside>
         </div>
       )}

@@ -28,6 +28,13 @@ function html(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
+function unwrapState(input: unknown): Record<string, unknown> {
+  const root = input as Record<string, unknown>;
+  const candidates = [root, root.state, root.data, root.payload, root.backup]
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item));
+  return candidates.find((item) => Array.isArray(item.topics) || Array.isArray(item.cases)) || root;
+}
+
 function flattenTopics(items: OldTopic[], userId: string, parentId: string | null, out: Topic[], map: Map<string, string>) {
   items.forEach((item, index) => {
     const id = makeId("topic");
@@ -48,8 +55,7 @@ function flattenTopics(items: OldTopic[], userId: string, parentId: string | nul
 }
 
 export function convertOldJson(input: unknown, userId: string): AppSnapshot {
-  const root = input as Record<string, unknown>;
-  const oldState = (root.state || root) as Record<string, unknown>;
+  const oldState = unwrapState(input);
   const timestamp = nowIso();
   const topicMap = new Map<string, string>();
   const topics: Topic[] = [];

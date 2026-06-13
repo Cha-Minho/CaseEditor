@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { PointerEvent, useMemo, useState } from "react";
 import type { CaseItem, CaseNotes, EditableFieldKey, Topic, UiState } from "../types";
 import { FIELD_LABELS } from "../types";
 import { RichEditableField } from "./RichEditableField";
@@ -54,6 +54,25 @@ export function Editor({
     onSaveUi({ collapsed_fields: Array.from(set) });
   }
 
+  function startSplitResize(event: PointerEvent<HTMLDivElement>) {
+    const container = event.currentTarget.parentElement;
+    if (!container) return;
+    event.preventDefault();
+
+    const move = (moveEvent: PointerEvent | globalThis.PointerEvent) => {
+      const rect = container.getBoundingClientRect();
+      const percent = Math.round(((moveEvent.clientX - rect.left) / rect.width) * 100);
+      onSaveUi({ split_width: Math.max(28, Math.min(72, percent)) });
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+    };
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+  }
+
   if (!selectedCase || !selectedNotes) {
     return (
       <section className="empty-editor">
@@ -97,7 +116,7 @@ export function Editor({
 
       <div
         className="split-editor"
-        style={{ gridTemplateColumns: `${splitWidth}fr 8px ${100 - splitWidth}fr` }}
+        style={{ gridTemplateColumns: `${splitWidth}fr 10px ${100 - splitWidth}fr` }}
       >
         <div className="editor-column">
           <h2>참고자료</h2>
@@ -115,14 +134,20 @@ export function Editor({
             />
           ))}
         </div>
-        <input
+        <div
           className="split-resizer"
-          type="range"
-          min="28"
-          max="72"
-          value={splitWidth}
+          role="separator"
+          tabIndex={0}
           aria-label="참고자료와 내 정리 폭 조절"
-          onChange={(event) => onSaveUi({ split_width: Number(event.target.value) })}
+          aria-orientation="vertical"
+          aria-valuemin={28}
+          aria-valuemax={72}
+          aria-valuenow={splitWidth}
+          onPointerDown={startSplitResize}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft") onSaveUi({ split_width: Math.max(28, splitWidth - 2) });
+            if (event.key === "ArrowRight") onSaveUi({ split_width: Math.min(72, splitWidth + 2) });
+          }}
         />
         <div className="editor-column">
           <h2>내 정리</h2>

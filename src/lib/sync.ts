@@ -11,6 +11,33 @@ function newer<T extends { updated_at: string }>(local: T | undefined, remote: T
   return new Date(remote.updated_at).getTime() > new Date(local.updated_at).getTime() ? remote : local;
 }
 
+function sortedQueue(items: Awaited<ReturnType<typeof queueItems>>) {
+  const topicItems = items.filter((item) => item.table_name === "topics");
+  const topicPayloads = new Map(topicItems.map((item) => [item.record_id, item.payload as Topic]));
+  const topicDepth = (topic: Topic, seen = new Set<string>()): number => {
+    if (!topic.parent_id || seen.has(topic.id)) return 0;
+    const parent = topicPayloads.get(topic.parent_id);
+    if (!parent) return 0;
+    seen.add(topic.id);
+    return 1 + topicDepth(parent, seen);
+  };
+  const tableRank = {
+    topics: 0,
+    cases: 1,
+    case_notes: 2,
+    user_ui_state: 3
+  } as const;
+
+  return [...items].sort((a, b) => {
+    const rank = tableRank[a.table_name] - tableRank[b.table_name];
+    if (rank !== 0) return rank;
+    if (a.table_name === "topics" && b.table_name === "topics") {
+      return topicDepth(a.payload as Topic) - topicDepth(b.payload as Topic);
+    }
+    return a.created_at.localeCompare(b.created_at);
+  });
+}
+
 export async function recordChange(userId: string, table: "topics" | "cases" | "case_notes" | "user_ui_state", payload: Syncable, op?: string) {
   const recordId =
     "case_id" in payload ? payload.case_id : "id" in payload ? payload.id : payload.user_id;
@@ -33,7 +60,7 @@ export async function recordChange(userId: string, table: "topics" | "cases" | "
 
 export async function pushQueue(userId: string) {
   if (!supabase) return;
-  const queue = await queueItems(userId);
+  const queue = sortedQueue(await queueItems(userId));
   for (const item of queue) {
     const remoteKey = item.table_name === "case_notes" ? "case_id" : item.table_name === "user_ui_state" ? "user_id" : "id";
     const payload = item.payload as Syncable;

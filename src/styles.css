@@ -353,6 +353,9 @@ small,
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 24px);
   margin: 12px;
   min-height: calc(100vh - 24px);
   overflow: hidden;
@@ -392,13 +395,18 @@ small,
 
 .split-editor {
   display: grid;
+  flex: 1;
   gap: 0;
+  min-height: 0;
+  overflow: hidden;
   padding: 0 12px 16px;
 }
 
 .editor-column {
   min-width: 0;
+  overflow: auto;
   padding: 0 12px;
+  scrollbar-gutter: stable;
 }
 
 .editor-column h2 {
@@ -407,7 +415,7 @@ small,
   color: var(--brand);
   padding: 8px 0 6px;
   position: sticky;
-  top: 73px;
+  top: 0;
   z-index: 1;
 }
 
@@ -733,7 +741,10 @@ small,
     border-radius: 0;
     box-shadow: none;
     margin: 0;
+    display: block;
+    height: auto;
     min-height: calc(100dvh - 64px - env(safe-area-inset-bottom));
+    overflow: visible;
   }
 
   .editor-head {
@@ -774,10 +785,12 @@ small,
   }
 
   .split-editor {
+    overflow: visible;
     padding: 0 10px calc(76px + env(safe-area-inset-bottom));
   }
 
   .editor-column {
+    overflow: visible;
     padding: 0;
   }
 

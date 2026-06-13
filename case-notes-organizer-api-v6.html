@@ -2415,7 +2415,7 @@
       button.addEventListener("click", (event) => {
         event.stopPropagation();
         if (event.shiftKey) {
-          selectCaseRange(item.id);
+          selectTopicCaseRange(item.id, item.topicId || null);
         } else if (event.ctrlKey || event.metaKey) {
           toggleCaseSelected(item.id);
           state.lastSelectedCaseId = item.id;
@@ -2831,6 +2831,17 @@
 
     function selectCaseRange(toId) {
       const ids = filteredCases().map((item) => item.id);
+      selectCaseRangeWithinIds(toId, ids);
+    }
+
+    function selectTopicCaseRange(toId, topicId) {
+      const ids = state.cases
+        .filter((item) => !item.deletedAt && (item.topicId || null) === (topicId || null))
+        .map((item) => item.id);
+      selectCaseRangeWithinIds(toId, ids);
+    }
+
+    function selectCaseRangeWithinIds(toId, ids) {
       const anchor = state.lastSelectedCaseId && ids.includes(state.lastSelectedCaseId)
         ? state.lastSelectedCaseId
         : toId;

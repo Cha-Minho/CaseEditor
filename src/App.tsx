@@ -58,6 +58,8 @@ export default function App() {
     return <AuthView />;
   }
 
+  const closePanel = () => setPanel(null);
+
   return (
     <div className="app-shell">
       <Toolbar
@@ -73,54 +75,70 @@ export default function App() {
       />
 
       {panel === "topics" && (
-        <aside className="floating-panel topic-panel" aria-label="목차 팝업">
-          <TopicTree
-            topics={store.topics}
-            cases={store.cases}
-            expandedIds={store.uiState.expanded_topic_ids}
-            selectedCaseId={store.selectedCaseId}
-            onSelectCase={store.setSelectedCaseId}
-            onToggleTopic={(id) => {
-              const expanded = new Set(store.uiState.expanded_topic_ids);
-              expanded.has(id) ? expanded.delete(id) : expanded.add(id);
-              store.saveUiState({ expanded_topic_ids: Array.from(expanded) });
-            }}
-            onAddTopic={store.addTopic}
-            onRenameTopic={(id, name) => store.updateTopic(id, { name })}
-            onMoveCase={(caseId, topicId) => store.updateCase(caseId, { topic_id: topicId })}
-          />
-        </aside>
+        <div className="panel-layer">
+          <button className="panel-backdrop" aria-label="팝업 닫기" onClick={closePanel} />
+          <aside className="floating-panel topic-panel" aria-label="목차 팝업">
+            <button className="panel-close" onClick={closePanel} aria-label="팝업 닫기">×</button>
+            <TopicTree
+              topics={store.topics}
+              cases={store.cases}
+              expandedIds={store.uiState.expanded_topic_ids}
+              selectedCaseId={store.selectedCaseId}
+              onSelectCase={store.setSelectedCaseId}
+              onToggleTopic={(id) => {
+                const expanded = new Set(store.uiState.expanded_topic_ids);
+                expanded.has(id) ? expanded.delete(id) : expanded.add(id);
+                store.saveUiState({ expanded_topic_ids: Array.from(expanded) });
+              }}
+              onAddTopic={store.addTopic}
+              onRenameTopic={(id, name) => store.updateTopic(id, { name })}
+              onMoveCase={(caseId, topicId) => store.updateCase(caseId, { topic_id: topicId })}
+            />
+          </aside>
+        </div>
       )}
 
       {panel === "search" && (
-        <aside className="floating-panel search-panel" aria-label="검색 팝업">
-          <CaseSearchPanel
-            cases={store.cases}
-            topics={store.topics}
-            selectedCaseId={store.selectedCaseId}
-            onSelectCase={store.setSelectedCaseId}
-            onAddApiCase={store.addApiCase}
-            onAddBlank={store.addBlankCase}
-          />
-        </aside>
+        <div className="panel-layer">
+          <button className="panel-backdrop" aria-label="팝업 닫기" onClick={closePanel} />
+          <aside className="floating-panel search-panel" aria-label="검색 팝업">
+            <button className="panel-close" onClick={closePanel} aria-label="팝업 닫기">×</button>
+            <CaseSearchPanel
+              cases={store.cases}
+              topics={store.topics}
+              selectedCaseId={store.selectedCaseId}
+              onSelectCase={store.setSelectedCaseId}
+              onAddApiCase={store.addApiCase}
+              onAddBlank={store.addBlankCase}
+            />
+          </aside>
+        </div>
       )}
 
       {panel === "import" && (
-        <aside className="floating-panel import-panel" aria-label="JSON 가져오기 팝업">
-          <JsonImportView userId={userId} onImport={store.importSnapshot} />
-        </aside>
+        <div className="panel-layer">
+          <button className="panel-backdrop" aria-label="팝업 닫기" onClick={closePanel} />
+          <aside className="floating-panel import-panel" aria-label="JSON 가져오기 팝업">
+            <button className="panel-close" onClick={closePanel} aria-label="팝업 닫기">×</button>
+            <JsonImportView userId={userId} onImport={store.importSnapshot} />
+          </aside>
+        </div>
       )}
 
       {panel === "status" && (
-        <aside className="floating-panel status-panel" aria-label="상태 팝업">
-          <StatusPanel
-            configured={supabaseConfigured}
-            signedIn={Boolean(session)}
-            online={online}
-            syncMessage={store.syncMessage}
-            userEmail={session?.user.email}
-          />
-        </aside>
+        <div className="panel-layer">
+          <button className="panel-backdrop" aria-label="팝업 닫기" onClick={closePanel} />
+          <aside className="floating-panel status-panel" aria-label="상태 팝업">
+            <button className="panel-close" onClick={closePanel} aria-label="팝업 닫기">×</button>
+            <StatusPanel
+              configured={supabaseConfigured}
+              signedIn={Boolean(session)}
+              online={online}
+              syncMessage={store.syncMessage}
+              userEmail={session?.user.email}
+            />
+          </aside>
+        </div>
       )}
 
       <main className="workspace">

@@ -717,10 +717,11 @@ small,
   align-items: center;
   display: grid;
   gap: 8px;
-  grid-template-columns: auto minmax(260px, 1fr);
+  grid-template-columns: auto 66.666%;
+  justify-content: end;
   justify-self: end;
   min-width: 0;
-  width: 66.666%;
+  width: 100%;
 }
 
 .editor-side .editor-tools {

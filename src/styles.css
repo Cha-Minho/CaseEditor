@@ -717,15 +717,20 @@ small,
   align-items: center;
   display: grid;
   gap: 8px;
-  grid-template-columns: auto minmax(360px, 1fr);
+  grid-template-columns: auto minmax(260px, 1fr);
   justify-self: end;
   min-width: 0;
-  width: 100%;
+  width: 66.666%;
 }
 
 .editor-side .editor-tools {
   justify-self: end;
-  width: 100%;
+  width: 66.666%;
+}
+
+.editor-side .editor-tools button {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 label,

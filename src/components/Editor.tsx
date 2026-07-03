@@ -119,8 +119,8 @@ export function Editor({
                 {selectedCase.important ? "★ 중요" : "☆ 중요"}
               </button>
               <button className="warn" onClick={() => onUpdateCase(selectedCase.id, { deleted_at: new Date().toISOString() })}>삭제</button>
-              <button className={toolMode === "highlight" ? "active-tool" : "secondary"} onClick={() => setToolMode(toolMode === "highlight" ? null : "highlight")}>형광펜</button>
-              <button className={toolMode === "erase" ? "active-tool" : "secondary"} onClick={() => setToolMode(toolMode === "erase" ? null : "erase")}>지우개</button>
+              <button className={`desktop-only-tool ${toolMode === "highlight" ? "active-tool" : "secondary"}`} onClick={() => setToolMode(toolMode === "highlight" ? null : "highlight")}>형광펜</button>
+              <button className={`desktop-only-tool ${toolMode === "erase" ? "active-tool" : "secondary"}`} onClick={() => setToolMode(toolMode === "erase" ? null : "erase")}>지우개</button>
             </div>
           </div>
         </div>

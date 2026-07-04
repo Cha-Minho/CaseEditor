@@ -41,7 +41,6 @@ export default function App() {
         cases={store.cases}
         expandedIds={store.uiState.expanded_topic_ids}
         selectedCaseId={store.selectedCaseId}
-        syncMessage={store.syncMessage}
         configured={supabaseConfigured}
         userEmail={session?.user.email}
         onSelectCase={(id) => {
@@ -72,6 +71,8 @@ export default function App() {
         selectedCase={store.selectedCase}
         selectedNotes={store.selectedNotes}
         collapsedFields={store.uiState.collapsed_fields}
+        splitWidth={store.uiState.split_width}
+        onSaveSplit={(width) => store.saveUiState({ split_width: width })}
         onBack={() => setMobileView("list")}
         onUpdateCase={store.updateCase}
         onUpdateField={store.updateNoteField}

@@ -99,7 +99,12 @@ export async function pushQueue(userId: string) {
       continue;
     }
 
-    const { error } = await supabase.from(item.table_name).upsert(item.payload as never);
+    // 로컬 IndexedDB 키로 붙는 id는 원격 user_ui_state 테이블에 없는 컬럼이다
+    const upsertPayload =
+      item.table_name === "user_ui_state" && typeof item.payload === "object" && item.payload
+        ? (({ id: _id, ...rest }: Record<string, unknown>) => rest)(item.payload as Record<string, unknown>)
+        : item.payload;
+    const { error } = await supabase.from(item.table_name).upsert(upsertPayload as never);
     if (error) throw error;
     await remove("sync_queue", item.id);
   }

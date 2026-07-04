@@ -11,7 +11,6 @@ type Props = {
   cases: CaseItem[];
   expandedIds: string[];
   selectedCaseId: string | null;
-  syncMessage: string;
   configured: boolean;
   userEmail?: string;
   onSelectCase: (id: string) => void;
@@ -177,10 +176,6 @@ export function Sidebar(props: Props) {
       </nav>
 
       <footer className="sidebar-foot">
-        <div className="sync-line">
-          <span className="sync-dot" />
-          <span className="sync-text">{props.syncMessage}</span>
-        </div>
         {props.configured && props.userEmail && <div className="account-line">{props.userEmail}</div>}
         <div className="foot-actions">
           <label className="ghost file-button">

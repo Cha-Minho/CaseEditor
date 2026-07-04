@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { PointerEvent, useMemo } from "react";
 import type { CaseItem, CaseNotes, EditableFieldKey, Topic } from "../types";
 import { FIELD_LABELS } from "../types";
 import { RichEditableField } from "./RichEditableField";
@@ -8,10 +8,12 @@ type Props = {
   selectedCase: CaseItem | null;
   selectedNotes: CaseNotes | null;
   collapsedFields: string[];
+  splitWidth: number;
   onBack: () => void;
   onUpdateCase: (id: string, patch: Partial<CaseItem>) => void;
   onUpdateField: (caseId: string, field: EditableFieldKey, value: string) => void;
   onToggleField: (field: EditableFieldKey) => void;
+  onSaveSplit: (width: number) => void;
   onDelete: (id: string) => void;
   onAddBlank: () => void;
 };
@@ -24,10 +26,12 @@ export function Editor({
   selectedCase,
   selectedNotes,
   collapsedFields,
+  splitWidth,
   onBack,
   onUpdateCase,
   onUpdateField,
   onToggleField,
+  onSaveSplit,
   onDelete,
   onAddBlank
 }: Props) {
@@ -62,6 +66,25 @@ export function Editor({
   function requestDelete() {
     if (!selectedCase) return;
     if (window.confirm(`"${selectedCase.title}" 판례를 삭제할까요?`)) onDelete(selectedCase.id);
+  }
+
+  function startSplitResize(event: PointerEvent<HTMLDivElement>) {
+    const container = event.currentTarget.parentElement;
+    if (!container) return;
+    event.preventDefault();
+
+    const move = (moveEvent: globalThis.PointerEvent) => {
+      const rect = container.getBoundingClientRect();
+      const percent = Math.round(((moveEvent.clientX - rect.left) / rect.width) * 100);
+      onSaveSplit(Math.max(25, Math.min(75, percent)));
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+    };
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
   }
 
   return (
@@ -102,21 +125,10 @@ export function Editor({
         </div>
       </header>
 
-      <div className="editor-columns">
-        <section className="field-group">
-          <h2>참고자료</h2>
-          {referenceFields.map((field) => (
-            <RichEditableField
-              key={field}
-              label={FIELD_LABELS[field]}
-              value={selectedNotes[field]}
-              collapsed={collapsedFields.includes(field)}
-              onToggle={() => onToggleField(field)}
-              onChange={(value) => onUpdateField(selectedCase.id, field, value)}
-            />
-          ))}
-        </section>
-
+      <div
+        className="editor-columns"
+        style={{ gridTemplateColumns: `minmax(240px, ${splitWidth}%) 6px minmax(240px, 1fr)` }}
+      >
         <section className="field-group">
           <h2>내 정리</h2>
           <RichEditableField
@@ -130,6 +142,36 @@ export function Editor({
             }}
           />
           {noteFields.map((field) => (
+            <RichEditableField
+              key={field}
+              label={FIELD_LABELS[field]}
+              value={selectedNotes[field]}
+              collapsed={collapsedFields.includes(field)}
+              onToggle={() => onToggleField(field)}
+              onChange={(value) => onUpdateField(selectedCase.id, field, value)}
+            />
+          ))}
+        </section>
+
+        <div
+          className="split-resizer"
+          role="separator"
+          tabIndex={0}
+          aria-label="내 정리와 참고자료 폭 조절"
+          aria-orientation="vertical"
+          aria-valuemin={25}
+          aria-valuemax={75}
+          aria-valuenow={splitWidth}
+          onPointerDown={startSplitResize}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft") onSaveSplit(Math.max(25, splitWidth - 2));
+            if (event.key === "ArrowRight") onSaveSplit(Math.min(75, splitWidth + 2));
+          }}
+        />
+
+        <section className="field-group">
+          <h2>참고자료</h2>
+          {referenceFields.map((field) => (
             <RichEditableField
               key={field}
               label={FIELD_LABELS[field]}

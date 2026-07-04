@@ -315,21 +315,6 @@ select:focus {
   padding-top: 10px;
 }
 
-.sync-line {
-  align-items: center;
-  display: flex;
-  gap: 7px;
-}
-
-.sync-dot {
-  background: #34a765;
-  border-radius: 999px;
-  flex: 0 0 auto;
-  height: 7px;
-  width: 7px;
-}
-
-.sync-text,
 .account-line {
   color: var(--muted);
   font-size: 12px;
@@ -482,9 +467,24 @@ select:focus {
 .editor-columns {
   display: grid;
   flex: 1;
-  gap: 24px;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0;
+  grid-template-columns: minmax(0, 1fr) 6px minmax(0, 1fr);
   padding: 20px 24px 40px;
+}
+
+.split-resizer {
+  border-radius: 999px;
+  cursor: col-resize;
+  margin: 0 9px;
+  min-width: 4px;
+  outline: none;
+  touch-action: none;
+  transition: background 0.15s ease;
+}
+
+.split-resizer:hover,
+.split-resizer:focus {
+  background: rgba(59, 91, 219, 0.35);
 }
 
 .field-group {
@@ -692,6 +692,10 @@ select:focus {
   .editor-columns {
     display: block;
     padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
+  }
+
+  .split-resizer {
+    display: none;
   }
 
   .field-group + .field-group {

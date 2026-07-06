@@ -64,6 +64,10 @@ export default function App() {
           await store.addApiCase(caseNo, null);
         }}
         onImport={store.importSnapshot}
+        onDeleteCases={(ids) => {
+          const deletedAt = new Date().toISOString();
+          ids.forEach((id) => store.updateCase(id, { deleted_at: deletedAt }));
+        }}
         onSignOut={() => supabase?.auth.signOut()}
       />
       <Editor

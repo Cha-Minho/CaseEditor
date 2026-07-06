@@ -141,6 +141,56 @@ select:focus {
   margin: 0;
 }
 
+.head-actions {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.head-actions .select-on {
+  color: var(--brand);
+}
+
+.select-bar {
+  align-items: center;
+  background: var(--brand-soft);
+  border-radius: 10px;
+  color: var(--brand);
+  display: flex;
+  font-size: 12.5px;
+  font-weight: 700;
+  justify-content: space-between;
+  padding: 4px 4px 4px 12px;
+}
+
+.select-bar .danger {
+  background: var(--surface);
+  min-height: 30px;
+}
+
+.checkbox {
+  align-items: center;
+  border: 1.5px solid var(--line);
+  border-radius: 5px;
+  color: #fff;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 11px;
+  height: 16px;
+  justify-content: center;
+  margin-right: 7px;
+  vertical-align: -3px;
+  width: 16px;
+}
+
+.checkbox.on {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.case-item.checked {
+  background: var(--brand-soft);
+}
+
 .search-input {
   border-radius: 10px;
 }
@@ -362,7 +412,7 @@ select:focus {
   flex-direction: column;
   min-height: 0;
   min-width: 0;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .empty-state {
@@ -448,6 +498,27 @@ select:focus {
   width: 140px;
 }
 
+.tool-button {
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.tool-button:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.tool-button.on {
+  background: var(--mark);
+  border-color: #e8cf5a;
+  color: #5c4a00;
+}
+
+.field-box.tool-active {
+  cursor: crosshair;
+}
+
 .star-button {
   color: var(--muted);
   font-size: 17px;
@@ -469,13 +540,24 @@ select:focus {
   flex: 1;
   gap: 0;
   grid-template-columns: minmax(0, 1fr) 6px minmax(0, 1fr);
-  padding: 20px 24px 40px;
+  min-height: 0;
+  padding: 16px 24px 0;
+}
+
+.field-group {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 40px;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .split-resizer {
+  background: var(--line);
   border-radius: 999px;
   cursor: col-resize;
-  margin: 0 9px;
+  margin: 0 10px 40px;
   min-width: 4px;
   outline: none;
   touch-action: none;
@@ -483,8 +565,9 @@ select:focus {
 }
 
 .split-resizer:hover,
-.split-resizer:focus {
-  background: rgba(59, 91, 219, 0.35);
+.split-resizer:focus,
+.split-resizer:active {
+  background: rgba(59, 91, 219, 0.55);
 }
 
 .field-group {
@@ -696,6 +779,16 @@ select:focus {
 
   .split-resizer {
     display: none;
+  }
+
+  .tool-button {
+    display: none;
+  }
+
+  .field-group {
+    overflow: visible;
+    padding-bottom: 0;
+    padding-right: 0;
   }
 
   .field-group + .field-group {

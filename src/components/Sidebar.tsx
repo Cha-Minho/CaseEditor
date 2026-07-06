@@ -21,12 +21,15 @@ type Props = {
   onAddBlank: () => void;
   onAddApiCase: (caseNo: string) => Promise<void>;
   onImport: (snapshot: AppSnapshot) => Promise<void>;
+  onDeleteCases: (ids: string[]) => void;
   onSignOut: () => void;
 };
 
 export function Sidebar(props: Props) {
   const [query, setQuery] = useState("");
   const [caseNo, setCaseNo] = useState("");
+  const [selectMode, setSelectMode] = useState(false);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const needle = query.trim().toLowerCase();
 
   const searchResults = useMemo(() => {
@@ -75,14 +78,37 @@ export function Sidebar(props: Props) {
     }
   }
 
+  function exitSelectMode() {
+    setSelectMode(false);
+    setCheckedIds(new Set());
+  }
+
+  function toggleChecked(id: string) {
+    setCheckedIds((current) => {
+      const next = new Set(current);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function deleteChecked() {
+    if (!checkedIds.size) return;
+    if (window.confirm(`선택한 판례 ${checkedIds.size}개를 삭제할까요?`)) {
+      props.onDeleteCases(Array.from(checkedIds));
+      exitSelectMode();
+    }
+  }
+
   function renderCase(caseItem: CaseItem) {
+    const checked = checkedIds.has(caseItem.id);
     return (
       <button
         key={caseItem.id}
-        className={`case-item ${props.selectedCaseId === caseItem.id ? "active" : ""}`}
-        onClick={() => props.onSelectCase(caseItem.id)}
+        className={`case-item ${props.selectedCaseId === caseItem.id && !selectMode ? "active" : ""} ${checked ? "checked" : ""}`}
+        onClick={() => (selectMode ? toggleChecked(caseItem.id) : props.onSelectCase(caseItem.id))}
       >
         <span className="case-item-title">
+          {selectMode && <span className={`checkbox ${checked ? "on" : ""}`}>{checked ? "✓" : ""}</span>}
           {caseItem.important && <span className="star">★</span>}
           {caseItem.title}
         </span>
@@ -126,8 +152,24 @@ export function Sidebar(props: Props) {
     <aside className="sidebar">
       <header className="sidebar-head">
         <h1>판례 정리함</h1>
-        <button className="ghost" title="폴더 추가" onClick={() => props.onAddTopic(null)}>+ 폴더</button>
+        <span className="head-actions">
+          <button
+            className={`ghost ${selectMode ? "select-on" : ""}`}
+            title="여러 판례 선택"
+            onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+          >
+            {selectMode ? "취소" : "선택"}
+          </button>
+          <button className="ghost" title="폴더 추가" onClick={() => props.onAddTopic(null)}>+ 폴더</button>
+        </span>
       </header>
+
+      {selectMode && (
+        <div className="select-bar">
+          <span>{checkedIds.size}개 선택됨</span>
+          <button className="danger" disabled={!checkedIds.size} onClick={deleteChecked}>삭제</button>
+        </div>
+      )}
 
       <input
         className="search-input"

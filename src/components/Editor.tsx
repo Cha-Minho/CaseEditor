@@ -1,7 +1,7 @@
-import { PointerEvent, useMemo } from "react";
+import { PointerEvent, useMemo, useState } from "react";
 import type { CaseItem, CaseNotes, EditableFieldKey, Topic } from "../types";
 import { FIELD_LABELS } from "../types";
-import { RichEditableField } from "./RichEditableField";
+import { RichEditableField, ToolMode } from "./RichEditableField";
 
 type Props = {
   topics: Topic[];
@@ -35,6 +35,7 @@ export function Editor({
   onDelete,
   onAddBlank
 }: Props) {
+  const [toolMode, setToolMode] = useState<ToolMode>(null);
   const topicPath = useMemo(() => {
     if (!selectedCase?.topic_id) return "미분류";
     const map = new Map(topics.map((topic) => [topic.id, topic]));
@@ -106,6 +107,20 @@ export function Editor({
         </div>
         <div className="editor-controls">
           <button
+            className={`tool-button ${toolMode === "highlight" ? "on" : ""}`}
+            title="드래그한 부분에 형광펜 (PC 전용)"
+            onClick={() => setToolMode(toolMode === "highlight" ? null : "highlight")}
+          >
+            형광펜
+          </button>
+          <button
+            className={`tool-button ${toolMode === "erase" ? "on" : ""}`}
+            title="형광펜 지우기 (PC 전용)"
+            onClick={() => setToolMode(toolMode === "erase" ? null : "erase")}
+          >
+            지우개
+          </button>
+          <button
             className={`star-button ${selectedCase.important ? "on" : ""}`}
             title={selectedCase.important ? "중요 해제" : "중요 표시"}
             onClick={() => onUpdateCase(selectedCase.id, { important: !selectedCase.important })}
@@ -135,6 +150,8 @@ export function Editor({
             label="주요 문구 / 결론 요약"
             value={combinedSummaryHtml}
             collapsed={collapsedFields.includes("summary_html")}
+            toolMode={toolMode}
+            onToolDone={() => setToolMode(null)}
             onToggle={() => onToggleField("summary_html")}
             onChange={(value) => {
               onUpdateField(selectedCase.id, "summary_html", value);
@@ -147,6 +164,8 @@ export function Editor({
               label={FIELD_LABELS[field]}
               value={selectedNotes[field]}
               collapsed={collapsedFields.includes(field)}
+              toolMode={toolMode}
+              onToolDone={() => setToolMode(null)}
               onToggle={() => onToggleField(field)}
               onChange={(value) => onUpdateField(selectedCase.id, field, value)}
             />
@@ -177,6 +196,8 @@ export function Editor({
               label={FIELD_LABELS[field]}
               value={selectedNotes[field]}
               collapsed={collapsedFields.includes(field)}
+              toolMode={toolMode}
+              onToolDone={() => setToolMode(null)}
               onToggle={() => onToggleField(field)}
               onChange={(value) => onUpdateField(selectedCase.id, field, value)}
             />

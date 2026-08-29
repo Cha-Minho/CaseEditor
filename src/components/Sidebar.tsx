@@ -24,7 +24,7 @@ type Props = {
   onDeleteTopic: (id: string) => void;
   onAddBlank: () => void;
   onAddApiCase: (caseNo: string) => Promise<void>;
-  onAddPdfCase: (pdfCase: PdfCaseImport) => Promise<void>;
+  onAddPdfCases: (pdfCases: PdfCaseImport[]) => Promise<void>;
   onImport: (snapshot: AppSnapshot) => Promise<void>;
   onDeleteCases: (ids: string[]) => void;
   onSignOut: () => void;
@@ -93,12 +93,22 @@ export function Sidebar(props: Props) {
   }
 
   async function choosePdfFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
     event.target.value = "";
-    if (!file) return;
+    if (!files.length) return;
     setReadingPdf(true);
     try {
-      await props.onAddPdfCase(await readCasePdf(file));
+      const imported: PdfCaseImport[] = [];
+      const failed: string[] = [];
+      for (const file of files) {
+        try {
+          imported.push(await readCasePdf(file));
+        } catch (error) {
+          failed.push(`${file.name}: ${error instanceof Error ? error.message : "읽지 못했습니다."}`);
+        }
+      }
+      if (imported.length) await props.onAddPdfCases(imported);
+      if (failed.length) window.alert(failed.join("\n"));
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "PDF를 읽지 못했습니다.");
     } finally {
@@ -274,7 +284,7 @@ export function Sidebar(props: Props) {
         <div className="add-secondary-actions">
           <label className={`ghost file-button ${readingPdf ? "is-loading" : ""}`}>
             {readingPdf ? "PDF 읽는 중" : "PDF 판결문"}
-            <input type="file" accept="application/pdf,.pdf" onChange={choosePdfFile} disabled={readingPdf} />
+            <input type="file" accept="application/pdf,.pdf" multiple onChange={choosePdfFile} disabled={readingPdf} />
           </label>
           <button className="ghost blank-case" onClick={props.onAddBlank}>빈 판례</button>
         </div>

@@ -55,6 +55,22 @@ export function Editor({
     return path.join(" / ") || "미분류";
   }, [selectedCase?.topic_id, topics]);
 
+  useEffect(() => {
+    if (!moveMenuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoveMenuOpen(false);
+    };
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (moveMenuRef.current && !moveMenuRef.current.contains(event.target as Node)) setMoveMenuOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+    };
+  }, [moveMenuOpen]);
+
   if (!selectedCase || !selectedNotes) {
     return (
       <main className="editor-pane">
@@ -71,22 +87,6 @@ export function Editor({
     .filter((value) => value.trim())
     .join("<div><br></div>");
   const moveCount = selectedCaseIds.length > 1 ? selectedCaseIds.length : 1;
-
-  useEffect(() => {
-    if (!moveMenuOpen) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMoveMenuOpen(false);
-    };
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      if (moveMenuRef.current && !moveMenuRef.current.contains(event.target as Node)) setMoveMenuOpen(false);
-    };
-    document.addEventListener("keydown", closeOnEscape);
-    document.addEventListener("mousedown", closeOnOutsideClick);
-    return () => {
-      document.removeEventListener("keydown", closeOnEscape);
-      document.removeEventListener("mousedown", closeOnOutsideClick);
-    };
-  }, [moveMenuOpen]);
 
   function requestDelete() {
     if (!selectedCase) return;

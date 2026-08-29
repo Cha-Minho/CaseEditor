@@ -51,6 +51,14 @@ export default function App() {
     store.updateCases(ids, { topic_id: topicId });
   };
 
+  const moveCases = (ids: string[], topicId: string | null) => {
+    const uniqueIds = Array.from(new Set(ids));
+    if (!uniqueIds.length) return;
+    store.updateCases(uniqueIds, { topic_id: topicId });
+    setSelectedCaseIds(uniqueIds);
+    store.setSelectedCaseId(uniqueIds[0]);
+  };
+
   return (
     <div className={`app ${mobileView === "editor" ? "show-editor" : ""}`}>
       <Sidebar
@@ -64,6 +72,7 @@ export default function App() {
         userEmail={session?.user.email}
         onSelectCase={selectCase}
         onSelectCases={selectCases}
+        onMoveCases={moveCases}
         onToggleTopic={(id) => {
           const expanded = new Set(store.uiState.expanded_topic_ids);
           expanded.has(id) ? expanded.delete(id) : expanded.add(id);

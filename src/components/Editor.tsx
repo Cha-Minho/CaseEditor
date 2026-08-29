@@ -1,4 +1,4 @@
-import { PointerEvent, useMemo, useState } from "react";
+import { PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { CaseItem, CaseNotes, EditableFieldKey, Topic } from "../types";
 import { FIELD_LABELS } from "../types";
 import { RichEditableField, ToolMode } from "./RichEditableField";
@@ -40,6 +40,9 @@ export function Editor({
   onAddBlank
 }: Props) {
   const [toolMode, setToolMode] = useState<ToolMode>(null);
+  const [moveMenuOpen, setMoveMenuOpen] = useState(false);
+  const [moveExpandedIds, setMoveExpandedIds] = useState<Set<string>>(new Set());
+  const moveMenuRef = useRef<HTMLDivElement | null>(null);
   const topicPath = useMemo(() => {
     if (!selectedCase?.topic_id) return "미분류";
     const map = new Map(topics.map((topic) => [topic.id, topic]));
@@ -69,6 +72,22 @@ export function Editor({
     .join("<div><br></div>");
   const moveCount = selectedCaseIds.length > 1 ? selectedCaseIds.length : 1;
 
+  useEffect(() => {
+    if (!moveMenuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoveMenuOpen(false);
+    };
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (moveMenuRef.current && !moveMenuRef.current.contains(event.target as Node)) setMoveMenuOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+    };
+  }, [moveMenuOpen]);
+
   function requestDelete() {
     if (!selectedCase) return;
     if (window.confirm(`"${selectedCase.title}" 판례를 삭제할까요?`)) onDelete(selectedCase.id);
@@ -92,6 +111,40 @@ export function Editor({
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", stop);
   }
+
+  function chooseTopic(topicId: string | null) {
+    onMoveSelectedCases(topicId);
+    setMoveMenuOpen(false);
+  }
+
+  function toggleMoveTopic(topicId: string) {
+    setMoveExpandedIds((current) => {
+      const next = new Set(current);
+      next.has(topicId) ? next.delete(topicId) : next.add(topicId);
+      return next;
+    });
+  }
+
+  function renderMoveTopic(topic: Topic): JSX.Element {
+    const children = topics.filter((item) => item.parent_id === topic.id).sort((a, b) => a.sort_order - b.sort_order);
+    const hasChildren = children.length > 0;
+    const open = moveExpandedIds.has(topic.id);
+    return (
+      <div className="move-tree-node" key={topic.id}>
+        <div className="move-tree-row">
+          {hasChildren ? (
+            <button className="move-tree-toggle" onClick={() => toggleMoveTopic(topic.id)} aria-label={`${topic.name} ${open ? "접기" : "펼치기"}`}>
+              <span className={`chevron ${open ? "open" : ""}`}>▸</span>
+            </button>
+          ) : <span className="move-tree-spacer" />}
+          <button className="move-tree-name" onClick={() => chooseTopic(topic.id)}>{topic.name}</button>
+        </div>
+        {hasChildren && open && <div className="move-tree-children">{children.map(renderMoveTopic)}</div>}
+      </div>
+    );
+  }
+
+  const moveRoots = topics.filter((topic) => !topic.parent_id).sort((a, b) => a.sort_order - b.sort_order);
 
   return (
     <main className="editor-pane">
@@ -132,16 +185,17 @@ export function Editor({
           >
             {selectedCase.important ? "★" : "☆"}
           </button>
-          <select
-            aria-label={moveCount > 1 ? `선택한 판례 ${moveCount}개 폴더 이동` : "폴더 이동"}
-            value={moveCount > 1 ? "" : selectedCase.topic_id || ""}
-            onChange={(event) => onMoveSelectedCases(event.target.value || null)}
-          >
-            <option value="">{moveCount > 1 ? `${moveCount}개를 미분류로 이동` : "미분류"}</option>
-            {topics.map((topic) => (
-              <option key={topic.id} value={topic.id}>{moveCount > 1 ? `${moveCount}개를 ${topic.name}으로 이동` : topic.name}</option>
-            ))}
-          </select>
+          <div className="move-menu-wrap" ref={moveMenuRef}>
+            <button className="move-menu-button" onClick={() => setMoveMenuOpen((open) => !open)}>
+              {moveCount > 1 ? `${moveCount}개 폴더 이동` : "폴더 이동"}
+            </button>
+            {moveMenuOpen && (
+              <div className="move-menu" role="menu" aria-label="폴더 이동">
+                <button className="move-tree-name unclassified-move" onClick={() => chooseTopic(null)}>미분류</button>
+                <div className="move-tree-list">{moveRoots.map(renderMoveTopic)}</div>
+              </div>
+            )}
+          </div>
           <button className="danger" onClick={requestDelete}>삭제</button>
         </div>
       </header>

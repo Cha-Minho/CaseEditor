@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, useMemo, useState } from "react";
 import type { CaseItem, Topic } from "../types";
 import { convertOldJson } from "../lib/oldJson";
 import type { AppSnapshot } from "../types";
@@ -16,6 +16,7 @@ type Props = {
   userEmail?: string;
   onSelectCase: (id: string) => void;
   onSelectCases: (ids: string[]) => void;
+  onMoveCases: (ids: string[], topicId: string | null) => void;
   onToggleTopic: (id: string) => void;
   onAddTopic: (parentId?: string | null) => void;
   onRenameTopic: (id: string, name: string) => void;
@@ -32,6 +33,8 @@ export function Sidebar(props: Props) {
   const [caseNo, setCaseNo] = useState("");
   const [selectMode, setSelectMode] = useState(false);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+  const [draggedIds, setDraggedIds] = useState<string[]>([]);
+  const [dropTopicId, setDropTopicId] = useState<string | null | undefined>(undefined);
   const needle = query.trim().toLowerCase();
 
   const searchResults = useMemo(() => {
@@ -126,6 +129,29 @@ export function Sidebar(props: Props) {
     }
   }
 
+  function startCaseDrag(event: DragEvent<HTMLButtonElement>, id: string) {
+    const ids = props.selectedCaseIds.includes(id) ? props.selectedCaseIds : [id];
+    setDraggedIds(ids);
+    props.onSelectCases(ids);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", ids.join(","));
+  }
+
+  function allowCaseDrop(event: DragEvent<HTMLElement>, topicId: string | null) {
+    if (!draggedIds.length) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDropTopicId(topicId);
+  }
+
+  function dropCases(event: DragEvent<HTMLElement>, topicId: string | null) {
+    if (!draggedIds.length) return;
+    event.preventDefault();
+    props.onMoveCases(draggedIds, topicId);
+    setDraggedIds([]);
+    setDropTopicId(undefined);
+  }
+
   function renderCase(caseItem: CaseItem) {
     const checked = checkedIds.has(caseItem.id) || props.selectedCaseIds.includes(caseItem.id);
     return (
@@ -133,6 +159,12 @@ export function Sidebar(props: Props) {
         key={caseItem.id}
         className={`case-item ${props.selectedCaseId === caseItem.id && !selectMode ? "active" : ""} ${checked ? "checked" : ""}`}
         onClick={() => (selectMode ? toggleChecked(caseItem.id) : props.onSelectCase(caseItem.id))}
+        draggable
+        onDragStart={(event) => startCaseDrag(event, caseItem.id)}
+        onDragEnd={() => {
+          setDraggedIds([]);
+          setDropTopicId(undefined);
+        }}
       >
         <span className="case-item-title">
           {selectMode && <span className={`checkbox ${checked ? "on" : ""}`}>{checked ? "✓" : ""}</span>}
@@ -152,7 +184,12 @@ export function Sidebar(props: Props) {
 
     return (
       <div className="folder" key={topic.id}>
-        <div className="folder-row">
+        <div
+          className={`folder-row ${dropTopicId === topic.id ? "drop-target" : ""}`}
+          onDragOver={(event) => allowCaseDrop(event, topic.id)}
+          onDragLeave={() => setDropTopicId((current) => current === topic.id ? undefined : current)}
+          onDrop={(event) => dropCases(event, topic.id)}
+        >
           <button className="folder-toggle" onClick={() => props.onToggleTopic(topic.id)}>
             <span className={`chevron ${open ? "open" : ""}`}>▸</span>
             <span className="folder-name">{topic.name}</span>
@@ -229,7 +266,12 @@ export function Sidebar(props: Props) {
             {roots.map(renderTopic)}
             {unclassified.length > 0 && (
               <div className="folder">
-                <div className="folder-row">
+                <div
+                  className={`folder-row ${dropTopicId === null ? "drop-target" : ""}`}
+                  onDragOver={(event) => allowCaseDrop(event, null)}
+                  onDragLeave={() => setDropTopicId((current) => current === null ? undefined : current)}
+                  onDrop={(event) => dropCases(event, null)}
+                >
                   <button className="folder-toggle muted" onClick={() => props.onToggleTopic(UNCLASSIFIED_ID)}>
                     <span className={`chevron ${unclassifiedOpen ? "open" : ""}`}>▸</span>
                     <span className="folder-name">미분류</span>

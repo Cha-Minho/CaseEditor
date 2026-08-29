@@ -178,27 +178,22 @@ export function Editor({
           </p>
         </div>
         <div className="editor-controls">
-          <button
-            className={`tool-button ${toolMode === "highlight" ? "on" : ""}`}
-            title="드래그한 부분에 형광펜 (PC 전용)"
-            onClick={() => setToolMode(toolMode === "highlight" ? null : "highlight")}
-          >
-            형광펜
-          </button>
-          <button
-            className={`tool-button ${toolMode === "erase" ? "on" : ""}`}
-            title="형광펜 지우기 (PC 전용)"
-            onClick={() => setToolMode(toolMode === "erase" ? null : "erase")}
-          >
-            지우개
-          </button>
-          <button
-            className={`star-button ${selectedCase.important ? "on" : ""}`}
-            title={selectedCase.important ? "중요 해제" : "중요 표시"}
-            onClick={() => onUpdateCase(selectedCase.id, { important: !selectedCase.important })}
-          >
-            {selectedCase.important ? "★" : "☆"}
-          </button>
+          <div className="editor-mark-tools">
+            <button
+              className={`tool-button ${toolMode === "highlight" ? "on" : ""}`}
+              title="드래그한 부분에 형광펜 (PC 전용)"
+              onClick={() => setToolMode(toolMode === "highlight" ? null : "highlight")}
+            >
+              형광펜
+            </button>
+            <button
+              className={`tool-button ${toolMode === "erase" ? "on" : ""}`}
+              title="형광펜 지우기 (PC 전용)"
+              onClick={() => setToolMode(toolMode === "erase" ? null : "erase")}
+            >
+              지우개
+            </button>
+          </div>
           <div className="move-menu-wrap" ref={moveMenuRef}>
             <button className="move-menu-button" onClick={() => setMoveMenuOpen((open) => !open)}>
               {moveCount > 1 ? `${moveCount}개 폴더 이동` : "폴더 이동"}
@@ -210,7 +205,16 @@ export function Editor({
               </div>
             )}
           </div>
-          <button className="danger" onClick={requestDelete}>삭제</button>
+          <div className="editor-case-actions">
+            <button
+              className={`star-button ${selectedCase.important ? "on" : ""}`}
+              title={selectedCase.important ? "중요 해제" : "중요 표시"}
+              onClick={() => onUpdateCase(selectedCase.id, { important: !selectedCase.important })}
+            >
+              {selectedCase.important ? "★" : "☆"}
+            </button>
+            <button className="danger" onClick={requestDelete}>삭제</button>
+          </div>
         </div>
       </header>
 

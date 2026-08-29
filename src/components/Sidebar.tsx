@@ -2,6 +2,7 @@ import { ChangeEvent, DragEvent, FormEvent, useMemo, useState } from "react";
 import type { CaseItem, Topic } from "../types";
 import { convertOldJson } from "../lib/oldJson";
 import type { AppSnapshot } from "../types";
+import { readCasePdf, type PdfCaseImport } from "../lib/pdfCase";
 
 const UNCLASSIFIED_ID = "__unclassified__";
 
@@ -23,6 +24,7 @@ type Props = {
   onDeleteTopic: (id: string) => void;
   onAddBlank: () => void;
   onAddApiCase: (caseNo: string) => Promise<void>;
+  onAddPdfCase: (pdfCase: PdfCaseImport) => Promise<void>;
   onImport: (snapshot: AppSnapshot) => Promise<void>;
   onDeleteCases: (ids: string[]) => void;
   onSignOut: () => void;
@@ -35,6 +37,7 @@ export function Sidebar(props: Props) {
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [draggedIds, setDraggedIds] = useState<string[]>([]);
   const [dropTopicId, setDropTopicId] = useState<string | null | undefined>(undefined);
+  const [readingPdf, setReadingPdf] = useState(false);
   const needle = query.trim().toLowerCase();
 
   const searchResults = useMemo(() => {
@@ -87,6 +90,20 @@ export function Sidebar(props: Props) {
     setSelectMode(false);
     setCheckedIds(new Set());
     props.onSelectCases([]);
+  }
+
+  async function choosePdfFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setReadingPdf(true);
+    try {
+      await props.onAddPdfCase(await readCasePdf(file));
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "PDF를 읽지 못했습니다.");
+    } finally {
+      setReadingPdf(false);
+    }
   }
 
   function toggleChecked(id: string) {
@@ -245,15 +262,23 @@ export function Sidebar(props: Props) {
         type="search"
       />
 
-      <form className="add-form" onSubmit={submitCaseNo}>
-        <input
-          value={caseNo}
-          onChange={(event) => setCaseNo(event.target.value)}
-          placeholder="사건번호로 판례 추가"
-        />
-        <button type="submit" className="primary" disabled={!caseNo.trim()}>추가</button>
-      </form>
-      <button className="ghost blank-case" onClick={props.onAddBlank}>+ 빈 판례</button>
+      <section className="case-add-panel" aria-label="판례 추가">
+        <form className="add-form" onSubmit={submitCaseNo}>
+          <input
+            value={caseNo}
+            onChange={(event) => setCaseNo(event.target.value)}
+            placeholder="사건번호 또는 법원명 + 사건번호"
+          />
+          <button type="submit" className="primary" disabled={!caseNo.trim()}>불러오기</button>
+        </form>
+        <div className="add-secondary-actions">
+          <label className={`ghost file-button ${readingPdf ? "is-loading" : ""}`}>
+            {readingPdf ? "PDF 읽는 중" : "PDF 판결문"}
+            <input type="file" accept="application/pdf,.pdf" onChange={choosePdfFile} disabled={readingPdf} />
+          </label>
+          <button className="ghost blank-case" onClick={props.onAddBlank}>빈 판례</button>
+        </div>
+      </section>
 
       <nav className="case-list">
         {searchResults ? (

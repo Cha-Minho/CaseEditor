@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AppSnapshot, CaseItem, CaseNotes, EditableFieldKey, Topic, UiState } from "../types";
 import { FIELD_LABELS } from "../types";
 import { fetchLawCase } from "../lib/lawApi";
+import type { PdfCaseImport } from "../lib/pdfCase";
 import { localUserId, makeId, nowIso } from "../lib/id";
 import { put, readSnapshot } from "../lib/localDb";
 import { mergeLocalSnapshot, pullRemote, recordChange, syncNow } from "../lib/sync";
@@ -358,6 +359,28 @@ export function useAppStore(userId: string | null) {
     }
   }, [activeUserId, persistCase, persistNotes]);
 
+  const addPdfCase = useCallback(async (pdfCase: PdfCaseImport, topicId: string | null = null) => {
+    const timestamp = nowIso();
+    const caseItem: CaseItem = {
+      id: makeId("case"),
+      user_id: activeUserId,
+      topic_id: topicId,
+      title: pdfCase.title,
+      case_no: pdfCase.caseNo,
+      important: false,
+      api_status: "manual",
+      api_error: null,
+      created_at: timestamp,
+      updated_at: timestamp,
+      deleted_at: null
+    };
+    const caseNotes = { ...emptyNotes(caseItem.id, activeUserId), source_html: sanitizeHtml(pdfCase.sourceHtml), updated_at: timestamp };
+    setCases((current) => [...current, caseItem]);
+    setNotes((current) => [...current, caseNotes]);
+    setSelectedCaseId(caseItem.id);
+    await Promise.all([persistCase(caseItem), persistNotes(caseNotes)]);
+  }, [activeUserId, persistCase, persistNotes]);
+
   const updateCase = useCallback((id: string, patch: Partial<CaseItem>) => {
     setCases((current) =>
       current.map((item) => {
@@ -446,6 +469,7 @@ export function useAppStore(userId: string | null) {
     deleteTopic,
     addBlankCase,
     addApiCase,
+    addPdfCase,
     updateCase,
     updateCases,
     updateNoteField,

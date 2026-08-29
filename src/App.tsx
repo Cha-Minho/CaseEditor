@@ -89,6 +89,10 @@ export default function App() {
           setMobileView("editor");
           await store.addApiCase(caseNo, null);
         }}
+        onAddPdfCase={async (pdfCase) => {
+          setMobileView("editor");
+          await store.addPdfCase(pdfCase, null);
+        }}
         onImport={store.importSnapshot}
         onDeleteCases={(ids) => {
           const deletedAt = new Date().toISOString();

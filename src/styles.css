@@ -201,9 +201,31 @@ select:focus {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.case-add-panel {
+  display: grid;
+  gap: 5px;
+}
+
+.add-secondary-actions {
+  align-items: center;
+  display: flex;
+  gap: 2px;
+}
+
+.add-secondary-actions .file-button,
+.add-secondary-actions .blank-case {
+  color: var(--muted);
+  font-size: 12px;
+  min-height: 28px;
+}
+
+.add-secondary-actions .file-button.is-loading {
+  color: var(--brand);
+  pointer-events: none;
+}
+
 .blank-case {
   justify-self: start;
-  margin-top: -4px;
   min-height: 30px;
   padding: 0 8px;
 }
@@ -496,6 +518,23 @@ select:focus {
   display: flex;
   flex: 0 0 auto;
   gap: 6px;
+}
+
+.editor-mark-tools,
+.editor-case-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: 2px;
+}
+
+.editor-mark-tools {
+  border-right: 1px solid var(--line);
+  padding-right: 7px;
+}
+
+.editor-case-actions {
+  border-left: 1px solid var(--line);
+  padding-left: 7px;
 }
 
 .tool-button {

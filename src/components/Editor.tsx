@@ -7,10 +7,12 @@ type Props = {
   topics: Topic[];
   selectedCase: CaseItem | null;
   selectedNotes: CaseNotes | null;
+  selectedCaseIds: string[];
   collapsedFields: string[];
   splitWidth: number;
   onBack: () => void;
   onUpdateCase: (id: string, patch: Partial<CaseItem>) => void;
+  onMoveSelectedCases: (topicId: string | null) => void;
   onUpdateField: (caseId: string, field: EditableFieldKey, value: string) => void;
   onToggleField: (field: EditableFieldKey) => void;
   onSaveSplit: (width: number) => void;
@@ -25,10 +27,12 @@ export function Editor({
   topics,
   selectedCase,
   selectedNotes,
+  selectedCaseIds,
   collapsedFields,
   splitWidth,
   onBack,
   onUpdateCase,
+  onMoveSelectedCases,
   onUpdateField,
   onToggleField,
   onSaveSplit,
@@ -63,6 +67,7 @@ export function Editor({
   const combinedSummaryHtml = [selectedNotes.key_phrases_html, selectedNotes.summary_html]
     .filter((value) => value.trim())
     .join("<div><br></div>");
+  const moveCount = selectedCaseIds.length > 1 ? selectedCaseIds.length : 1;
 
   function requestDelete() {
     if (!selectedCase) return;
@@ -128,12 +133,13 @@ export function Editor({
             {selectedCase.important ? "★" : "☆"}
           </button>
           <select
-            value={selectedCase.topic_id || ""}
-            onChange={(event) => onUpdateCase(selectedCase.id, { topic_id: event.target.value || null })}
+            aria-label={moveCount > 1 ? `선택한 판례 ${moveCount}개 폴더 이동` : "폴더 이동"}
+            value={moveCount > 1 ? "" : selectedCase.topic_id || ""}
+            onChange={(event) => onMoveSelectedCases(event.target.value || null)}
           >
-            <option value="">미분류</option>
+            <option value="">{moveCount > 1 ? `${moveCount}개를 미분류로 이동` : "미분류"}</option>
             {topics.map((topic) => (
-              <option key={topic.id} value={topic.id}>{topic.name}</option>
+              <option key={topic.id} value={topic.id}>{moveCount > 1 ? `${moveCount}개를 ${topic.name}으로 이동` : topic.name}</option>
             ))}
           </select>
           <button className="danger" onClick={requestDelete}>삭제</button>

@@ -11,9 +11,11 @@ type Props = {
   cases: CaseItem[];
   expandedIds: string[];
   selectedCaseId: string | null;
+  selectedCaseIds: string[];
   configured: boolean;
   userEmail?: string;
   onSelectCase: (id: string) => void;
+  onSelectCases: (ids: string[]) => void;
   onToggleTopic: (id: string) => void;
   onAddTopic: (parentId?: string | null) => void;
   onRenameTopic: (id: string, name: string) => void;
@@ -81,14 +83,39 @@ export function Sidebar(props: Props) {
   function exitSelectMode() {
     setSelectMode(false);
     setCheckedIds(new Set());
+    props.onSelectCases([]);
   }
 
   function toggleChecked(id: string) {
     setCheckedIds((current) => {
       const next = new Set(current);
       next.has(id) ? next.delete(id) : next.add(id);
+      props.onSelectCases(Array.from(next));
       return next;
     });
+  }
+
+  function caseIdsInTopic(topicId: string) {
+    const childMap = new Map<string | null, Topic[]>();
+    props.topics.forEach((topic) => {
+      const key = topic.parent_id || null;
+      childMap.set(key, [...(childMap.get(key) || []), topic]);
+    });
+    const topicIds = new Set<string>();
+    const collect = (id: string) => {
+      topicIds.add(id);
+      (childMap.get(id) || []).forEach((child) => collect(child.id));
+    };
+    collect(topicId);
+    return props.cases.filter((item) => item.topic_id && topicIds.has(item.topic_id)).map((item) => item.id);
+  }
+
+  function selectCaseGroup(ids: string[]) {
+    if (!ids.length) return;
+    const next = Array.from(new Set(ids));
+    setSelectMode(true);
+    setCheckedIds(new Set(next));
+    props.onSelectCases(next);
   }
 
   function deleteChecked() {
@@ -100,7 +127,7 @@ export function Sidebar(props: Props) {
   }
 
   function renderCase(caseItem: CaseItem) {
-    const checked = checkedIds.has(caseItem.id);
+    const checked = checkedIds.has(caseItem.id) || props.selectedCaseIds.includes(caseItem.id);
     return (
       <button
         key={caseItem.id}
@@ -121,6 +148,7 @@ export function Sidebar(props: Props) {
     const children = props.topics.filter((item) => item.parent_id === topic.id).sort((a, b) => a.sort_order - b.sort_order);
     const topicCases = props.cases.filter((item) => item.topic_id === topic.id);
     const open = props.expandedIds.includes(topic.id);
+    const allTopicCaseIds = caseIdsInTopic(topic.id);
 
     return (
       <div className="folder" key={topic.id}>
@@ -131,6 +159,7 @@ export function Sidebar(props: Props) {
             <span className="folder-count">{children.length + topicCases.length}</span>
           </button>
           <span className="folder-actions">
+            {allTopicCaseIds.length > 0 && <button title="이 폴더와 하위 폴더 판례 전체 선택" onClick={() => selectCaseGroup(allTopicCaseIds)}>전체</button>}
             <button title="하위 폴더 추가" onClick={() => props.onAddTopic(topic.id)}>+</button>
             <button title="이름 변경" onClick={() => renameTopic(topic)}>✎</button>
             <button title="폴더 삭제" onClick={() => deleteTopic(topic)}>×</button>
@@ -206,6 +235,9 @@ export function Sidebar(props: Props) {
                     <span className="folder-name">미분류</span>
                     <span className="folder-count">{unclassified.length}</span>
                   </button>
+                  <span className="folder-actions">
+                    <button title="미분류 판례 전체 선택" onClick={() => selectCaseGroup(unclassified.map((item) => item.id))}>전체</button>
+                  </span>
                 </div>
                 {unclassifiedOpen && <div className="folder-children">{unclassified.map(renderCase)}</div>}
               </div>

@@ -368,6 +368,20 @@ export function useAppStore(userId: string | null) {
     );
   }, [persistCase]);
 
+  const updateCases = useCallback((ids: string[], patch: Partial<CaseItem>) => {
+    const idSet = new Set(ids);
+    if (!idSet.size) return;
+    const timestamp = nowIso();
+    setCases((current) =>
+      current.map((item) => {
+        if (!idSet.has(item.id)) return item;
+        const next = { ...item, ...patch, updated_at: timestamp };
+        persistCase(next).catch((error) => setSyncMessage(error.message));
+        return next;
+      })
+    );
+  }, [persistCase]);
+
   const updateNoteField = useCallback((caseId: string, field: EditableFieldKey, value: string) => {
     setNotes((current) =>
       current.map((item) => {
@@ -432,6 +446,7 @@ export function useAppStore(userId: string | null) {
     addBlankCase,
     addApiCase,
     updateCase,
+    updateCases,
     updateNoteField,
     saveUiState,
     importSnapshot,

@@ -38,7 +38,9 @@ type PositionedLine = {
 };
 
 function stripPdfArtifacts(value: string) {
-  const entityCleaned = value.replace(/&(#[xX]?[0-9a-fA-F]+|nbsp);?/g, " ");
+  const entityCleaned = value
+    .replace(/&(#[xX]?[0-9a-fA-F]+|nbsp);?/g, " ")
+    .replace(/\u2bb9/g, "");
   // 일부 법원 PDF는 본문 뒤에 깨진 보안 문구를 텍스트 조각으로 덧붙인다.
   const artifactIndex = entityCleaned.search(/[\u2e00-\u2fff\u3200-\u33ff\u3400-\u4dbf\uf900-\ufaff]/);
   if (artifactIndex < 0) return entityCleaned;
@@ -131,6 +133,16 @@ function textFromPage(items: unknown[], pageWidth: number) {
   }, "");
 }
 
+function joinPages(pages: string[]) {
+  return pages.reduce((text, page) => {
+    if (!text) return page;
+    const joinsAWord = /[가-힣A-Za-z0-9]$/.test(text)
+      && /^[가-힣A-Za-z0-9]/.test(page)
+      && !/[.!?…:;)]$/.test(text);
+    return `${text}${joinsAWord ? "" : " "}${page}`;
+  }, "");
+}
+
 function caseNumberFrom(text: string) {
   return text.match(/\d{2,4}\s*[가-힣A-Za-z]+\s*\d+(?:\s*,\s*\d{2,4}\s*[가-힣A-Za-z]+\s*\d+)*/)?.[0].replace(/\s/g, "") || "";
 }
@@ -160,7 +172,7 @@ export async function readCasePdf(file: File): Promise<PdfCaseImport> {
     pageTexts.push(textFromPage(content.items, page.getViewport({ scale: 1 }).width));
   }
 
-  const sourceText = pageTexts.join("\n\n").replace(/\u0000/g, "").trim();
+  const sourceText = joinPages(pageTexts).replace(/\u0000/g, "").trim();
   if (!sourceText) throw new Error("PDF에서 텍스트를 읽지 못했습니다. 스캔본은 아직 지원하지 않습니다.");
 
   const lines = sourceText.split(/\n+/).map(cleanLine).filter(Boolean);

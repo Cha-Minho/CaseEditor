@@ -3,6 +3,8 @@ import { supabase } from "./supabase";
 export type LawCaseResult = {
   title: string;
   case_no: string;
+  found?: boolean;
+  api_error?: string | null;
   holding_html?: string;
   judgment_summary_html?: string;
   source_html?: string;

@@ -42,7 +42,10 @@ export function Editor({
   const [toolMode, setToolMode] = useState<ToolMode>(null);
   const [moveMenuOpen, setMoveMenuOpen] = useState(false);
   const [moveExpandedIds, setMoveExpandedIds] = useState<Set<string>>(new Set());
+  const [draftSplitWidth, setDraftSplitWidth] = useState(splitWidth);
   const moveMenuRef = useRef<HTMLDivElement | null>(null);
+  const splitWidthRef = useRef(splitWidth);
+  const isResizingRef = useRef(false);
   const topicPath = useMemo(() => {
     if (!selectedCase?.topic_id) return "미분류";
     const map = new Map(topics.map((topic) => [topic.id, topic]));
@@ -71,6 +74,12 @@ export function Editor({
     };
   }, [moveMenuOpen]);
 
+  useEffect(() => {
+    if (isResizingRef.current) return;
+    splitWidthRef.current = splitWidth;
+    setDraftSplitWidth(splitWidth);
+  }, [splitWidth]);
+
   if (!selectedCase || !selectedNotes) {
     return (
       <main className="editor-pane">
@@ -97,15 +106,20 @@ export function Editor({
     const container = event.currentTarget.parentElement;
     if (!container) return;
     event.preventDefault();
+    isResizingRef.current = true;
 
     const move = (moveEvent: globalThis.PointerEvent) => {
       const rect = container.getBoundingClientRect();
       const percent = Math.round(((moveEvent.clientX - rect.left) / rect.width) * 100);
-      onSaveSplit(Math.max(25, Math.min(75, percent)));
+      const nextWidth = Math.max(25, Math.min(75, percent));
+      splitWidthRef.current = nextWidth;
+      setDraftSplitWidth(nextWidth);
     };
     const stop = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", stop);
+      isResizingRef.current = false;
+      onSaveSplit(splitWidthRef.current);
     };
 
     window.addEventListener("pointermove", move);
@@ -202,7 +216,7 @@ export function Editor({
 
       <div
         className="editor-columns"
-        style={{ gridTemplateColumns: `minmax(240px, ${splitWidth}%) 6px minmax(240px, 1fr)` }}
+        style={{ gridTemplateColumns: `minmax(240px, ${draftSplitWidth}%) 6px minmax(240px, 1fr)` }}
       >
         <section className="field-group">
           <h2>내 정리</h2>
@@ -240,11 +254,11 @@ export function Editor({
           aria-orientation="vertical"
           aria-valuemin={25}
           aria-valuemax={75}
-          aria-valuenow={splitWidth}
+          aria-valuenow={draftSplitWidth}
           onPointerDown={startSplitResize}
           onKeyDown={(event) => {
-            if (event.key === "ArrowLeft") onSaveSplit(Math.max(25, splitWidth - 2));
-            if (event.key === "ArrowRight") onSaveSplit(Math.min(75, splitWidth + 2));
+            if (event.key === "ArrowLeft") onSaveSplit(Math.max(25, draftSplitWidth - 2));
+            if (event.key === "ArrowRight") onSaveSplit(Math.min(75, draftSplitWidth + 2));
           }}
         />
 

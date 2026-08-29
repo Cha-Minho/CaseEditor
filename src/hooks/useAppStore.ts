@@ -332,7 +332,8 @@ export function useAppStore(userId: string | null) {
         ...caseItem,
         title: result.title || caseNo,
         case_no: result.case_no || caseNo,
-        api_status: "loaded" as const,
+        api_status: result.found === false ? "failed" as const : "loaded" as const,
+        api_error: result.api_error || null,
         updated_at: nowIso()
       };
       const loadedNotes = {

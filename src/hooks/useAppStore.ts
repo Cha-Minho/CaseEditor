@@ -5,7 +5,7 @@ import { fetchLawCase } from "../lib/lawApi";
 import type { PdfCaseImport } from "../lib/pdfCase";
 import { localUserId, makeId, nowIso } from "../lib/id";
 import { put, readSnapshot } from "../lib/localDb";
-import { mergeLocalSnapshot, pullRemote, recordChange, syncNow } from "../lib/sync";
+import { mergeLocalSnapshot, recordChange, syncNow } from "../lib/sync";
 import { supabase } from "../lib/supabase";
 import { sanitizeHtml } from "../lib/html";
 
@@ -124,7 +124,9 @@ export function useAppStore(userId: string | null) {
     if (remotePullTimer.current) window.clearTimeout(remotePullTimer.current);
     remotePullTimer.current = window.setTimeout(() => {
       remotePullTimer.current = null;
-      pullRemote(activeUserId)
+      // 내 변경을 먼저 밀어 넣은 뒤 원격 상태를 받는다. 그렇지 않으면 실시간
+      // 알림이 아직 저장되지 않은 목차 열림 상태나 사건 이동을 덮어쓸 수 있다.
+      syncNow(activeUserId)
         .then(load)
         .then(() => setSyncMessage("최신 내용을 불러옴"))
         .catch((error) => setSyncMessage(`동기화 보류: ${error.message}`));
@@ -216,6 +218,16 @@ export function useAppStore(userId: string | null) {
   const saveUiState = useCallback((patch: Partial<UiState>) => {
     setUiState((current) => {
       const next = { ...current, ...patch, updated_at: nowIso() };
+      persistUi(next).catch((error) => setSyncMessage(error.message));
+      return next;
+    });
+  }, [persistUi]);
+
+  const toggleExpandedTopic = useCallback((topicId: string) => {
+    setUiState((current) => {
+      const expanded = new Set(current.expanded_topic_ids);
+      expanded.has(topicId) ? expanded.delete(topicId) : expanded.add(topicId);
+      const next = { ...current, expanded_topic_ids: Array.from(expanded), updated_at: nowIso() };
       persistUi(next).catch((error) => setSyncMessage(error.message));
       return next;
     });
@@ -368,7 +380,7 @@ export function useAppStore(userId: string | null) {
         user_id: activeUserId,
         topic_id: topicId,
         title: pdfCase.title,
-        case_no: pdfCase.caseNo,
+        case_no: [pdfCase.courtName, pdfCase.caseNo].filter(Boolean).join(" "),
         important: false,
         api_status: "manual",
         api_error: null,
@@ -480,6 +492,7 @@ export function useAppStore(userId: string | null) {
     updateCases,
     updateNoteField,
     saveUiState,
+    toggleExpandedTopic,
     importSnapshot,
     reload: load,
     sync: () => syncNow(activeUserId).then(load)

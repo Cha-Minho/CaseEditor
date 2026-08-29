@@ -73,11 +73,7 @@ export default function App() {
         onSelectCase={selectCase}
         onSelectCases={selectCases}
         onMoveCases={moveCases}
-        onToggleTopic={(id) => {
-          const expanded = new Set(store.uiState.expanded_topic_ids);
-          expanded.has(id) ? expanded.delete(id) : expanded.add(id);
-          store.saveUiState({ expanded_topic_ids: Array.from(expanded) });
-        }}
+        onToggleTopic={store.toggleExpandedTopic}
         onAddTopic={store.addTopic}
         onRenameTopic={(id, name) => store.updateTopic(id, { name })}
         onDeleteTopic={store.deleteTopic}

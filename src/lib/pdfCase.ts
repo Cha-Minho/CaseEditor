@@ -6,6 +6,7 @@ GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 export type PdfCaseImport = {
   title: string;
   caseNo: string;
+  courtName: string;
   sourceHtml: string;
 };
 
@@ -134,12 +135,18 @@ function caseNumberFrom(text: string) {
   return text.match(/\d{2,4}\s*[가-힣A-Za-z]+\s*\d+(?:\s*,\s*\d{2,4}\s*[가-힣A-Za-z]+\s*\d+)*/)?.[0].replace(/\s/g, "") || "";
 }
 
-function titleFrom(lines: string[], caseNo: string, fileName: string) {
+function courtNameFrom(lines: string[]) {
+  const header = lines.slice(0, 12).join(" ");
+  return header.match(/(?:대법원|[가-힣]+(?:고등법원|지방법원|가정법원|행정법원|회생법원|지원))/)?.[0] || "";
+}
+
+function titleFrom(lines: string[], courtName: string, caseNo: string, fileName: string) {
   const caseLineIndex = lines.findIndex((line) => /^사\s*건/.test(line));
   const caseLine = caseLineIndex >= 0 ? lines[caseLineIndex].replace(/^사\s*건\s*/, "") : "";
   const nextLine = caseLineIndex >= 0 ? lines.slice(caseLineIndex + 1).find(Boolean) || "" : "";
   const rawTitle = caseLine.replace(caseNo, "").trim() || nextLine.replace(caseNo, "").trim();
-  return rawTitle || caseNo || fileName.replace(/\.pdf$/i, "") || "PDF 판례";
+  const fallback = caseNo || fileName.replace(/\.pdf$/i, "") || "PDF 판례";
+  return [courtName, caseNo, rawTitle || fallback].filter(Boolean).join(" - ");
 }
 
 export async function readCasePdf(file: File): Promise<PdfCaseImport> {
@@ -158,9 +165,11 @@ export async function readCasePdf(file: File): Promise<PdfCaseImport> {
 
   const lines = sourceText.split(/\n+/).map(cleanLine).filter(Boolean);
   const caseNo = caseNumberFrom(sourceText);
+  const courtName = courtNameFrom(lines);
   return {
-    title: titleFrom(lines, caseNo, file.name),
+    title: titleFrom(lines, courtName, caseNo, file.name),
     caseNo,
+    courtName,
     sourceHtml: sourceText.split("\n").map(escapeHtml).join("<br>")
   };
 }

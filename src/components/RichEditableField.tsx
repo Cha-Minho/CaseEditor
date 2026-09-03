@@ -66,6 +66,8 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.ctrlKey && event.key.toLowerCase() === "h") {
       event.preventDefault();
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
       recordToolChange(toggleHighlight);
       return;
     }

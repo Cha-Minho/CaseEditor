@@ -1,4 +1,4 @@
-import { ClipboardEvent, FocusEvent, FormEvent, KeyboardEvent, MouseEvent, useEffect, useRef, useState } from "react";
+import { ClipboardEvent, FocusEvent, FormEvent, KeyboardEvent, MouseEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { applyHighlight, eraseHighlight, sanitizeHtml, toggleHighlight } from "../lib/html";
 
 export type ToolMode = "highlight" | "erase" | null;
@@ -304,6 +304,13 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
 
   useEffect(() => {
     handleExternalValue();
+  }, [focused, value]);
+
+  // React reapplies dangerouslySetInnerHTML after a note update. Restore the
+  // logical caret after that commit so typing at a highlighted line end stays put.
+  useLayoutEffect(() => {
+    if (!focused || lastHtml.current !== value || !savedSelection.current) return;
+    restoreSelection();
   }, [focused, value]);
 
   useEffect(() => {

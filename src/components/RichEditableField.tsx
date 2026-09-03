@@ -1,4 +1,4 @@
-import { FocusEvent, MouseEvent, useEffect, useRef, useState } from "react";
+import { FocusEvent, KeyboardEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import { applyHighlight, eraseHighlight, sanitizeHtml } from "../lib/html";
 
 export type ToolMode = "highlight" | "erase" | null;
@@ -10,10 +10,10 @@ type Props = {
   toolMode: ToolMode;
   onToggle: () => void;
   onChange: (value: string) => void;
-  onToolDone: () => void;
+  onExitTool: () => void;
 };
 
-export function RichEditableField({ label, value, collapsed, toolMode, onToggle, onChange, onToolDone }: Props) {
+export function RichEditableField({ label, value, collapsed, toolMode, onToggle, onChange, onExitTool }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const lastHtml = useRef(value);
   const [focused, setFocused] = useState(false);
@@ -31,16 +31,25 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     setFocused(false);
   }
 
-  function pointerUp(event: MouseEvent<HTMLDivElement>) {
-    if (!toolMode) return;
-    event.preventDefault();
-    toolMode === "highlight" ? applyHighlight() : eraseHighlight();
+  function applyCurrentTool(mode: Exclude<ToolMode, null>) {
+    mode === "highlight" ? applyHighlight() : eraseHighlight();
     if (ref.current) {
       const html = sanitizeHtml(ref.current.innerHTML);
       lastHtml.current = html;
       onChange(html);
     }
-    onToolDone();
+  }
+
+  function pointerUp(event: MouseEvent<HTMLDivElement>) {
+    if (!toolMode) return;
+    event.preventDefault();
+    applyCurrentTool(toolMode);
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (!event.ctrlKey || event.key.toLowerCase() !== "h") return;
+    event.preventDefault();
+    applyCurrentTool(toolMode ?? "highlight");
   }
 
   return (
@@ -59,10 +68,11 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
           onFocus={() => setFocused(true)}
           onBlur={commit}
           onMouseUp={pointerUp}
+          onKeyDown={handleKeyDown}
           onContextMenu={(event) => {
             if (toolMode) {
               event.preventDefault();
-              onToolDone();
+              onExitTool();
             }
           }}
           dangerouslySetInnerHTML={{ __html: value }}

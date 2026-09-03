@@ -181,14 +181,14 @@ export function Editor({
           <div className="editor-mark-tools">
             <button
               className={`tool-button ${toolMode === "highlight" ? "on" : ""}`}
-              title="드래그한 부분에 형광펜 (PC 전용)"
+              title="드래그한 부분에 형광펜 (Ctrl+H, 우클릭으로 종료)"
               onClick={() => setToolMode(toolMode === "highlight" ? null : "highlight")}
             >
               형광펜
             </button>
             <button
               className={`tool-button ${toolMode === "erase" ? "on" : ""}`}
-              title="형광펜 지우기 (PC 전용)"
+              title="형광펜 지우기 (Ctrl+H, 우클릭으로 종료)"
               onClick={() => setToolMode(toolMode === "erase" ? null : "erase")}
             >
               지우개
@@ -229,7 +229,7 @@ export function Editor({
             value={combinedSummaryHtml}
             collapsed={collapsedFields.includes("summary_html")}
             toolMode={toolMode}
-            onToolDone={() => setToolMode(null)}
+            onExitTool={() => setToolMode(null)}
             onToggle={() => onToggleField("summary_html")}
             onChange={(value) => {
               onUpdateField(selectedCase.id, "summary_html", value);
@@ -243,7 +243,7 @@ export function Editor({
               value={selectedNotes[field]}
               collapsed={collapsedFields.includes(field)}
               toolMode={toolMode}
-              onToolDone={() => setToolMode(null)}
+              onExitTool={() => setToolMode(null)}
               onToggle={() => onToggleField(field)}
               onChange={(value) => onUpdateField(selectedCase.id, field, value)}
             />
@@ -275,7 +275,7 @@ export function Editor({
               value={selectedNotes[field]}
               collapsed={collapsedFields.includes(field)}
               toolMode={toolMode}
-              onToolDone={() => setToolMode(null)}
+              onExitTool={() => setToolMode(null)}
               onToggle={() => onToggleField(field)}
               onChange={(value) => onUpdateField(selectedCase.id, field, value)}
             />

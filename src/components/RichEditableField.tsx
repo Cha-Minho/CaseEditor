@@ -31,7 +31,6 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   const history = useRef<History>({ undo: [], redo: [] });
   const savedSelection = useRef<SelectionOffset | null>(null);
   const restoreAfterWindowFocus = useRef(false);
-  const typingMarker = useRef<Text | null>(null);
   const typingMode = useRef<"highlight" | "plain" | null>(null);
   const typingInputStart = useRef<number | null>(null);
   const altCodeStart = useRef<number | null>(null);
@@ -117,7 +116,6 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   }
 
   function handleInput(event: FormEvent<HTMLDivElement>) {
-    clearTypingMarker();
     const start = altCodeStart.current;
     if (start !== null) {
       const inserted = (event.nativeEvent as InputEvent).data || "";
@@ -153,60 +151,19 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     typingInputStart.current = end;
   }
 
-  function clearTypingMarker() {
-    const marker = typingMarker.current;
-    if (!marker?.isConnected || !marker.data.includes("\u200B")) return;
-    const selection = window.getSelection();
-    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
-    const markerStart = marker.data.indexOf("\u200B");
-    marker.data = marker.data.replace(/\u200B/g, "");
-    if (range) {
-      const adjust = (node: Node, offset: number) => node === marker && offset > markerStart ? offset - 1 : offset;
-      range.setStart(range.startContainer, adjust(range.startContainer, range.startOffset));
-      range.setEnd(range.endContainer, adjust(range.endContainer, range.endOffset));
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-    }
-    typingMarker.current = null;
-  }
-
   function toggleTypingHighlight(range: Range) {
     const root = ref.current;
     if (!root) return;
     const node = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
     const activeMark = node?.closest("mark.case-highlight");
-    const marker = document.createTextNode("\u200B");
     const prefix = document.createRange();
     prefix.selectNodeContents(root);
     prefix.setEnd(range.startContainer, range.startOffset);
-    typingInputStart.current = prefix.toString().length;
+    const cursorOffset = prefix.toString().length;
+    typingInputStart.current = cursorOffset;
     const followsHighlight = !activeMark && caretFollowsHighlight(range, root);
     typingMode.current = activeMark || followsHighlight ? "plain" : "highlight";
-
-    if (activeMark?.parentNode) {
-      const suffixRange = document.createRange();
-      suffixRange.setStart(range.startContainer, range.startOffset);
-      suffixRange.setEndAfter(activeMark);
-      const suffix = suffixRange.extractContents();
-      activeMark.parentNode.insertBefore(marker, activeMark.nextSibling);
-      activeMark.parentNode.insertBefore(suffix, marker.nextSibling);
-      if (!activeMark.textContent) activeMark.remove();
-    } else if (typingMode.current === "highlight") {
-      const mark = document.createElement("mark");
-      mark.className = "case-highlight";
-      mark.append(marker);
-      range.insertNode(mark);
-    } else {
-      range.insertNode(marker);
-    }
-
-    const nextRange = document.createRange();
-    nextRange.setStart(marker, marker.data.length);
-    nextRange.collapse(true);
-    const selection = window.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(nextRange);
-    typingMarker.current = marker;
+    savedSelection.current = { start: cursorOffset, end: cursorOffset };
   }
 
   function caretFollowsHighlight(range: Range, root: HTMLElement) {

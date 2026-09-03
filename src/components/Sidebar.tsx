@@ -1,10 +1,12 @@
-import { ChangeEvent, DragEvent, FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, PointerEvent, useMemo, useRef, useState } from "react";
 import type { CaseItem, Topic } from "../types";
 import { convertOldJson } from "../lib/oldJson";
 import type { AppSnapshot } from "../types";
 import { readCasePdf, type PdfCaseImport } from "../lib/pdfCase";
 
 const UNCLASSIFIED_ID = "__unclassified__";
+
+type Marquee = { x: number; y: number; width: number; height: number };
 
 type Props = {
   userId: string;
@@ -33,12 +35,15 @@ type Props = {
 export function Sidebar(props: Props) {
   const [query, setQuery] = useState("");
   const [caseNo, setCaseNo] = useState("");
-  const [selectMode, setSelectMode] = useState(false);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [draggedIds, setDraggedIds] = useState<string[]>([]);
   const [dropTopicId, setDropTopicId] = useState<string | null | undefined>(undefined);
   const [readingPdf, setReadingPdf] = useState(false);
   const [importantOnly, setImportantOnly] = useState(false);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [marquee, setMarquee] = useState<Marquee | null>(null);
+  const caseListRef = useRef<HTMLElement | null>(null);
+  const marqueeStart = useRef<{ x: number; y: number; base: Set<string> } | null>(null);
   const needle = query.trim().toLowerCase();
   const visibleCases = importantOnly ? props.cases.filter((item) => item.important) : props.cases;
 
@@ -56,6 +61,7 @@ export function Sidebar(props: Props) {
     if (!value) return;
     setCaseNo("");
     await props.onAddApiCase(value);
+    setAddMenuOpen(false);
   }
 
   async function chooseImportFile(event: ChangeEvent<HTMLInputElement>) {
@@ -71,6 +77,7 @@ export function Sidebar(props: Props) {
       }
       if (window.confirm(`목차 ${snapshot.topics.length}개, 판례 ${snapshot.cases.length}개를 가져올까요?`)) {
         await props.onImport(snapshot);
+        setAddMenuOpen(false);
       }
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "JSON 파일을 읽지 못했습니다.");
@@ -88,12 +95,6 @@ export function Sidebar(props: Props) {
     }
   }
 
-  function exitSelectMode() {
-    setSelectMode(false);
-    setCheckedIds(new Set());
-    props.onSelectCases([]);
-  }
-
   async function choosePdfFile(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []);
     event.target.value = "";
@@ -109,7 +110,10 @@ export function Sidebar(props: Props) {
           failed.push(`${file.name}: ${error instanceof Error ? error.message : "읽지 못했습니다."}`);
         }
       }
-      if (imported.length) await props.onAddPdfCases(imported);
+      if (imported.length) {
+        await props.onAddPdfCases(imported);
+        setAddMenuOpen(false);
+      }
       if (failed.length) window.alert(failed.join("\n"));
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "PDF를 읽지 못했습니다.");
@@ -145,7 +149,6 @@ export function Sidebar(props: Props) {
   function selectCaseGroup(ids: string[]) {
     if (!ids.length) return;
     const next = Array.from(new Set(ids));
-    setSelectMode(true);
     setCheckedIds(new Set(next));
     props.onSelectCases(next);
   }
@@ -154,12 +157,13 @@ export function Sidebar(props: Props) {
     if (!checkedIds.size) return;
     if (window.confirm(`선택한 판례 ${checkedIds.size}개를 삭제할까요?`)) {
       props.onDeleteCases(Array.from(checkedIds));
-      exitSelectMode();
+      setCheckedIds(new Set());
+      props.onSelectCases([]);
     }
   }
 
   function startCaseDrag(event: DragEvent<HTMLButtonElement>, id: string) {
-    const ids = props.selectedCaseIds.includes(id) ? props.selectedCaseIds : [id];
+    const ids = checkedIds.has(id) ? Array.from(checkedIds) : [id];
     setDraggedIds(ids);
     props.onSelectCases(ids);
     event.dataTransfer.effectAllowed = "move";
@@ -181,13 +185,79 @@ export function Sidebar(props: Props) {
     setDropTopicId(undefined);
   }
 
+  function startMarquee(event: PointerEvent<HTMLElement>) {
+    if (event.button !== 0 || (event.target as HTMLElement).closest("button, input, label")) return;
+    const list = caseListRef.current;
+    if (!list) return;
+    const rect = list.getBoundingClientRect();
+    const point = { x: event.clientX - rect.left, y: event.clientY - rect.top + list.scrollTop };
+    marqueeStart.current = { ...point, base: event.ctrlKey ? new Set(checkedIds) : new Set() };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setMarquee({ x: point.x, y: point.y, width: 0, height: 0 });
+  }
+
+  function updateMarquee(event: PointerEvent<HTMLElement>) {
+    const start = marqueeStart.current;
+    const list = caseListRef.current;
+    if (!start || !list) return;
+    const rect = list.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top + list.scrollTop;
+    setMarquee({ x: Math.min(start.x, x), y: Math.min(start.y, y), width: Math.abs(x - start.x), height: Math.abs(y - start.y) });
+  }
+
+  function finishMarquee(event: PointerEvent<HTMLElement>) {
+    const start = marqueeStart.current;
+    const list = caseListRef.current;
+    marqueeStart.current = null;
+    if (!start || !list) {
+      setMarquee(null);
+      return;
+    }
+    const listRect = list.getBoundingClientRect();
+    const endX = event.clientX - listRect.left;
+    const endY = event.clientY - listRect.top + list.scrollTop;
+    const currentMarquee = {
+      x: Math.min(start.x, endX),
+      y: Math.min(start.y, endY),
+      width: Math.abs(endX - start.x),
+      height: Math.abs(endY - start.y)
+    };
+    setMarquee(null);
+    if (currentMarquee.width < 4 && currentMarquee.height < 4) return;
+    const selected = new Set(start.base);
+    list.querySelectorAll<HTMLElement>("[data-case-id]").forEach((item) => {
+      const rect = item.getBoundingClientRect();
+      const left = rect.left - listRect.left;
+      const top = rect.top - listRect.top + list.scrollTop;
+      const intersects = left < currentMarquee.x + currentMarquee.width && left + rect.width > currentMarquee.x
+        && top < currentMarquee.y + currentMarquee.height && top + rect.height > currentMarquee.y;
+      if (intersects) selected.add(item.dataset.caseId || "");
+    });
+    selected.delete("");
+    const ids = Array.from(selected);
+    setCheckedIds(new Set(ids));
+    props.onSelectCases(ids);
+  }
+
   function renderCase(caseItem: CaseItem) {
-    const checked = checkedIds.has(caseItem.id) || props.selectedCaseIds.includes(caseItem.id);
+    const checked = checkedIds.has(caseItem.id);
     return (
-      <button
-        key={caseItem.id}
-        className={`case-item ${props.selectedCaseId === caseItem.id && !selectMode ? "active" : ""} ${checked ? "checked" : ""}`}
-        onClick={() => (selectMode ? toggleChecked(caseItem.id) : props.onSelectCase(caseItem.id))}
+      <div className="case-row" key={caseItem.id} data-case-id={caseItem.id}>
+        <button
+          className={`checkbox case-checkbox ${checked ? "on" : ""}`}
+          aria-label={`${caseItem.case_no || "사건번호 없음"} 선택`}
+          aria-pressed={checked}
+          onClick={(event) => {
+            event.stopPropagation();
+            toggleChecked(caseItem.id);
+          }}
+        >
+          {checked ? "✓" : ""}
+        </button>
+        <button
+        className={`case-item ${props.selectedCaseId === caseItem.id ? "active" : ""} ${checked ? "checked" : ""}`}
+        onClick={() => props.onSelectCase(caseItem.id)}
         draggable
         onDragStart={(event) => startCaseDrag(event, caseItem.id)}
         onDragEnd={() => {
@@ -196,11 +266,11 @@ export function Sidebar(props: Props) {
         }}
       >
         <span className="case-item-title">
-          {selectMode && <span className={`checkbox ${checked ? "on" : ""}`}>{checked ? "✓" : ""}</span>}
           {caseItem.important && <span className="star">★</span>}
           {caseItem.case_no || "사건번호 없음"}
         </span>
       </button>
+      </div>
     );
   }
 
@@ -245,14 +315,13 @@ export function Sidebar(props: Props) {
   return (
     <aside className="sidebar">
       <header className="sidebar-head">
-        <h1>판례 정리함</h1>
         <span className="head-actions">
           <button
-            className={`ghost ${selectMode ? "select-on" : ""}`}
-            title="여러 판례 선택"
-            onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+            className="primary add-case-button"
+            aria-expanded={addMenuOpen}
+            onClick={() => setAddMenuOpen((current) => !current)}
           >
-            {selectMode ? "취소" : "선택"}
+            + 판례 추가
           </button>
           <button
             className={`ghost ${importantOnly ? "select-on" : ""}`}
@@ -262,14 +331,13 @@ export function Sidebar(props: Props) {
           >
             ★
           </button>
-          <button className="ghost" title="폴더 추가" onClick={() => props.onAddTopic(null)}>+ 폴더</button>
         </span>
       </header>
 
-      {selectMode && (
+      {checkedIds.size > 0 && (
         <div className="select-bar">
           <span>{checkedIds.size}개 선택됨</span>
-          <button className="danger" disabled={!checkedIds.size} onClick={deleteChecked}>삭제</button>
+          <button className="danger" onClick={deleteChecked}>삭제</button>
         </div>
       )}
 
@@ -281,25 +349,44 @@ export function Sidebar(props: Props) {
         type="search"
       />
 
-      <section className="case-add-panel" aria-label="판례 추가">
-        <form className="add-form" onSubmit={submitCaseNo}>
-          <input
-            value={caseNo}
-            onChange={(event) => setCaseNo(event.target.value)}
-            placeholder="사건번호 또는 법원명 + 사건번호"
-          />
-          <button type="submit" className="primary" disabled={!caseNo.trim()}>불러오기</button>
-        </form>
-        <div className="add-secondary-actions">
-          <label className={`ghost file-button ${readingPdf ? "is-loading" : ""}`}>
-            {readingPdf ? "PDF 읽는 중" : "PDF 판결문"}
-            <input type="file" accept="application/pdf,.pdf" multiple onChange={choosePdfFile} disabled={readingPdf} />
-          </label>
-          <button className="ghost blank-case" onClick={props.onAddBlank}>빈 판례</button>
-        </div>
-      </section>
+      {addMenuOpen && (
+        <section className="case-add-panel" aria-label="판례 추가">
+          <form className="add-form" onSubmit={submitCaseNo}>
+            <input
+              value={caseNo}
+              onChange={(event) => setCaseNo(event.target.value)}
+              placeholder="사건번호 또는 법원명 + 사건번호"
+            />
+            <button type="submit" className="primary" disabled={!caseNo.trim()}>불러오기</button>
+          </form>
+          <div className="add-secondary-actions">
+            <label className={`ghost file-button ${readingPdf ? "is-loading" : ""}`}>
+              {readingPdf ? "PDF 읽는 중" : "PDF 판결문"}
+              <input type="file" accept="application/pdf,.pdf" multiple onChange={choosePdfFile} disabled={readingPdf} />
+            </label>
+            <button className="ghost blank-case" onClick={() => {
+              props.onAddBlank();
+              setAddMenuOpen(false);
+            }}>빈 판례</button>
+            <label className="ghost file-button">
+              JSON 가져오기
+              <input type="file" accept="application/json,.json" onChange={chooseImportFile} />
+            </label>
+          </div>
+        </section>
+      )}
 
-      <nav className="case-list">
+      <nav
+        className="case-list"
+        ref={caseListRef}
+        onPointerDown={startMarquee}
+        onPointerMove={updateMarquee}
+        onPointerUp={finishMarquee}
+        onPointerCancel={() => {
+          marqueeStart.current = null;
+          setMarquee(null);
+        }}
+      >
         {searchResults ? (
           <>
             <p className="list-label">{searchResults.length}개 결과</p>
@@ -307,6 +394,9 @@ export function Sidebar(props: Props) {
           </>
         ) : (
           <>
+            <div className="folder-root-actions">
+              <button className="ghost" onClick={() => props.onAddTopic(null)}>+ 폴더</button>
+            </div>
             {roots.map(renderTopic)}
             {unclassified.length > 0 && (
               <div className="folder">
@@ -329,19 +419,16 @@ export function Sidebar(props: Props) {
               </div>
             )}
             {roots.length === 0 && unclassified.length === 0 && (
-              <p className="list-empty">아직 판례가 없습니다.<br />위에서 사건번호로 추가하거나 빈 판례를 만들어보세요.</p>
+              <p className="list-empty">아직 판례가 없습니다.<br />판례 추가 버튼으로 새 판례를 넣어보세요.</p>
             )}
           </>
         )}
+        {marquee && <div className="selection-marquee" style={{ left: marquee.x, top: marquee.y, width: marquee.width, height: marquee.height }} />}
       </nav>
 
       <footer className="sidebar-foot">
         {props.configured && props.userEmail && <div className="account-line">{props.userEmail}</div>}
         <div className="foot-actions">
-          <label className="ghost file-button">
-            JSON 가져오기
-            <input type="file" accept="application/json,.json" onChange={chooseImportFile} />
-          </label>
           {props.configured && <button className="ghost" onClick={props.onSignOut}>로그아웃</button>}
         </div>
       </footer>

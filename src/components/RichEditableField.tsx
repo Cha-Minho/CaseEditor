@@ -32,6 +32,7 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   const savedSelection = useRef<SelectionOffset | null>(null);
   const restoreAfterWindowFocus = useRef(false);
   const typingMarker = useRef<Text | null>(null);
+  const typingMode = useRef<"highlight" | "plain" | null>(null);
   const altCodeStart = useRef<number | null>(null);
   const [focused, setFocused] = useState(false);
 
@@ -129,6 +130,33 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     resetToolHistory();
   }
 
+  function handleBeforeInput(event: FormEvent<HTMLDivElement>) {
+    const mode = typingMode.current;
+    const input = event.nativeEvent as InputEvent;
+    if (!mode || input.inputType !== "insertText" || !input.data) return;
+    event.preventDefault();
+    clearTypingMarker();
+    const root = ref.current;
+    const selection = window.getSelection();
+    if (!root || !selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
+
+    range.deleteContents();
+    const node = mode === "highlight"
+      ? Object.assign(document.createElement("mark"), { className: "case-highlight", textContent: input.data })
+      : document.createTextNode(input.data);
+    range.insertNode(node);
+    range.setStartAfter(node);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    resetToolHistory();
+    const html = sanitizeHtml(root.innerHTML);
+    lastHtml.current = html;
+    onChange(html);
+  }
+
   function clearTypingMarker() {
     const marker = typingMarker.current;
     if (!marker?.isConnected || !marker.data.includes("\u200B")) return;
@@ -152,6 +180,7 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     const node = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
     const activeMark = node?.closest("mark.case-highlight");
     const marker = document.createTextNode("\u200B");
+    typingMode.current = activeMark ? "plain" : "highlight";
 
     if (activeMark?.parentNode) {
       const suffixRange = document.createRange();
@@ -291,6 +320,7 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
           onFocus={() => setFocused(true)}
           onBlur={commit}
           onInput={handleInput}
+          onBeforeInput={handleBeforeInput}
           onPaste={handlePaste}
           onMouseUp={pointerUp}
           onKeyDown={handleKeyDown}

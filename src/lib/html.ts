@@ -54,7 +54,7 @@ function rangeOverlapsNode(range: Range, node: Node) {
 
 function highlightedMarksInRange(range: Range) {
   return Array.from(document.querySelectorAll("mark.case-highlight")).filter((mark) =>
-    rangeOverlapsNode(range, mark)
+    range.intersectsNode(mark) || rangeOverlapsNode(range, mark)
   );
 }
 

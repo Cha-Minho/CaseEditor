@@ -33,6 +33,7 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   const restoreAfterWindowFocus = useRef(false);
   const typingMarker = useRef<Text | null>(null);
   const typingMode = useRef<"highlight" | "plain" | null>(null);
+  const typingInputStart = useRef<number | null>(null);
   const altCodeStart = useRef<number | null>(null);
   const [focused, setFocused] = useState(false);
 
@@ -41,6 +42,8 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     event.currentTarget.innerHTML = html;
     lastHtml.current = html;
     onChange(html);
+    typingMode.current = null;
+    typingInputStart.current = null;
     setFocused(false);
   }
 
@@ -125,36 +128,29 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
       }
       altCodeStart.current = null;
     }
+    enforceTypingMode((event.nativeEvent as InputEvent).data || "");
     // Text typing has the browser's native undo history. Avoid replaying an old
     // highlighting snapshot over newer text edits.
     resetToolHistory();
   }
 
-  function handleBeforeInput(event: FormEvent<HTMLDivElement>) {
-    const mode = typingMode.current;
-    const input = event.nativeEvent as InputEvent;
-    if (!mode || input.inputType !== "insertText" || !input.data) return;
-    event.preventDefault();
-    clearTypingMarker();
+  function enforceTypingMode(inserted: string) {
     const root = ref.current;
-    const selection = window.getSelection();
-    if (!root || !selection || selection.rangeCount === 0) return;
-    const range = selection.getRangeAt(0);
-    if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
-
-    range.deleteContents();
-    const node = mode === "highlight"
-      ? Object.assign(document.createElement("mark"), { className: "case-highlight", textContent: input.data })
-      : document.createTextNode(input.data);
-    range.insertNode(node);
-    range.setStartAfter(node);
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    resetToolHistory();
+    const mode = typingMode.current;
+    const start = typingInputStart.current;
+    if (!root || !mode || start === null || !inserted) return;
+    const end = start + inserted.length;
+    root.innerHTML = sanitizeHtml(root.innerHTML);
+    savedSelection.current = { start, end };
+    restoreSelection();
+    mode === "highlight" ? applyHighlight() : eraseHighlight();
     const html = sanitizeHtml(root.innerHTML);
+    root.innerHTML = html;
     lastHtml.current = html;
     onChange(html);
+    savedSelection.current = { start: end, end };
+    restoreSelection();
+    typingInputStart.current = end;
   }
 
   function clearTypingMarker() {
@@ -180,7 +176,12 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     const node = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
     const activeMark = node?.closest("mark.case-highlight");
     const marker = document.createTextNode("\u200B");
-    typingMode.current = activeMark ? "plain" : "highlight";
+    const prefix = document.createRange();
+    prefix.selectNodeContents(root);
+    prefix.setEnd(range.startContainer, range.startOffset);
+    typingInputStart.current = prefix.toString().length;
+    const followsHighlight = !activeMark && caretFollowsHighlight(range, root);
+    typingMode.current = activeMark || followsHighlight ? "plain" : "highlight";
 
     if (activeMark?.parentNode) {
       const suffixRange = document.createRange();
@@ -190,11 +191,13 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
       activeMark.parentNode.insertBefore(marker, activeMark.nextSibling);
       activeMark.parentNode.insertBefore(suffix, marker.nextSibling);
       if (!activeMark.textContent) activeMark.remove();
-    } else {
+    } else if (typingMode.current === "highlight") {
       const mark = document.createElement("mark");
       mark.className = "case-highlight";
       mark.append(marker);
       range.insertNode(mark);
+    } else {
+      range.insertNode(marker);
     }
 
     const nextRange = document.createRange();
@@ -204,6 +207,27 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     selection?.removeAllRanges();
     selection?.addRange(nextRange);
     typingMarker.current = marker;
+  }
+
+  function caretFollowsHighlight(range: Range, root: HTMLElement) {
+    const previousElement = (node: Node, offset: number): Element | null => {
+      if (node.nodeType === Node.ELEMENT_NODE && offset > 0) {
+        return (node.childNodes[offset - 1] as Element | undefined) || null;
+      }
+      if (node.nodeType === Node.TEXT_NODE && offset === 0) return node.previousSibling as Element | null;
+      return null;
+    };
+    let current: Node | null = range.startContainer;
+    let offset = range.startOffset;
+    while (current) {
+      if (current.nodeType === Node.TEXT_NODE && offset > 0) return false;
+      const previous = previousElement(current, offset);
+      if (previous instanceof Element && (previous.matches("mark.case-highlight") || previous.querySelector("mark.case-highlight"))) return true;
+      if (current === root) break;
+      offset = Array.prototype.indexOf.call(current.parentNode?.childNodes, current);
+      current = current.parentNode;
+    }
+    return false;
   }
 
   function handlePaste(event: ClipboardEvent<HTMLDivElement>) {
@@ -320,7 +344,6 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
           onFocus={() => setFocused(true)}
           onBlur={commit}
           onInput={handleInput}
-          onBeforeInput={handleBeforeInput}
           onPaste={handlePaste}
           onMouseUp={pointerUp}
           onKeyDown={handleKeyDown}

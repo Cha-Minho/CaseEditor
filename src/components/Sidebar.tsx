@@ -196,9 +196,8 @@ export function Sidebar(props: Props) {
         <span className="case-item-title">
           {selectMode && <span className={`checkbox ${checked ? "on" : ""}`}>{checked ? "✓" : ""}</span>}
           {caseItem.important && <span className="star">★</span>}
-          {caseItem.title}
+          {caseItem.case_no || "사건번호 없음"}
         </span>
-        {caseItem.case_no && <span className="case-item-no">{caseItem.case_no}</span>}
       </button>
     );
   }

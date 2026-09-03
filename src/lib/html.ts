@@ -61,13 +61,11 @@ export function eraseHighlight() {
   );
   if (!marks.length) return;
 
-  // Extracting the selected fragment splits the surrounding marks at its edges,
-  // so only the highlighted portion inside the selection is removed.
-  const content = range.extractContents();
-  Array.from(content.querySelectorAll("mark.case-highlight")).forEach((mark) => {
+  // A highlight is stored as one mark element. Unwrapping every selected mark is
+  // more reliable than extracting and re-inserting a partial DOM fragment.
+  marks.forEach((mark) => {
     mark.replaceWith(...Array.from(mark.childNodes));
   });
-  range.insertNode(content);
   selection.removeAllRanges();
 }
 

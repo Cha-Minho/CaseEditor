@@ -3,6 +3,13 @@ import { applyHighlight, eraseHighlight, sanitizeHtml, toggleHighlight } from ".
 
 export type ToolMode = "highlight" | "erase" | null;
 
+type History = {
+  undo: string[];
+  redo: string[];
+};
+
+const HISTORY_LIMIT = 60;
+
 type Props = {
   label: string;
   value: string;
@@ -16,13 +23,8 @@ type Props = {
 export function RichEditableField({ label, value, collapsed, toolMode, onToggle, onChange, onExitTool }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const lastHtml = useRef(value);
+  const history = useRef<History>({ undo: [], redo: [] });
   const [focused, setFocused] = useState(false);
-
-  useEffect(() => {
-    if (!ref.current || focused || lastHtml.current === value) return;
-    ref.current.innerHTML = value;
-    lastHtml.current = value;
-  }, [focused, value]);
 
   function commit(event: FocusEvent<HTMLDivElement>) {
     const html = sanitizeHtml(event.currentTarget.innerHTML);
@@ -31,13 +33,21 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     setFocused(false);
   }
 
+  function recordToolChange(change: () => void) {
+    if (!ref.current) return;
+    const before = sanitizeHtml(ref.current.innerHTML);
+    change();
+    const after = sanitizeHtml(ref.current.innerHTML);
+    if (before === after) return;
+    history.current.undo.push(before);
+    if (history.current.undo.length > HISTORY_LIMIT) history.current.undo.shift();
+    history.current.redo = [];
+    lastHtml.current = after;
+    onChange(after);
+  }
+
   function applyCurrentTool(mode: Exclude<ToolMode, null>) {
-    mode === "highlight" ? applyHighlight() : eraseHighlight();
-    if (ref.current) {
-      const html = sanitizeHtml(ref.current.innerHTML);
-      lastHtml.current = html;
-      onChange(html);
-    }
+    recordToolChange(() => (mode === "highlight" ? applyHighlight() : eraseHighlight()));
   }
 
   function pointerUp(event: MouseEvent<HTMLDivElement>) {
@@ -47,15 +57,47 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (!event.ctrlKey || event.key.toLowerCase() !== "h") return;
-    event.preventDefault();
-    toggleHighlight();
-    if (ref.current) {
-      const html = sanitizeHtml(ref.current.innerHTML);
-      lastHtml.current = html;
-      onChange(html);
+    if (event.ctrlKey && event.key.toLowerCase() === "h") {
+      event.preventDefault();
+      recordToolChange(toggleHighlight);
+      return;
     }
+
+    const isUndo = event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "z";
+    const isRedo = event.ctrlKey && (event.key.toLowerCase() === "y" || (event.shiftKey && event.key.toLowerCase() === "z"));
+    if (!isUndo && !isRedo) return;
+
+    const from = isUndo ? history.current.undo : history.current.redo;
+    const to = isUndo ? history.current.redo : history.current.undo;
+    const next = from.pop();
+    if (!next || !ref.current) return;
+    event.preventDefault();
+    to.push(sanitizeHtml(ref.current.innerHTML));
+    ref.current.innerHTML = next;
+    lastHtml.current = next;
+    onChange(next);
   }
+
+  function resetToolHistory() {
+    history.current = { undo: [], redo: [] };
+  }
+
+  function handleInput() {
+    // Text typing has the browser's native undo history. Avoid replaying an old
+    // highlighting snapshot over newer text edits.
+    resetToolHistory();
+  }
+
+  function handleExternalValue() {
+    if (!ref.current || focused || lastHtml.current === value) return;
+    ref.current.innerHTML = value;
+    lastHtml.current = value;
+    resetToolHistory();
+  }
+
+  useEffect(() => {
+    handleExternalValue();
+  }, [focused, value]);
 
   return (
     <div className="field">
@@ -72,6 +114,7 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
           spellCheck={false}
           onFocus={() => setFocused(true)}
           onBlur={commit}
+          onInput={handleInput}
           onMouseUp={pointerUp}
           onKeyDown={handleKeyDown}
           onContextMenu={(event) => {

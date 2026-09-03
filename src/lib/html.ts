@@ -43,6 +43,21 @@ export function applyHighlight() {
   selection.removeAllRanges();
 }
 
+function rangeOverlapsNode(range: Range, node: Node) {
+  const nodeRange = document.createRange();
+  nodeRange.selectNodeContents(node);
+  return (
+    range.compareBoundaryPoints(Range.END_TO_START, nodeRange) > 0 &&
+    range.compareBoundaryPoints(Range.START_TO_END, nodeRange) < 0
+  );
+}
+
+function highlightedMarksInRange(range: Range) {
+  return Array.from(document.querySelectorAll("mark.case-highlight")).filter((mark) =>
+    rangeOverlapsNode(range, mark)
+  );
+}
+
 export function eraseHighlight() {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) return;
@@ -56,16 +71,16 @@ export function eraseHighlight() {
     return;
   }
 
-  const marks = Array.from(document.querySelectorAll("mark.case-highlight")).filter((mark) =>
-    range.intersectsNode(mark)
-  );
+  const marks = highlightedMarksInRange(range);
   if (!marks.length) return;
 
-  // A highlight is stored as one mark element. Unwrapping every selected mark is
-  // more reliable than extracting and re-inserting a partial DOM fragment.
-  marks.forEach((mark) => {
+  // The browser splits surrounding marks when extracting a partial selection.
+  // Unwrapping the extracted fragment therefore keeps the still-highlighted text intact.
+  const content = range.extractContents();
+  Array.from(content.querySelectorAll("mark.case-highlight")).forEach((mark) => {
     mark.replaceWith(...Array.from(mark.childNodes));
   });
+  range.insertNode(content);
   selection.removeAllRanges();
 }
 
@@ -73,9 +88,7 @@ export function toggleHighlight() {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
   const range = selection.getRangeAt(0);
-  const hasHighlight = Array.from(document.querySelectorAll("mark.case-highlight")).some((mark) =>
-    range.intersectsNode(mark)
-  );
+  const hasHighlight = highlightedMarksInRange(range).length > 0;
   if (hasHighlight) eraseHighlight();
   else applyHighlight();
 }

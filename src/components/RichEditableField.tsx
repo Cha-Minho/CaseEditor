@@ -31,10 +31,12 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   const history = useRef<History>({ undo: [], redo: [] });
   const savedSelection = useRef<SelectionOffset | null>(null);
   const restoreAfterWindowFocus = useRef(false);
+  const typingMarker = useRef<Text | null>(null);
   const [focused, setFocused] = useState(false);
 
   function commit(event: FocusEvent<HTMLDivElement>) {
     const html = sanitizeHtml(event.currentTarget.innerHTML);
+    event.currentTarget.innerHTML = html;
     lastHtml.current = html;
     onChange(html);
     setFocused(false);
@@ -42,6 +44,7 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
 
   function recordToolChange(change: () => void) {
     if (!ref.current) return;
+    captureSelection();
     const before = sanitizeHtml(ref.current.innerHTML);
     change();
     const after = sanitizeHtml(ref.current.innerHTML);
@@ -51,6 +54,14 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     history.current.redo = [];
     lastHtml.current = after;
     onChange(after);
+    if (savedSelection.current) {
+      const end = savedSelection.current.end;
+      savedSelection.current = { start: end, end };
+      window.requestAnimationFrame(() => {
+        ref.current?.focus({ preventScroll: true });
+        restoreSelection();
+      });
+    }
   }
 
   function applyCurrentTool(mode: Exclude<ToolMode, null>) {
@@ -67,7 +78,11 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     if (event.ctrlKey && event.key.toLowerCase() === "h") {
       event.preventDefault();
       const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+      if (!selection || selection.rangeCount === 0) return;
+      if (selection.isCollapsed) {
+        toggleTypingHighlight(selection.getRangeAt(0));
+        return;
+      }
       recordToolChange(toggleHighlight);
       return;
     }
@@ -92,9 +107,58 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   }
 
   function handleInput() {
+    clearTypingMarker();
     // Text typing has the browser's native undo history. Avoid replaying an old
     // highlighting snapshot over newer text edits.
     resetToolHistory();
+  }
+
+  function clearTypingMarker() {
+    const marker = typingMarker.current;
+    if (!marker?.isConnected || !marker.data.includes("\u200B")) return;
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    const markerStart = marker.data.indexOf("\u200B");
+    marker.data = marker.data.replace(/\u200B/g, "");
+    if (range) {
+      const adjust = (node: Node, offset: number) => node === marker && offset > markerStart ? offset - 1 : offset;
+      range.setStart(range.startContainer, adjust(range.startContainer, range.startOffset));
+      range.setEnd(range.endContainer, adjust(range.endContainer, range.endOffset));
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+    typingMarker.current = null;
+  }
+
+  function toggleTypingHighlight(range: Range) {
+    const root = ref.current;
+    if (!root) return;
+    const node = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
+    const activeMark = node?.closest("mark.case-highlight");
+    const marker = document.createTextNode("\u200B");
+
+    if (activeMark?.parentNode) {
+      const suffixRange = document.createRange();
+      suffixRange.setStart(range.startContainer, range.startOffset);
+      suffixRange.setEndAfter(activeMark);
+      const suffix = suffixRange.extractContents();
+      activeMark.parentNode.insertBefore(marker, activeMark.nextSibling);
+      activeMark.parentNode.insertBefore(suffix, marker.nextSibling);
+      if (!activeMark.textContent) activeMark.remove();
+    } else {
+      const mark = document.createElement("mark");
+      mark.className = "case-highlight";
+      mark.append(marker);
+      range.insertNode(mark);
+    }
+
+    const nextRange = document.createRange();
+    nextRange.setStart(marker, marker.data.length);
+    nextRange.collapse(true);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(nextRange);
+    typingMarker.current = marker;
   }
 
   function handlePaste(event: ClipboardEvent<HTMLDivElement>) {

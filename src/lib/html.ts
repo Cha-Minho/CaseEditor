@@ -3,7 +3,7 @@ const ALLOWED_ATTRS = new Set(["class"]);
 
 export function sanitizeHtml(html: string) {
   const template = document.createElement("template");
-  template.innerHTML = html;
+  template.innerHTML = html.replace(/\u200B/g, "");
 
   const walk = (node: Node) => {
     Array.from(node.childNodes).forEach((child) => {

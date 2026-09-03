@@ -8,6 +8,11 @@ type History = {
   redo: string[];
 };
 
+type SelectionOffset = {
+  start: number;
+  end: number;
+};
+
 const HISTORY_LIMIT = 60;
 
 type Props = {
@@ -24,6 +29,8 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   const ref = useRef<HTMLDivElement | null>(null);
   const lastHtml = useRef(value);
   const history = useRef<History>({ undo: [], redo: [] });
+  const savedSelection = useRef<SelectionOffset | null>(null);
+  const restoreAfterWindowFocus = useRef(false);
   const [focused, setFocused] = useState(false);
 
   function commit(event: FocusEvent<HTMLDivElement>) {
@@ -95,9 +102,74 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     resetToolHistory();
   }
 
+  function captureSelection() {
+    const root = ref.current;
+    const selection = window.getSelection();
+    if (!root || !selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
+
+    const startRange = document.createRange();
+    startRange.selectNodeContents(root);
+    startRange.setEnd(range.startContainer, range.startOffset);
+    const endRange = document.createRange();
+    endRange.selectNodeContents(root);
+    endRange.setEnd(range.endContainer, range.endOffset);
+    savedSelection.current = { start: startRange.toString().length, end: endRange.toString().length };
+  }
+
+  function restoreSelection() {
+    const root = ref.current;
+    const saved = savedSelection.current;
+    if (!root || !saved) return;
+
+    const findBoundary = (offset: number) => {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let remaining = offset;
+      let textNode = walker.nextNode() as Text | null;
+      while (textNode) {
+        if (remaining <= textNode.data.length) return { node: textNode, offset: remaining };
+        remaining -= textNode.data.length;
+        textNode = walker.nextNode() as Text | null;
+      }
+      return { node: root as Node, offset: root.childNodes.length };
+    };
+
+    const range = document.createRange();
+    const start = findBoundary(saved.start);
+    const end = findBoundary(saved.end);
+    range.setStart(start.node, start.offset);
+    range.setEnd(end.node, end.offset);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }
+
   useEffect(() => {
     handleExternalValue();
   }, [focused, value]);
+
+  useEffect(() => {
+    const onWindowBlur = () => {
+      if (document.activeElement !== ref.current) return;
+      captureSelection();
+      restoreAfterWindowFocus.current = Boolean(savedSelection.current);
+    };
+    const onWindowFocus = () => {
+      if (!restoreAfterWindowFocus.current) return;
+      restoreAfterWindowFocus.current = false;
+      window.requestAnimationFrame(() => {
+        ref.current?.focus({ preventScroll: true });
+        restoreSelection();
+      });
+    };
+    window.addEventListener("blur", onWindowBlur);
+    window.addEventListener("focus", onWindowFocus);
+    return () => {
+      window.removeEventListener("blur", onWindowBlur);
+      window.removeEventListener("focus", onWindowFocus);
+    };
+  }, []);
 
   return (
     <div className="field">

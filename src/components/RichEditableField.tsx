@@ -1,4 +1,4 @@
-import { FocusEvent, KeyboardEvent, MouseEvent, useEffect, useRef, useState } from "react";
+import { ClipboardEvent, FocusEvent, KeyboardEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import { applyHighlight, eraseHighlight, sanitizeHtml, toggleHighlight } from "../lib/html";
 
 export type ToolMode = "highlight" | "erase" | null;
@@ -95,6 +95,28 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     resetToolHistory();
   }
 
+  function handlePaste(event: ClipboardEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const root = ref.current;
+    const selection = window.getSelection();
+    if (!root || !selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
+
+    const text = event.clipboardData.getData("text/plain").replace(/\r\n?/g, "\n");
+    range.deleteContents();
+    const textNode = document.createTextNode(text);
+    range.insertNode(textNode);
+    range.setStartAfter(textNode);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    resetToolHistory();
+    const html = sanitizeHtml(root.innerHTML);
+    lastHtml.current = html;
+    onChange(html);
+  }
+
   function handleExternalValue() {
     if (!ref.current || focused || lastHtml.current === value) return;
     ref.current.innerHTML = value;
@@ -187,6 +209,7 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
           onFocus={() => setFocused(true)}
           onBlur={commit}
           onInput={handleInput}
+          onPaste={handlePaste}
           onMouseUp={pointerUp}
           onKeyDown={handleKeyDown}
           onContextMenu={(event) => {

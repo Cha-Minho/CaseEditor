@@ -181,14 +181,14 @@ export function Editor({
           <div className="editor-mark-tools">
             <button
               className={`tool-button ${toolMode === "highlight" ? "on" : ""}`}
-              title="드래그한 부분에 형광펜 (Ctrl+H, 우클릭으로 종료)"
+              title="드래그한 부분에 형광펜 (Ctrl+H는 독립 토글)"
               onClick={() => setToolMode(toolMode === "highlight" ? null : "highlight")}
             >
               형광펜
             </button>
             <button
               className={`tool-button ${toolMode === "erase" ? "on" : ""}`}
-              title="형광펜 지우기 (Ctrl+H, 우클릭으로 종료)"
+              title="드래그한 부분의 형광펜 지우기 (Ctrl+H는 독립 토글)"
               onClick={() => setToolMode(toolMode === "erase" ? null : "erase")}
             >
               지우개

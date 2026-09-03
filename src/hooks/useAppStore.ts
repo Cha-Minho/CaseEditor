@@ -52,6 +52,46 @@ function hasUserData(snapshot: AppSnapshot) {
   return snapshot.topics.some((item) => !item.deleted_at) || snapshot.cases.some((item) => !item.deleted_at);
 }
 
+function lastSelectedCaseKey(userId: string) {
+  return `case-editor:last-selected-case:${userId}`;
+}
+
+function readLastSelectedCase(userId: string) {
+  try {
+    return window.localStorage.getItem(lastSelectedCaseKey(userId));
+  } catch {
+    return null;
+  }
+}
+
+function storeLastSelectedCase(userId: string, caseId: string | null) {
+  try {
+    const key = lastSelectedCaseKey(userId);
+    if (caseId) window.localStorage.setItem(key, caseId);
+    else window.localStorage.removeItem(key);
+  } catch {
+    // Private browsing can deny localStorage. The app still works without restoration.
+  }
+}
+
+function isNewer<T extends { updated_at: string }>(candidate: T, current: T) {
+  return new Date(candidate.updated_at).getTime() >= new Date(current.updated_at).getTime();
+}
+
+function mergeLatest<T extends { user_id: string; updated_at: string }>(
+  current: T[],
+  incoming: T[],
+  userId: string,
+  getId: (item: T) => string
+) {
+  const merged = new Map(current.filter((item) => item.user_id === userId).map((item) => [getId(item), item]));
+  incoming.forEach((item) => {
+    const existing = merged.get(getId(item));
+    if (!existing || isNewer(item, existing)) merged.set(getId(item), item);
+  });
+  return Array.from(merged.values());
+}
+
 function reassignSnapshotUser(snapshot: AppSnapshot, userId: string): AppSnapshot {
   const timestamp = nowIso();
   return {
@@ -68,20 +108,32 @@ export function useAppStore(userId: string | null) {
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [notes, setNotes] = useState<CaseNotes[]>([]);
   const [uiState, setUiState] = useState<UiState>(() => emptyUiState(activeUserId));
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [selectedCaseId, setSelectedCaseIdState] = useState<string | null>(() => readLastSelectedCase(activeUserId));
   const [syncMessage, setSyncMessage] = useState("로컬 저장 준비 중");
   const syncTimer = useRef<number | null>(null);
   const remotePullTimer = useRef<number | null>(null);
+  const selectedCaseIdRef = useRef(selectedCaseId);
+
+  const setSelectedCaseId = useCallback((caseId: string | null) => {
+    selectedCaseIdRef.current = caseId;
+    setSelectedCaseIdState(caseId);
+    storeLastSelectedCase(activeUserId, caseId);
+  }, [activeUserId]);
 
   const load = useCallback(async () => {
     const snapshot = await readSnapshot(activeUserId);
-    setTopics(snapshot.topics);
-    setCases(snapshot.cases);
-    setNotes(snapshot.notes);
-    setUiState(snapshot.uiState);
-    setSelectedCaseId((current) => current || snapshot.cases.find((item) => !item.deleted_at)?.id || null);
+    setTopics((current) => mergeLatest(current, snapshot.topics, activeUserId, (item) => item.id));
+    setCases((current) => mergeLatest(current, snapshot.cases, activeUserId, (item) => item.id));
+    setNotes((current) => mergeLatest(current, snapshot.notes, activeUserId, (item) => item.case_id));
+    setUiState((current) =>
+      current.user_id === activeUserId && !isNewer(snapshot.uiState, current) ? current : snapshot.uiState
+    );
+    const availableCases = snapshot.cases.filter((item) => !item.deleted_at);
+    const candidates = [selectedCaseIdRef.current, readLastSelectedCase(activeUserId), availableCases[0]?.id];
+    const nextSelectedId = candidates.find((id): id is string => Boolean(id) && availableCases.some((item) => item.id === id)) || null;
+    setSelectedCaseId(nextSelectedId);
     setSyncMessage("로컬 저장됨");
-  }, [activeUserId]);
+  }, [activeUserId, setSelectedCaseId]);
 
   const promoteLocalDataToAccount = useCallback(async () => {
     if (!userId) return false;
@@ -113,25 +165,23 @@ export function useAppStore(userId: string | null) {
       syncTimer.current = null;
       setSyncMessage("동기화 중");
       syncNow(activeUserId)
-        .then(load)
         .then(() => setSyncMessage("계정에 저장됨"))
         .catch((error) => setSyncMessage(`동기화 보류: ${error.message}`));
     }, 900);
-  }, [activeUserId, load, userId]);
+  }, [activeUserId, userId]);
 
   const scheduleRemotePull = useCallback(() => {
     if (!userId || !navigator.onLine) return;
     if (remotePullTimer.current) window.clearTimeout(remotePullTimer.current);
     remotePullTimer.current = window.setTimeout(() => {
       remotePullTimer.current = null;
-      // 내 변경을 먼저 밀어 넣은 뒤 원격 상태를 받는다. 그렇지 않으면 실시간
-      // 알림이 아직 저장되지 않은 목차 열림 상태나 사건 이동을 덮어쓸 수 있다.
+      // 원격 내용은 IndexedDB에만 반영한다. 열린 편집 화면은 사용자의 로컬 편집본을
+      // 계속 유지하고, 다음 앱 진입 때 로컬 DB에서 최신 상태를 읽는다.
       syncNow(activeUserId)
-        .then(load)
-        .then(() => setSyncMessage("최신 내용을 불러옴"))
+        .then(() => setSyncMessage("계정과 동기화됨"))
         .catch((error) => setSyncMessage(`동기화 보류: ${error.message}`));
     }, 500);
-  }, [activeUserId, load, userId]);
+  }, [activeUserId, userId]);
 
   useEffect(() => {
     return () => {
@@ -157,12 +207,11 @@ export function useAppStore(userId: string | null) {
     const handler = () => {
       if (!userId) return;
       syncNow(activeUserId)
-        .then(load)
         .catch((error) => setSyncMessage(`동기화 보류: ${error.message}`));
     };
     window.addEventListener("online", handler);
     return () => window.removeEventListener("online", handler);
-  }, [activeUserId, load, userId]);
+  }, [activeUserId, userId]);
 
   useEffect(() => {
     if (!userId || !supabase) return;
@@ -459,12 +508,11 @@ export function useAppStore(userId: string | null) {
     if (userId && navigator.onLine) {
       setSyncMessage("가져온 JSON 업로드 중");
       await syncNow(activeUserId);
-      await load();
       setSyncMessage("가져온 JSON을 계정에 저장함");
       return;
     }
     scheduleSync();
-  }, [activeUserId, load, scheduleSync, selectedCaseId, uiState, userId]);
+  }, [activeUserId, scheduleSync, selectedCaseId, uiState, userId]);
 
   const visibleTopics = useMemo(() => topics.filter((topic) => !topic.deleted_at), [topics]);
   const visibleCases = useMemo(() => cases.filter((item) => !item.deleted_at), [cases]);
@@ -495,6 +543,6 @@ export function useAppStore(userId: string | null) {
     toggleExpandedTopic,
     importSnapshot,
     reload: load,
-    sync: () => syncNow(activeUserId).then(load)
+    sync: () => syncNow(activeUserId)
   };
 }

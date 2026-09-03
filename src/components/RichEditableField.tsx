@@ -154,21 +154,36 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
 
   function replaceArrowShortcut() {
     const root = ref.current;
-    if (!root) return;
-    captureSelection();
-    const selection = savedSelection.current;
-    if (!selection || selection.start !== selection.end || selection.start < 2) return;
-    if (root.textContent?.slice(selection.start - 2, selection.start) !== "->") return;
+    const selection = window.getSelection();
+    if (!root || !selection || selection.rangeCount === 0 || !selection.isCollapsed) return;
+    const caret = selection.getRangeAt(0);
+    if (!root.contains(caret.startContainer)) return;
+    const trailingText = textAtCaret(caret);
+    if (!trailingText || trailingText.offset < 2) return;
+    if (trailingText.node.data.slice(trailingText.offset - 2, trailingText.offset) !== "->") return;
 
-    savedSelection.current = { start: selection.start - 2, end: selection.start };
-    restoreSelection();
+    const replacement = document.createRange();
+    replacement.setStart(trailingText.node, trailingText.offset - 2);
+    replacement.setEnd(trailingText.node, trailingText.offset);
+    selection.removeAllRanges();
+    selection.addRange(replacement);
     // execCommand keeps this small replacement in the browser's native undo stack.
     if (!document.execCommand("insertText", false, "→")) return;
 
-    const cursor = selection.start - 1;
-    savedSelection.current = { start: cursor, end: cursor };
-    typingInputStart.current = cursor;
     captureSelection();
+    typingInputStart.current = savedSelection.current?.start ?? null;
+  }
+
+  function textAtCaret(range: Range) {
+    if (range.startContainer.nodeType === Node.TEXT_NODE) {
+      return { node: range.startContainer as Text, offset: range.startOffset };
+    }
+    if (range.startContainer.nodeType !== Node.ELEMENT_NODE || range.startOffset === 0) return null;
+    let node: Node | null = range.startContainer.childNodes[range.startOffset - 1] ?? null;
+    while (node?.lastChild) node = node.lastChild;
+    if (node?.nodeType !== Node.TEXT_NODE) return null;
+    const textNode = node as Text;
+    return { node: textNode, offset: textNode.data.length };
   }
 
   function toggleTypingHighlight(range: Range) {

@@ -1,4 +1,4 @@
-import { ClipboardEvent, FocusEvent, KeyboardEvent, MouseEvent, useEffect, useRef, useState } from "react";
+import { ClipboardEvent, FocusEvent, FormEvent, KeyboardEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import { applyHighlight, eraseHighlight, sanitizeHtml, toggleHighlight } from "../lib/html";
 
 export type ToolMode = "highlight" | "erase" | null;
@@ -32,6 +32,7 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   const savedSelection = useRef<SelectionOffset | null>(null);
   const restoreAfterWindowFocus = useRef(false);
   const typingMarker = useRef<Text | null>(null);
+  const altCodeStart = useRef<number | null>(null);
   const [focused, setFocused] = useState(false);
 
   function commit(event: FocusEvent<HTMLDivElement>) {
@@ -75,6 +76,11 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.altKey && (/^\d$/.test(event.key) || event.code.startsWith("Numpad"))) {
+      captureSelection();
+      altCodeStart.current = savedSelection.current?.start ?? null;
+    }
+
     if (event.ctrlKey && event.key.toLowerCase() === "h") {
       event.preventDefault();
       const selection = window.getSelection();
@@ -106,8 +112,18 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     history.current = { undo: [], redo: [] };
   }
 
-  function handleInput() {
+  function handleInput(event: FormEvent<HTMLDivElement>) {
     clearTypingMarker();
+    const start = altCodeStart.current;
+    if (start !== null) {
+      const inserted = (event.nativeEvent as InputEvent).data || "";
+      if (inserted) {
+        const end = start + inserted.length;
+        savedSelection.current = { start: end, end };
+        restoreSelection();
+      }
+      altCodeStart.current = null;
+    }
     // Text typing has the browser's native undo history. Avoid replaying an old
     // highlighting snapshot over newer text edits.
     resetToolHistory();

@@ -1,5 +1,5 @@
 import { FocusEvent, KeyboardEvent, MouseEvent, useEffect, useRef, useState } from "react";
-import { applyHighlight, eraseHighlight, sanitizeHtml } from "../lib/html";
+import { applyHighlight, eraseHighlight, sanitizeHtml, toggleHighlight } from "../lib/html";
 
 export type ToolMode = "highlight" | "erase" | null;
 
@@ -49,7 +49,12 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (!event.ctrlKey || event.key.toLowerCase() !== "h") return;
     event.preventDefault();
-    applyCurrentTool(toolMode ?? "highlight");
+    toggleHighlight();
+    if (ref.current) {
+      const html = sanitizeHtml(ref.current.innerHTML);
+      lastHtml.current = html;
+      onChange(html);
+    }
   }
 
   return (

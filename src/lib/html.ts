@@ -47,10 +47,39 @@ export function eraseHighlight() {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) return;
   const range = selection.getRangeAt(0);
+  if (selection.isCollapsed) {
+    const node = selection.anchorNode instanceof Element
+      ? selection.anchorNode
+      : selection.anchorNode?.parentElement;
+    const mark = node?.closest("mark.case-highlight");
+    if (mark) mark.replaceWith(...Array.from(mark.childNodes));
+    return;
+  }
+
   const marks = Array.from(document.querySelectorAll("mark.case-highlight")).filter((mark) =>
     range.intersectsNode(mark)
   );
-  marks.forEach((mark) => mark.replaceWith(...Array.from(mark.childNodes)));
+  if (!marks.length) return;
+
+  // Extracting the selected fragment splits the surrounding marks at its edges,
+  // so only the highlighted portion inside the selection is removed.
+  const content = range.extractContents();
+  Array.from(content.querySelectorAll("mark.case-highlight")).forEach((mark) => {
+    mark.replaceWith(...Array.from(mark.childNodes));
+  });
+  range.insertNode(content);
+  selection.removeAllRanges();
+}
+
+export function toggleHighlight() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+  const range = selection.getRangeAt(0);
+  const hasHighlight = Array.from(document.querySelectorAll("mark.case-highlight")).some((mark) =>
+    range.intersectsNode(mark)
+  );
+  if (hasHighlight) eraseHighlight();
+  else applyHighlight();
 }
 
 export function textFromHtml(html: string) {

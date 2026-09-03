@@ -38,15 +38,17 @@ export function Sidebar(props: Props) {
   const [draggedIds, setDraggedIds] = useState<string[]>([]);
   const [dropTopicId, setDropTopicId] = useState<string | null | undefined>(undefined);
   const [readingPdf, setReadingPdf] = useState(false);
+  const [importantOnly, setImportantOnly] = useState(false);
   const needle = query.trim().toLowerCase();
+  const visibleCases = importantOnly ? props.cases.filter((item) => item.important) : props.cases;
 
   const searchResults = useMemo(() => {
     if (!needle) return null;
-    return props.cases.filter((item) => `${item.title} ${item.case_no}`.toLowerCase().includes(needle));
-  }, [needle, props.cases]);
+    return visibleCases.filter((item) => `${item.title} ${item.case_no}`.toLowerCase().includes(needle));
+  }, [needle, visibleCases]);
 
   const roots = props.topics.filter((topic) => !topic.parent_id).sort((a, b) => a.sort_order - b.sort_order);
-  const unclassified = props.cases.filter((item) => !item.topic_id);
+  const unclassified = visibleCases.filter((item) => !item.topic_id);
 
   async function submitCaseNo(event: FormEvent) {
     event.preventDefault();
@@ -137,7 +139,7 @@ export function Sidebar(props: Props) {
       (childMap.get(id) || []).forEach((child) => collect(child.id));
     };
     collect(topicId);
-    return props.cases.filter((item) => item.topic_id && topicIds.has(item.topic_id)).map((item) => item.id);
+    return visibleCases.filter((item) => item.topic_id && topicIds.has(item.topic_id)).map((item) => item.id);
   }
 
   function selectCaseGroup(ids: string[]) {
@@ -204,7 +206,7 @@ export function Sidebar(props: Props) {
 
   function renderTopic(topic: Topic): JSX.Element {
     const children = props.topics.filter((item) => item.parent_id === topic.id).sort((a, b) => a.sort_order - b.sort_order);
-    const topicCases = props.cases.filter((item) => item.topic_id === topic.id);
+    const topicCases = visibleCases.filter((item) => item.topic_id === topic.id);
     const open = props.expandedIds.includes(topic.id);
     const allTopicCaseIds = caseIdsInTopic(topic.id);
 
@@ -251,6 +253,14 @@ export function Sidebar(props: Props) {
             onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
           >
             {selectMode ? "취소" : "선택"}
+          </button>
+          <button
+            className={`ghost ${importantOnly ? "select-on" : ""}`}
+            title={importantOnly ? "전체 판례 보기" : "중요 판례만 보기"}
+            aria-label={importantOnly ? "전체 판례 보기" : "중요 판례만 보기"}
+            onClick={() => setImportantOnly((current) => !current)}
+          >
+            ★
           </button>
           <button className="ghost" title="폴더 추가" onClick={() => props.onAddTopic(null)}>+ 폴더</button>
         </span>

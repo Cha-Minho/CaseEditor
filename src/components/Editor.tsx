@@ -165,7 +165,14 @@ export function Editor({
       <header className="editor-header">
         <button className="ghost back-button" onClick={onBack}>‹ 목록</button>
         <div className="editor-title">
-          <h1>{selectedCase.case_no || "사건번호 없음"}</h1>
+          <h1
+            contentEditable
+            suppressContentEditableWarning
+            spellCheck={false}
+            onBlur={(event) => onUpdateCase(selectedCase.id, { case_no: event.currentTarget.textContent?.trim() || "" })}
+          >
+            {selectedCase.case_no || "사건번호 없음"}
+          </h1>
           <p className="editor-meta">
             {topicPath}
           </p>

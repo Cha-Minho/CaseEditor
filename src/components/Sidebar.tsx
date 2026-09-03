@@ -21,6 +21,7 @@ type Props = {
   onSelectCase: (id: string) => void;
   onSelectCases: (ids: string[]) => void;
   onMoveCases: (ids: string[], topicId: string | null) => void;
+  onMoveTopic: (topicId: string, parentId: string | null) => void;
   onToggleTopic: (id: string) => void;
   onAddTopic: (parentId?: string | null) => void;
   onRenameTopic: (id: string, name: string) => void;
@@ -38,7 +39,9 @@ export function Sidebar(props: Props) {
   const [caseNo, setCaseNo] = useState("");
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [draggedIds, setDraggedIds] = useState<string[]>([]);
+  const [draggedTopicId, setDraggedTopicId] = useState<string | null>(null);
   const [dropTopicId, setDropTopicId] = useState<string | null | undefined>(undefined);
+  const [topicDropId, setTopicDropId] = useState<string | null | undefined>(undefined);
   const [readingPdf, setReadingPdf] = useState(false);
   const [importantOnly, setImportantOnly] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
@@ -190,6 +193,27 @@ export function Sidebar(props: Props) {
     setDropTopicId(undefined);
   }
 
+  function startTopicDrag(event: DragEvent<HTMLElement>, topicId: string) {
+    setDraggedTopicId(topicId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-case-editor-topic", topicId);
+  }
+
+  function allowTopicDrop(event: DragEvent<HTMLElement>, topicId: string | null) {
+    if (!draggedTopicId || draggedTopicId === topicId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setTopicDropId(topicId);
+  }
+
+  function dropTopic(event: DragEvent<HTMLElement>, topicId: string | null) {
+    if (!draggedTopicId || draggedTopicId === topicId) return;
+    event.preventDefault();
+    props.onMoveTopic(draggedTopicId, topicId);
+    setDraggedTopicId(null);
+    setTopicDropId(undefined);
+  }
+
   function startMarquee(event: PointerEvent<HTMLElement>) {
     if (event.button !== 0 || (event.target as HTMLElement).closest("button, input, label")) return;
     const list = caseListRef.current;
@@ -288,10 +312,25 @@ export function Sidebar(props: Props) {
     return (
       <div className="folder" key={topic.id}>
         <div
-          className={`folder-row ${dropTopicId === topic.id ? "drop-target" : ""}`}
-          onDragOver={(event) => allowCaseDrop(event, topic.id)}
-          onDragLeave={() => setDropTopicId((current) => current === topic.id ? undefined : current)}
-          onDrop={(event) => dropCases(event, topic.id)}
+          className={`folder-row ${dropTopicId === topic.id ? "drop-target" : ""} ${topicDropId === topic.id ? "topic-drop-target" : ""}`}
+          draggable
+          onDragStart={(event) => startTopicDrag(event, topic.id)}
+          onDragEnd={() => {
+            setDraggedTopicId(null);
+            setTopicDropId(undefined);
+          }}
+          onDragOver={(event) => {
+            allowCaseDrop(event, topic.id);
+            allowTopicDrop(event, topic.id);
+          }}
+          onDragLeave={() => {
+            setDropTopicId((current) => current === topic.id ? undefined : current);
+            setTopicDropId((current) => current === topic.id ? undefined : current);
+          }}
+          onDrop={(event) => {
+            dropCases(event, topic.id);
+            dropTopic(event, topic.id);
+          }}
         >
           <button className="folder-toggle" onClick={() => props.onToggleTopic(topic.id)}>
             <span className={`chevron ${open ? "open" : ""}`}>▸</span>
@@ -329,7 +368,7 @@ export function Sidebar(props: Props) {
             + 판례 추가
           </button>
           <button
-            className={`ghost ${importantOnly ? "select-on" : ""}`}
+            className={`ghost important-filter ${importantOnly ? "select-on" : ""}`}
             title={importantOnly ? "전체 판례 보기" : "중요 판례만 보기"}
             aria-label={importantOnly ? "전체 판례 보기" : "중요 판례만 보기"}
             onClick={() => setImportantOnly((current) => !current)}
@@ -399,7 +438,12 @@ export function Sidebar(props: Props) {
           </>
         ) : (
           <>
-            <div className="folder-root-actions">
+            <div
+              className={`folder-root-actions ${topicDropId === null ? "topic-drop-target" : ""}`}
+              onDragOver={(event) => allowTopicDrop(event, null)}
+              onDragLeave={() => setTopicDropId((current) => current === null ? undefined : current)}
+              onDrop={(event) => dropTopic(event, null)}
+            >
               <button className="ghost" onClick={() => props.onAddTopic(null)}>+ 폴더</button>
             </div>
             {roots.map(renderTopic)}

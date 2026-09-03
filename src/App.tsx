@@ -59,6 +59,18 @@ export default function App() {
     store.setSelectedCaseId(uniqueIds[0]);
   };
 
+  const moveTopic = (topicId: string, parentId: string | null) => {
+    if (topicId === parentId) return;
+    const topicsById = new Map(store.topics.map((topic) => [topic.id, topic]));
+    let cursor = parentId ? topicsById.get(parentId) : undefined;
+    while (cursor) {
+      if (cursor.id === topicId) return;
+      cursor = cursor.parent_id ? topicsById.get(cursor.parent_id) : undefined;
+    }
+    const sortOrder = store.topics.filter((topic) => topic.parent_id === parentId && topic.id !== topicId).length;
+    store.updateTopic(topicId, { parent_id: parentId, sort_order: sortOrder });
+  };
+
   return (
     <div className={`app ${mobileView === "editor" ? "show-editor" : ""}`}>
       <Sidebar
@@ -74,6 +86,7 @@ export default function App() {
         onSelectCase={selectCase}
         onSelectCases={selectCases}
         onMoveCases={moveCases}
+        onMoveTopic={moveTopic}
         onToggleTopic={store.toggleExpandedTopic}
         onAddTopic={store.addTopic}
         onRenameTopic={(id, name) => store.updateTopic(id, { name })}

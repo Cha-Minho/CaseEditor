@@ -132,7 +132,7 @@ select:focus {
 .sidebar-head {
   align-items: center;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .sidebar-head h1 {
@@ -153,6 +153,10 @@ select:focus {
 
 .head-actions .select-on {
   color: var(--brand);
+}
+
+.head-actions .important-filter.select-on {
+  color: var(--star);
 }
 
 .select-bar {
@@ -184,6 +188,9 @@ select:focus {
   justify-content: center;
   margin-right: 7px;
   vertical-align: -3px;
+  min-height: 16px;
+  min-width: 16px;
+  padding: 0;
   width: 16px;
 }
 
@@ -294,6 +301,12 @@ select:focus {
 .folder-row.drop-target {
   background: var(--brand-soft);
   box-shadow: inset 0 0 0 1px var(--brand);
+}
+
+.folder-row.topic-drop-target,
+.folder-root-actions.topic-drop-target {
+  background: #fff6d9;
+  box-shadow: inset 0 0 0 1px var(--star);
 }
 
 .folder-toggle {
@@ -682,8 +695,13 @@ select:focus {
 }
 
 .case-checkbox {
+  flex: 0 0 16px;
+  height: 16px;
   margin: 0 3px 0 1px;
+  min-height: 16px;
+  min-width: 16px;
   padding: 0;
+  width: 16px;
 }
 
 .move-tree-list {

@@ -220,7 +220,7 @@ export function Editor({
 
       <div
         className="editor-columns"
-        style={{ gridTemplateColumns: `minmax(240px, ${draftSplitWidth}%) 6px minmax(240px, 1fr)` }}
+        style={{ gridTemplateColumns: `minmax(240px, ${draftSplitWidth}%) 20px minmax(240px, 1fr)` }}
       >
         <section className="field-group">
           <h2>내 정리</h2>

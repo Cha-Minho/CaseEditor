@@ -105,7 +105,7 @@ select:focus {
 
 .app {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: 200px minmax(0, 1fr);
   height: 100vh;
 }
 
@@ -739,8 +739,8 @@ select:focus {
 .split-resizer {
   background: transparent;
   cursor: col-resize;
-  margin: 0 5px 40px;
-  min-width: 8px;
+  margin: 0 6px 40px;
+  min-width: 0;
   outline: none;
   position: relative;
   touch-action: none;

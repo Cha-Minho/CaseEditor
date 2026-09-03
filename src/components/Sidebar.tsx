@@ -1,5 +1,5 @@
 import { ChangeEvent, DragEvent, FormEvent, PointerEvent, useMemo, useRef, useState } from "react";
-import type { CaseItem, Topic } from "../types";
+import type { CaseItem, CaseNotes, Topic } from "../types";
 import { convertOldJson } from "../lib/oldJson";
 import type { AppSnapshot } from "../types";
 import { readCasePdf, type PdfCaseImport } from "../lib/pdfCase";
@@ -12,6 +12,7 @@ type Props = {
   userId: string;
   topics: Topic[];
   cases: CaseItem[];
+  notes: CaseNotes[];
   expandedIds: string[];
   selectedCaseId: string | null;
   selectedCaseIds: string[];
@@ -46,11 +47,15 @@ export function Sidebar(props: Props) {
   const marqueeStart = useRef<{ x: number; y: number; base: Set<string> } | null>(null);
   const needle = query.trim().toLowerCase();
   const visibleCases = importantOnly ? props.cases.filter((item) => item.important) : props.cases;
+  const notesByCaseId = useMemo(() => new Map(props.notes.map((note) => [note.case_id, note])), [props.notes]);
 
   const searchResults = useMemo(() => {
     if (!needle) return null;
-    return visibleCases.filter((item) => `${item.title} ${item.case_no}`.toLowerCase().includes(needle));
-  }, [needle, visibleCases]);
+    return visibleCases.filter((item) => {
+      const notes = notesByCaseId.get(item.id);
+      return `${item.title} ${item.case_no} ${notes?.tags_html || ""}`.toLowerCase().includes(needle);
+    });
+  }, [needle, notesByCaseId, visibleCases]);
 
   const roots = props.topics.filter((topic) => !topic.parent_id).sort((a, b) => a.sort_order - b.sort_order);
   const unclassified = visibleCases.filter((item) => !item.topic_id);
@@ -345,7 +350,7 @@ export function Sidebar(props: Props) {
         className="search-input"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="판례명, 사건번호 검색"
+        placeholder="사건번호, 태그 검색"
         type="search"
       />
 

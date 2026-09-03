@@ -65,6 +65,7 @@ export default function App() {
         userId={userId}
         topics={store.topics}
         cases={store.cases}
+        notes={store.notes}
         expandedIds={store.uiState.expanded_topic_ids}
         selectedCaseId={store.selectedCaseId}
         selectedCaseIds={selectedCaseIds}

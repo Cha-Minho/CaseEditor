@@ -127,6 +127,7 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
       altCodeStart.current = null;
     }
     enforceTypingMode((event.nativeEvent as InputEvent).data || "");
+    replaceArrowShortcut();
     // Text typing has the browser's native undo history. Avoid replaying an old
     // highlighting snapshot over newer text edits.
     resetToolHistory();
@@ -149,6 +150,25 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     savedSelection.current = { start: end, end };
     restoreSelection();
     typingInputStart.current = end;
+  }
+
+  function replaceArrowShortcut() {
+    const root = ref.current;
+    if (!root) return;
+    captureSelection();
+    const selection = savedSelection.current;
+    if (!selection || selection.start !== selection.end || selection.start < 2) return;
+    if (root.textContent?.slice(selection.start - 2, selection.start) !== "->") return;
+
+    savedSelection.current = { start: selection.start - 2, end: selection.start };
+    restoreSelection();
+    // execCommand keeps this small replacement in the browser's native undo stack.
+    if (!document.execCommand("insertText", false, "→")) return;
+
+    const cursor = selection.start - 1;
+    savedSelection.current = { start: cursor, end: cursor };
+    typingInputStart.current = cursor;
+    captureSelection();
   }
 
   function toggleTypingHighlight(range: Range) {

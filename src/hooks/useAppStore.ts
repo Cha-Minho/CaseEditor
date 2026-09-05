@@ -473,6 +473,15 @@ export function useAppStore(userId: string | null) {
     );
   }, [persistCase]);
 
+  const updateDiagram = useCallback((caseId: string, diagram: CaseNotes['diagram']) => {
+    setNotes((current) => current.map((item) => {
+      if (item.case_id !== caseId) return item;
+      const next = { ...item, diagram, updated_at: nowIso() };
+      persistNotes(next).catch((error) => setSyncMessage(error.message));
+      return next;
+    }));
+  }, [persistNotes]);
+
   const updateNoteField = useCallback((caseId: string, field: EditableFieldKey, value: string) => {
     setNotes((current) =>
       current.map((item) => {
@@ -539,6 +548,7 @@ export function useAppStore(userId: string | null) {
     updateCase,
     updateCases,
     updateNoteField,
+    updateDiagram,
     saveUiState,
     toggleExpandedTopic,
     importSnapshot,

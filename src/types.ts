@@ -26,6 +26,7 @@ export type CaseItem = {
 };
 
 export type CaseNotes = {
+  diagram?: { nodes: import('@xyflow/react').Node[]; edges: import('@xyflow/react').Edge[] };
   case_id: string;
   user_id: string;
   holding_html: string;

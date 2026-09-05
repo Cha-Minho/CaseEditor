@@ -123,6 +123,7 @@ export default function App() {
         onUpdateCase={store.updateCase}
         onMoveSelectedCases={moveEditorSelection}
         onUpdateField={store.updateNoteField}
+        onUpdateDiagram={store.updateDiagram}
         onToggleField={(field) => {
           const set = new Set(store.uiState.collapsed_fields);
           set.has(field) ? set.delete(field) : set.add(field);

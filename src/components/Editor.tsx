@@ -2,8 +2,11 @@ import { PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { CaseItem, CaseNotes, EditableFieldKey, Topic } from "../types";
 import { FIELD_LABELS } from "../types";
 import { RichEditableField, ToolMode } from "./RichEditableField";
+import { Network } from 'lucide-react';
+import { DiagramEditor } from './DiagramEditor';
 
 type Props = {
+  onUpdateDiagram: (caseId: string, diagram: CaseNotes['diagram']) => void;
   topics: Topic[];
   selectedCase: CaseItem | null;
   selectedNotes: CaseNotes | null;
@@ -24,6 +27,7 @@ const referenceFields: EditableFieldKey[] = ["source_html", "holding_html", "jud
 const noteFields: EditableFieldKey[] = ["majority_html", "dissent_html", "concurring_html", "tags_html"];
 
 export function Editor({
+  onUpdateDiagram,
   topics,
   selectedCase,
   selectedNotes,
@@ -40,6 +44,7 @@ export function Editor({
   onAddBlank
 }: Props) {
   const [toolMode, setToolMode] = useState<ToolMode>(null);
+  const [diagramOpen, setDiagramOpen] = useState(false);
   const [moveMenuOpen, setMoveMenuOpen] = useState(false);
   const [moveExpandedIds, setMoveExpandedIds] = useState<Set<string>>(new Set());
   const [draftSplitWidth, setDraftSplitWidth] = useState(splitWidth);
@@ -178,6 +183,7 @@ export function Editor({
           </p>
         </div>
         <div className="editor-controls">
+          <button className={`diagram-launch ${selectedNotes.diagram?.nodes.length ? 'has-diagram' : ''}`} title="관계도" aria-label="관계도" onClick={() => setDiagramOpen(true)}><Network size={20} /></button>
           <div className="editor-mark-tools">
             <button
               className={`tool-button ${toolMode === "highlight" ? "on" : ""}`}
@@ -282,6 +288,7 @@ export function Editor({
           ))}
         </section>
       </div>
+      {diagramOpen && <DiagramEditor key={selectedCase.id} title={selectedCase.case_no || '관계도'} value={selectedNotes.diagram} onChange={(diagram) => onUpdateDiagram(selectedCase.id, diagram)} onClose={() => setDiagramOpen(false)} />}
     </main>
   );
 }

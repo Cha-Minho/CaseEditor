@@ -1,4 +1,4 @@
-import { ChangeEvent, DragEvent, FormEvent, PointerEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, PointerEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { CaseItem, CaseNotes, Topic } from "../types";
 import { convertOldJson } from "../lib/oldJson";
 import type { AppSnapshot } from "../types";
@@ -7,6 +7,7 @@ import { readCasePdf, type PdfCaseImport } from "../lib/pdfCase";
 const UNCLASSIFIED_ID = "__unclassified__";
 
 type Marquee = { x: number; y: number; width: number; height: number };
+type FolderMenu = { topic: Topic | null; caseIds: string[]; x: number; y: number };
 
 type Props = {
   userId: string;
@@ -46,7 +47,9 @@ export function Sidebar(props: Props) {
   const [importantOnly, setImportantOnly] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [marquee, setMarquee] = useState<Marquee | null>(null);
+  const [folderMenu, setFolderMenu] = useState<FolderMenu | null>(null);
   const caseListRef = useRef<HTMLElement | null>(null);
+  const folderMenuRef = useRef<HTMLDivElement | null>(null);
   const marqueeStart = useRef<{ x: number; y: number; base: Set<string> } | null>(null);
   const needle = query.trim().toLowerCase();
   const visibleCases = importantOnly ? props.cases.filter((item) => item.important) : props.cases;
@@ -62,6 +65,27 @@ export function Sidebar(props: Props) {
 
   const roots = props.topics.filter((topic) => !topic.parent_id).sort((a, b) => a.sort_order - b.sort_order);
   const unclassified = visibleCases.filter((item) => !item.topic_id);
+
+  useEffect(() => {
+    if (!folderMenu) return;
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!folderMenuRef.current?.contains(event.target as Node)) setFolderMenu(null);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFolderMenu(null);
+    };
+    const closeOnViewportChange = () => setFolderMenu(null);
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("resize", closeOnViewportChange);
+    window.addEventListener("scroll", closeOnViewportChange, true);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("resize", closeOnViewportChange);
+      window.removeEventListener("scroll", closeOnViewportChange, true);
+    };
+  }, [folderMenu]);
 
   async function submitCaseNo(event: FormEvent) {
     event.preventDefault();
@@ -154,11 +178,27 @@ export function Sidebar(props: Props) {
     return visibleCases.filter((item) => item.topic_id && topicIds.has(item.topic_id)).map((item) => item.id);
   }
 
-  function selectCaseGroup(ids: string[]) {
+  function toggleCaseGroup(ids: string[]) {
     if (!ids.length) return;
-    const next = Array.from(new Set(ids));
-    setCheckedIds(new Set(next));
-    props.onSelectCases(next);
+    setCheckedIds((current) => {
+      const next = new Set(current);
+      const allSelected = ids.every((id) => next.has(id));
+      ids.forEach((id) => allSelected ? next.delete(id) : next.add(id));
+      props.onSelectCases(Array.from(next));
+      return next;
+    });
+  }
+
+  function openFolderMenu(event: ReactMouseEvent, topic: Topic | null, caseIds: string[]) {
+    event.preventDefault();
+    const menuWidth = 176;
+    const menuHeight = topic ? 168 : 48;
+    setFolderMenu({
+      topic,
+      caseIds,
+      x: Math.max(8, Math.min(event.clientX, window.innerWidth - menuWidth - 8)),
+      y: Math.max(8, Math.min(event.clientY, window.innerHeight - menuHeight - 8))
+    });
   }
 
   function deleteChecked() {
@@ -313,6 +353,7 @@ export function Sidebar(props: Props) {
       <div className="folder" key={topic.id}>
         <div
           className={`folder-row ${dropTopicId === topic.id ? "drop-target" : ""} ${topicDropId === topic.id ? "topic-drop-target" : ""}`}
+          onContextMenu={(event) => openFolderMenu(event, topic, allTopicCaseIds)}
           draggable
           onDragStart={(event) => startTopicDrag(event, topic.id)}
           onDragEnd={() => {
@@ -337,12 +378,6 @@ export function Sidebar(props: Props) {
             <span className="folder-name">{topic.name}</span>
             <span className="folder-count">{children.length + topicCases.length}</span>
           </button>
-          <span className="folder-actions">
-            {allTopicCaseIds.length > 0 && <button title="이 폴더와 하위 폴더 판례 전체 선택" onClick={() => selectCaseGroup(allTopicCaseIds)}>전체</button>}
-            <button title="하위 폴더 추가" onClick={() => props.onAddTopic(topic.id)}>+</button>
-            <button title="이름 변경" onClick={() => renameTopic(topic)}>✎</button>
-            <button title="폴더 삭제" onClick={() => deleteTopic(topic)}>×</button>
-          </span>
         </div>
         {open && (
           <div className="folder-children">
@@ -451,6 +486,7 @@ export function Sidebar(props: Props) {
               <div className="folder">
                 <div
                   className={`folder-row ${dropTopicId === null ? "drop-target" : ""}`}
+                  onContextMenu={(event) => openFolderMenu(event, null, unclassified.map((item) => item.id))}
                   onDragOver={(event) => allowCaseDrop(event, null)}
                   onDragLeave={() => setDropTopicId((current) => current === null ? undefined : current)}
                   onDrop={(event) => dropCases(event, null)}
@@ -460,9 +496,6 @@ export function Sidebar(props: Props) {
                     <span className="folder-name">미분류</span>
                     <span className="folder-count">{unclassified.length}</span>
                   </button>
-                  <span className="folder-actions">
-                    <button title="미분류 판례 전체 선택" onClick={() => selectCaseGroup(unclassified.map((item) => item.id))}>전체</button>
-                  </span>
                 </div>
                 {unclassifiedOpen && <div className="folder-children">{unclassified.map(renderCase)}</div>}
               </div>
@@ -481,6 +514,34 @@ export function Sidebar(props: Props) {
           {props.configured && <button className="ghost" onClick={props.onSignOut}>로그아웃</button>}
         </div>
       </footer>
+
+      {folderMenu && (
+        <div
+          ref={folderMenuRef}
+          className="folder-context-menu"
+          role="menu"
+          aria-label={`${folderMenu.topic?.name || "미분류"} 폴더 메뉴`}
+          style={{ left: folderMenu.x, top: folderMenu.y }}
+        >
+          <button
+            role="menuitem"
+            disabled={!folderMenu.caseIds.length}
+            onClick={() => {
+              toggleCaseGroup(folderMenu.caseIds);
+              setFolderMenu(null);
+            }}
+          >
+            {folderMenu.caseIds.length > 0 && folderMenu.caseIds.every((id) => checkedIds.has(id)) ? "전체 선택 해제" : "전체 선택"}
+          </button>
+          {folderMenu.topic && (
+            <>
+              <button role="menuitem" onClick={() => { props.onAddTopic(folderMenu.topic!.id); setFolderMenu(null); }}>하위 폴더 추가</button>
+              <button role="menuitem" onClick={() => { renameTopic(folderMenu.topic!); setFolderMenu(null); }}>이름 변경</button>
+              <button role="menuitem" className="danger-text" onClick={() => { deleteTopic(folderMenu.topic!); setFolderMenu(null); }}>폴더 삭제</button>
+            </>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

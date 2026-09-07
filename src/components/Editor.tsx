@@ -2,6 +2,7 @@ import { PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { CaseItem, CaseNotes, EditableFieldKey, Topic } from "../types";
 import { FIELD_LABELS } from "../types";
 import { RichEditableField, ToolMode } from "./RichEditableField";
+import { Network } from 'lucide-react';
 import { DiagramEditor } from './DiagramEditor';
 
 type Props = {
@@ -182,7 +183,7 @@ export function Editor({
           </p>
         </div>
         <div className="editor-controls">
-          <button className={`diagram-launch ${selectedNotes.diagram?.nodes.length ? 'has-diagram' : ''}`} title="관계도" aria-label="관계도" onClick={() => setDiagramOpen(true)}>판</button>
+          <button className={`diagram-launch ${selectedNotes.diagram?.nodes.length ? 'has-diagram' : ''}`} title="관계도" aria-label="관계도" onClick={() => setDiagramOpen(true)}><Network size={20} /></button>
           <div className="editor-mark-tools">
             <button
               className={`tool-button ${toolMode === "highlight" ? "on" : ""}`}

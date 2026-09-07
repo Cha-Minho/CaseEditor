@@ -1001,7 +1001,7 @@ select:focus {
   }
 }
 /* Case relationship canvas */
-.diagram-launch { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 6px; }
+.diagram-launch { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 6px; font-size: 17px; font-weight: 700; }
 .diagram-launch.has-diagram { color: #16705c; background: #e2f3ec; }
 .diagram-dialog { width: min(1280px, 94vw); height: 90dvh; max-width: none; max-height: 94dvh; margin: auto; padding: 0; border: 1px solid #d5dbd8; border-radius: 8px; background: #fff; color: #252a28; overflow: hidden; }
 .diagram-dialog::backdrop { background: #15201c66; }

@@ -50,8 +50,8 @@ test('review and apply an AI relationship draft', async ({ page }) => {
       parties: [{ id: 'p1', name: '갑', role: '원고' }, { id: 'p2', name: '을', role: '피고' }, { id: 'p3', name: '병', role: '피해자' }],
       objects: [{ id: 'o1', name: 'X 토지' }],
       relations: [
-        { id: 'r1', from: 'p1', to: 'p2', label: '2013 촬영', kind: 'other', date: '2013.12', evidence: '갑은 2013. 12. 을을 촬영하였다', status: 'recognized', confidence: 0.94 },
-        { id: 'r2', from: 'p1', to: 'p3', label: '2014 촬영', kind: 'other', date: '2014.12.11', objectId: 'o1', effect: 'sale', evidence: '갑은 2014. 12. 11. 병을 촬영하였다', status: 'recognized', confidence: 0.92 }
+        { id: 'r1', from: 'p1', to: 'p2', label: '2013 촬영', kind: 'other', sequence: 1, date: '2013.12', evidence: '갑은 2013. 12. 을을 촬영하였다', status: 'recognized', confidence: 0.94 },
+        { id: 'r2', from: 'p1', to: 'p3', label: '2014 촬영', kind: 'other', sequence: 2, date: '2014.12.11', objectId: 'o1', effect: 'sale', evidence: '갑은 2014. 12. 11. 병을 촬영하였다', status: 'recognized', confidence: 0.92 }
       ],
       events: [
         { id: 'ev3', sequence: 3, date: '2014.12.11', text: '휴대전화 임의제출', evidence: '피해 사실을 신고하면서 즉시 제출하였다' },
@@ -74,6 +74,9 @@ test('review and apply an AI relationship draft', async ({ page }) => {
   await page.getByLabel('사건 흐름 시점').fill('0');
   expect(await relationEdges.nth(0).locator('.react-flow__edge-path').evaluate(element => getComputedStyle(element).opacity)).toBe('1');
   expect(Number(await relationEdges.nth(1).locator('.react-flow__edge-path').evaluate(element => getComputedStyle(element).opacity))).toBeLessThan(0.2);
+  await expect(page.locator('.plot-edge-chip.future')).toHaveCount(1);
+  await expect(page.locator('.plot-party-node.future')).toHaveCount(1);
+  await expect(page.locator('.plot-object-node.future')).toHaveCount(1);
   await relationEdges.nth(0).locator('.react-flow__edge-interaction').dispatchEvent('click');
   await expect(page.getByText('인정 사실')).toBeVisible();
   await expect(page.getByText('갑은 2013. 12. 을을 촬영하였다')).toBeVisible();

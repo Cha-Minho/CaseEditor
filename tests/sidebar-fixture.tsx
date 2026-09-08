@@ -9,7 +9,7 @@ const topic: Topic = { id: 'topic-1', user_id: 'user-1', parent_id: null, name: 
 const cases: CaseItem[] = Array.from({ length: 5 }, (_, index) => ({
   id: `case-${index + 1}`, user_id: 'user-1', topic_id: topic.id, title: '', case_no: `2020다${index + 1}`,
   important: false, api_status: 'manual', api_error: null, created_at: now, updated_at: now, deleted_at: null
-}));
+})).reverse();
 
 function Fixture() {
   const [selected, setSelected] = useState<string[]>([]);

@@ -4,6 +4,7 @@ import { FIELD_LABELS } from "../types";
 import { RichEditableField, ToolMode } from "./RichEditableField";
 import { Network } from 'lucide-react';
 import { DiagramEditor } from './DiagramEditor';
+import { compareTopicsByName } from '../lib/sort';
 
 type Props = {
   onUpdateDiagram: (caseId: string, diagram: CaseNotes['diagram']) => void;
@@ -145,7 +146,7 @@ export function Editor({
   }
 
   function renderMoveTopic(topic: Topic): JSX.Element {
-    const children = topics.filter((item) => item.parent_id === topic.id).sort((a, b) => a.sort_order - b.sort_order);
+    const children = topics.filter((item) => item.parent_id === topic.id).sort(compareTopicsByName);
     const hasChildren = children.length > 0;
     const open = moveExpandedIds.has(topic.id);
     return (
@@ -163,7 +164,7 @@ export function Editor({
     );
   }
 
-  const moveRoots = topics.filter((topic) => !topic.parent_id).sort((a, b) => a.sort_order - b.sort_order);
+  const moveRoots = topics.filter((topic) => !topic.parent_id).sort(compareTopicsByName);
 
   return (
     <main className="editor-pane">

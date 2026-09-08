@@ -6,24 +6,24 @@ import '@xyflow/react/dist/style.css';
 import type { CaseNotes } from '../types';
 import type { LegalGraph } from '../types';
 import { generateLegalGraph } from '../lib/legalGraphApi';
-import { computeGraphTimes, computePropertyArcs, dateKey, dateLabel, legalGraphToDiagram } from '../lib/plotGraph';
+import { computePropertyArcs, dateKey, legalGraphToDiagram } from '../lib/plotGraph';
 
 type Graph = NonNullable<CaseNotes['diagram']>;
 type Props = { title: string; sourceHtml: string; value: CaseNotes['diagram']; onChange: (graph: Graph) => void; onClose: () => void };
 
 function PlotPartyNode({ data, selected }: NodeProps) {
-  return <div className={`plot-party-node${selected ? ' selected' : ''}`} title={String(data.role || '')}>
-    <Handle type="target" position={Position.Top} />
+  return <div className={`plot-party-node${selected ? ' selected' : ''}${data.future ? ' future' : ''}`} title={String(data.role || '')}>
+    <Handle type="target" position={Position.Top} style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }} />
     <span>{String(data.label || '')}</span>
-    <Handle type="source" position={Position.Bottom} />
+    <Handle type="source" position={Position.Bottom} style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }} />
   </div>;
 }
 
 function PlotObjectNode({ data, selected }: NodeProps) {
-  return <div className={`plot-object-node${selected ? ' selected' : ''}`}>
-    <Handle type="target" position={Position.Top} />
+  return <div className={`plot-object-node${selected ? ' selected' : ''}${data.future ? ' future' : ''}`}>
+    <Handle type="target" position={Position.Top} style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }} />
     <span>{String(data.label || '')}</span>
-    <Handle type="source" position={Position.Bottom} />
+    <Handle type="source" position={Position.Bottom} style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }} />
   </div>;
 }
 
@@ -54,9 +54,21 @@ function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, mark
     const offset = index * step - (total - 1) * step * 0.3;
     const controlX = middleX + normalX * offset * 2;
     const controlY = middleY + normalY * offset * 2;
-    path = `M ${sourceX} ${sourceY} Q ${controlX} ${controlY} ${targetX} ${targetY}`;
-    labelX = (sourceX + 2 * controlX + targetX) / 4;
-    labelY = (sourceY + 2 * controlY + targetY) / 4;
+    const sourceRadius = relation?.derivedArc ? 42 : 34;
+    const targetRadius = 38;
+    const sourceVectorX = controlX - sourceX;
+    const sourceVectorY = controlY - sourceY;
+    const sourceVectorLength = Math.hypot(sourceVectorX, sourceVectorY) || 1;
+    const targetVectorX = controlX - targetX;
+    const targetVectorY = controlY - targetY;
+    const targetVectorLength = Math.hypot(targetVectorX, targetVectorY) || 1;
+    const startX = sourceX + sourceVectorX / sourceVectorLength * sourceRadius;
+    const startY = sourceY + sourceVectorY / sourceVectorLength * sourceRadius;
+    const endX = targetX + targetVectorX / targetVectorLength * targetRadius;
+    const endY = targetY + targetVectorY / targetVectorLength * targetRadius;
+    path = `M ${startX} ${startY} Q ${controlX} ${controlY} ${endX} ${endY}`;
+    labelX = (startX + 2 * controlX + endX) / 4;
+    labelY = (startY + 2 * controlY + endY) / 4;
   }
   return <>
     <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
@@ -86,27 +98,39 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
   const [draft, setDraft] = useState<LegalGraph | null>(null);
   const [timelineIndex, setTimelineIndex] = useState(0);
 
-  const times = useMemo(() => computeGraphTimes(graph.legalGraph), [graph.legalGraph]);
-  const cutoff = times.length ? (timelineIndex < 0 ? 0 : times[timelineIndex] || times[times.length - 1]) : Infinity;
   const timeline = useMemo(() => (graph.legalGraph?.events || []).map((event, index) => ({ event, index })).sort((left, right) => {
-    const leftDate = dateKey(left.event.date) || Infinity;
-    const rightDate = dateKey(right.event.date) || Infinity;
-    return leftDate - rightDate || (left.event.sequence || left.index + 1) - (right.event.sequence || right.index + 1);
+    const leftSequence = left.event.sequence || left.index + 1;
+    const rightSequence = right.event.sequence || right.index + 1;
+    return leftSequence - rightSequence || dateKey(left.event.date) - dateKey(right.event.date);
   }).map(item => item.event), [graph.legalGraph]);
-  const renderNodes = useMemo<Node[]>(() => graph.nodes.map(node => ({ ...node, type: node.className?.includes('diagram-object') ? 'plotObject' : 'plotParty' })), [graph.nodes]);
+  const atEnd = timelineIndex >= timeline.length - 1;
+  const cutoffSequence = timelineIndex < 0 ? 0 : timeline[timelineIndex]?.sequence || timelineIndex + 1;
+  const cutoffDate = atEnd ? Infinity : timeline.slice(0, timelineIndex + 1).reduce((latest, event) => Math.max(latest, dateKey(event.date)), 0);
+  const relationIsFuture = (relation?: Partial<LegalGraph['relations'][number]>) => {
+    if (!timeline.length || atEnd) return false;
+    if (relation?.sequence) return relation.sequence > cutoffSequence;
+    const relationDate = dateKey(relation?.date);
+    if (relationDate) return relationDate > cutoffDate;
+    return true;
+  };
+  const renderNodes = useMemo<Node[]>(() => graph.nodes.map(node => {
+    const related = graph.edges.filter(edge => edge.source === node.id || edge.target === node.id || (edge.data as Partial<LegalGraph['relations'][number]> | undefined)?.objectId === node.id);
+    const future = related.length > 0 && related.every(edge => relationIsFuture(edge.data as Partial<LegalGraph['relations'][number]> | undefined));
+    return { ...node, type: node.className?.includes('diagram-object') ? 'plotObject' : 'plotParty', data: { ...node.data, future } };
+  }), [atEnd, cutoffDate, cutoffSequence, graph.edges, graph.nodes, timeline.length]);
   const visibleEdges = useMemo<Edge[]>(() => {
     const relations = graph.edges.map(edge => {
       const relation = edge.data as LegalGraph['relations'][number] | undefined;
-      const future = dateKey(relation?.date) > cutoff;
+      const future = relationIsFuture(relation);
       return { ...edge, type: 'plotEdge', style: { ...edge.style, opacity: future ? 0.09 : 1 }, data: { ...edge.data, future } };
     });
     const arcs = computePropertyArcs(graph.legalGraph).map(arc => {
-      const active = arc.start <= cutoff && (arc.end === Infinity || cutoff < arc.end);
+      const active = atEnd || (arc.start <= cutoffDate && (arc.end === Infinity || cutoffDate < arc.end));
       const kind = arc.role === '소유' ? 'own' : arc.role === '점유' ? 'poss' : 'lien';
-      return { id: arc.id, source: arc.thing, target: arc.party, type: 'plotEdge', label: arc.role, selectable: false, focusable: false, className: `diagram-edge property-arc arc-${kind}`, style: { opacity: active ? 0.88 : 0.07 }, data: { derivedArc: true, role: arc.role, kind: 'status', status: 'recognized' } };
+      return { id: arc.id, source: arc.thing, target: arc.party, type: 'plotEdge', label: arc.role, selectable: false, focusable: false, className: `diagram-edge property-arc arc-${kind}`, style: { opacity: active ? 0.88 : 0.07 }, data: { derivedArc: true, role: arc.role, kind: 'status', status: 'recognized', future: !active } };
     });
     return [...relations, ...arcs] as Edge[];
-  }, [cutoff, graph.edges, graph.legalGraph]);
+  }, [atEnd, cutoffDate, cutoffSequence, graph.edges, graph.legalGraph, timeline.length]);
 
   function display(next: Graph) { current.current = next; setGraph(next); }
   function checkpoint() { undo.current = [...undo.current.slice(-49), structuredClone(current.current)]; redo.current = []; }
@@ -126,7 +150,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     if (dialog.current) observer.observe(dialog.current);
     return () => observer.disconnect();
   }, []);
-  useEffect(() => setTimelineIndex(times.length - 1), [graph.legalGraph, times.length]);
+  useEffect(() => setTimelineIndex(timeline.length - 1), [graph.legalGraph, timeline.length]);
 
   function add(kind: 'person' | 'object') {
     const node: Node = { id: crypto.randomUUID(), type: kind === 'person' ? 'plotParty' : 'plotObject', position: { x: 80 + (graph.nodes.length % 4) * 190, y: 80 + Math.floor(graph.nodes.length / 4) * 130 }, data: { label: kind === 'person' ? '당사자' : '목적물' }, className: kind === 'person' ? 'diagram-person' : 'diagram-object' };
@@ -200,16 +224,15 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       onPaneClick={() => setSelected(null)} deleteKeyCode={null} fitView minZoom={0.2} maxZoom={2.5} proOptions={{ hideAttribution: true }}>
       <Controls showInteractive={false} />
     </ReactFlow></div>
-    {(timeline.length > 0 || times.length > 1) && <footer className="diagram-timeline">
+    {timeline.length > 0 && <footer className="diagram-timeline">
       <div className="diagram-timeline-bar"><strong>사건 흐름</strong>
-        {times.length > 1 && <input aria-label="사건 흐름 시점" type="range" min="-1" max={times.length - 1} value={timelineIndex} onChange={event => setTimelineIndex(Number(event.target.value))} />}
-        <span>{times.length < 2 ? '' : timelineIndex < 0 ? '사건 전' : timelineIndex >= times.length - 1 ? '전체' : `${dateLabel(cutoff)} 시점`}</span>
+        {timeline.length > 1 && <input aria-label="사건 흐름 시점" type="range" min="-1" max={timeline.length - 1} value={timelineIndex} onChange={event => setTimelineIndex(Number(event.target.value))} />}
+        <span>{timeline.length < 2 ? '' : timelineIndex < 0 ? '사건 전' : atEnd ? '전체' : timeline[timelineIndex]?.date || `${cutoffSequence}단계`}</span>
       </div>
-      {timeline.length > 0 && <div className="diagram-event-list">{timeline.map(event => {
-        const key = dateKey(event.date);
-        const future = key > cutoff;
-        return <button key={event.id} className={future ? 'future' : ''} onClick={() => { const index = times.indexOf(key); if (index >= 0) setTimelineIndex(index); }}><b>{event.date || '날짜 미상'}</b><span>{event.text}</span></button>;
-      })}</div>}
+      <div className="diagram-event-list">{timeline.map((event, index) => {
+        const future = index > timelineIndex;
+        return <button key={event.id} className={future ? 'future' : ''} onClick={() => setTimelineIndex(index)}><b>{event.date || `${event.sequence || index + 1}단계`}</b><span>{event.text}</span></button>;
+      })}</div>
     </footer>}
   </dialog>, document.body);
 }

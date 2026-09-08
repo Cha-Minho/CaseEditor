@@ -17,9 +17,9 @@ const responseSchema = {
   properties: {
     parties: { type: "ARRAY", items: { type: "OBJECT", required: ["id", "name"], properties: { id: stringSchema, name: stringSchema, role: nullableStringSchema } } },
     objects: { type: "ARRAY", items: { type: "OBJECT", required: ["id", "name"], properties: { id: stringSchema, name: stringSchema } } },
-    relations: { type: "ARRAY", items: { type: "OBJECT", required: ["id", "from", "to", "label", "kind", "evidence", "status", "confidence"], properties: {
+    relations: { type: "ARRAY", items: { type: "OBJECT", required: ["id", "from", "to", "label", "kind", "sequence", "evidence", "status", "confidence"], properties: {
       id: stringSchema, from: stringSchema, to: stringSchema, label: stringSchema,
-      kind: { type: "STRING", enum: kinds }, date: nullableStringSchema, objectId: nullableStringSchema,
+      kind: { type: "STRING", enum: kinds }, sequence: { type: "INTEGER", minimum: 1 }, date: nullableStringSchema, objectId: nullableStringSchema,
       effect: { type: "STRING", enum: effects, nullable: true }, evidence: stringSchema,
       status: { type: "STRING", enum: statuses }, confidence: { type: "NUMBER", minimum: 0, maximum: 1 }
     } } },
@@ -63,6 +63,7 @@ function validateGraph(value: Record<string, unknown>) {
       id: cleanString(item.id, 60) || `r${index + 1}`,
       from: cleanString(item.from, 60), to: cleanString(item.to, 60), label: cleanString(item.label, 180),
       kind: kinds.includes(cleanString(item.kind)) ? cleanString(item.kind) : "other",
+      sequence: Math.max(1, Math.round(Number(item.sequence) || index + 1)),
       ...(cleanString(item.date, 40) ? { date: cleanString(item.date, 40) } : {}),
       ...(entityIds.has(cleanString(item.objectId)) ? { objectId: cleanString(item.objectId, 60) } : {}),
       ...(effects.includes(cleanString(item.effect)) ? { effect: cleanString(item.effect) } : {}),
@@ -99,9 +100,9 @@ serve(async (request) => {
 법원이 인정한 사실을 중심으로 하되 당사자의 주장, 원심 판단, 배척된 판단, 소송 경과를 status로 구분한다.
 근거 없는 사실, 날짜, 관계를 추정하지 않는다. 동일 인물의 여러 호칭은 하나로 통합한다.
 일반 법리 설명이나 인용 판례의 사실관계는 현재 사건의 사실관계에 넣지 않는다.
-판결문에 써진 순서가 아니라 실제 발생 시간 순으로 events를 정렬하고 sequence를 1부터 부여한다.
+판결문에 써진 순서가 아니라 실제 발생 시간 순으로 events를 정렬하고 sequence를 1부터 부여한다. 각 relation에도 대응하는 사건 단계의 sequence를 반드시 넣는다.
 date는 해당 사실이 발생한 날짜다. 판결 선고일이나 인용 판례의 날짜를 사실 발생일로 사용하지 말고, 원문에 알 수 있는 날짜만 YYYY.MM.DD, YYYY.MM, YYYY 형식으로 넣는다.
-즉시, 그 후, 다음날 같은 상대적 시점은 원문으로 선후관계가 분명한 범위에서 sequence에 반영한다.
+즉시, 그 후, 다음날, 제출하였다, 압수하였다 같은 서술상 인과관계는 날짜가 없어도 sequence에 반영한다. 예를 들어 범행으로 생성된 물건을 수사기관에 임의제출한 사실은 해당 범행들보다 뒤에 둔다.
 관계에 시점이 표시되었다면 relation.date에도 같은 발생일을 넣는다. 사실관계 관계선이 하나도 없는 기관이나 소송관계인은 parties에서 빼다.
 모든 relation과 event에는 판결문에서 그대로 가져온 짧은 evidence를 넣는다.
 from과 to는 반드시 parties의 id를 사용하고 objectId는 objects의 id를 사용한다.

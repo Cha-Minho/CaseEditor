@@ -1038,9 +1038,10 @@ select:focus {
 .relation-status.status-procedural { color: #5b6268; border-color: #bcc2c6; background: #f3f4f5; }
 .diagram-canvas { flex: 1; min-height: 280px; width: 100%; background: #f7f7f5; }
 .diagram-canvas .react-flow__node { width: auto; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-.plot-party-node { display: grid; place-items: center; width: 68px; height: 68px; padding: 7px; border: 1.6px solid #292a28; border-radius: 50%; background: #fff; color: #242522; font-size: 13px; font-weight: 700; line-height: 1.2; text-align: center; overflow-wrap: anywhere; box-shadow: 0 4px 14px #252a2812; }
+.plot-party-node { display: grid; place-items: center; width: 68px; height: 68px; padding: 7px; border: 1.6px solid #292a28; border-radius: 50%; background: #fff; color: #242522; font-size: 13px; font-weight: 700; line-height: 1.2; text-align: center; overflow-wrap: anywhere; box-shadow: 0 4px 14px #252a2812; transition: opacity .18s; }
 .plot-party-node.selected { outline: 3px solid #d3d8ea; outline-offset: 3px; }
-.plot-object-node { display: grid; place-items: center; width: 120px; min-height: 44px; padding: 8px 10px; border: 1.5px dashed #6e79a3; border-radius: 9px; background: #f0f1f7; color: #292a28; font-size: 12px; font-weight: 650; line-height: 1.25; text-align: center; overflow-wrap: anywhere; box-shadow: 0 3px 12px #252a280d; }
+.plot-object-node { display: grid; place-items: center; width: 120px; min-height: 44px; padding: 8px 10px; border: 1.5px dashed #6e79a3; border-radius: 9px; background: #f0f1f7; color: #292a28; font-size: 12px; font-weight: 650; line-height: 1.25; text-align: center; overflow-wrap: anywhere; box-shadow: 0 3px 12px #252a280d; transition: opacity .18s; }
+.plot-party-node.future, .plot-object-node.future { opacity: .12; }
 .plot-object-node.selected { outline: 3px solid #d3d8ea; outline-offset: 3px; }
 .diagram-canvas .react-flow__handle { width: 7px; height: 7px; border: 1px solid #fff; background: #6e79a3; opacity: 0; transition: opacity .15s; }
 .diagram-canvas .react-flow__node:hover .react-flow__handle, .diagram-canvas .react-flow__node.selected .react-flow__handle { opacity: 1; }

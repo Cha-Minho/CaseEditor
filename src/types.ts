@@ -37,6 +37,7 @@ export type LegalGraph = {
     to: string;
     label: string;
     kind: LegalGraphKind;
+    sequence?: number;
     date?: string;
     objectId?: string;
     effect?: "own" | "sale" | "lien" | "poss";

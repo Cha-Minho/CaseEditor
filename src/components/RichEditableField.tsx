@@ -33,7 +33,6 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   const restoreAfterWindowFocus = useRef(false);
   const typingMode = useRef<"highlight" | "plain" | null>(null);
   const typingInputStart = useRef<number | null>(null);
-  const altCodeStart = useRef<number | null>(null);
   const [focused, setFocused] = useState(false);
 
   function commit(event: FocusEvent<HTMLDivElement>) {
@@ -79,11 +78,6 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.altKey && (/^\d$/.test(event.key) || event.code.startsWith("Numpad"))) {
-      captureSelection();
-      altCodeStart.current = savedSelection.current?.start ?? null;
-    }
-
     if (event.ctrlKey && event.key.toLowerCase() === "h") {
       event.preventDefault();
       const selection = window.getSelection();
@@ -116,18 +110,9 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   }
 
   function handleInput(event: FormEvent<HTMLDivElement>) {
-    const start = altCodeStart.current;
-    if (start !== null) {
-      const inserted = (event.nativeEvent as InputEvent).data || "";
-      if (inserted) {
-        const end = start + inserted.length;
-        savedSelection.current = { start: end, end };
-        restoreSelection();
-      }
-      altCodeStart.current = null;
-    }
     enforceTypingMode((event.nativeEvent as InputEvent).data || "");
     replaceArrowShortcut();
+    captureSelection();
     // Text typing has the browser's native undo history. Avoid replaying an old
     // highlighting snapshot over newer text edits.
     resetToolHistory();

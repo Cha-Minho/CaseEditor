@@ -185,6 +185,12 @@ export function legalGraphToDiagram(data: LegalGraph) {
       pairSeen.set(pair, pairIndex + 1);
       return { ...relation, order: index, pairIndex, pairTotal: pairCounts.get(pair) || 1, centerX: center.x, centerY: center.y, objectName: relation.objectId ? objectMap.get(relation.objectId) : undefined };
     })()
-  })).sort((a, b) => (dateKey((a.data as LegalGraph['relations'][number])?.date) || Infinity) - (dateKey((b.data as LegalGraph['relations'][number])?.date) || Infinity) || Number(a.data?.order) - Number(b.data?.order));
+  })).sort((a, b) => {
+    const left = a.data as LegalGraph['relations'][number];
+    const right = b.data as LegalGraph['relations'][number];
+    return (left.sequence || Infinity) - (right.sequence || Infinity)
+      || (dateKey(left.date) || Infinity) - (dateKey(right.date) || Infinity)
+      || Number(a.data?.order) - Number(b.data?.order);
+  });
   return { nodes, edges, legalGraph: data };
 }

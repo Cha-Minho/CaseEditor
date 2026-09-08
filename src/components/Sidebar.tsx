@@ -3,6 +3,7 @@ import type { CaseItem, CaseNotes, Topic } from "../types";
 import { convertOldJson } from "../lib/oldJson";
 import type { AppSnapshot } from "../types";
 import { readCasePdf, type PdfCaseImport } from "../lib/pdfCase";
+import { compareCasesByTitle, compareTopicsByName } from "../lib/sort";
 
 const UNCLASSIFIED_ID = "__unclassified__";
 
@@ -60,11 +61,11 @@ export function Sidebar(props: Props) {
     return visibleCases.filter((item) => {
       const notes = notesByCaseId.get(item.id);
       return `${item.title} ${item.case_no} ${notes?.tags_html || ""}`.toLowerCase().includes(needle);
-    });
+    }).sort(compareCasesByTitle);
   }, [needle, notesByCaseId, visibleCases]);
 
-  const roots = props.topics.filter((topic) => !topic.parent_id).sort((a, b) => a.sort_order - b.sort_order);
-  const unclassified = visibleCases.filter((item) => !item.topic_id);
+  const roots = props.topics.filter((topic) => !topic.parent_id).sort(compareTopicsByName);
+  const unclassified = visibleCases.filter((item) => !item.topic_id).sort(compareCasesByTitle);
 
   useEffect(() => {
     if (!folderMenu) return;
@@ -344,8 +345,8 @@ export function Sidebar(props: Props) {
   }
 
   function renderTopic(topic: Topic): JSX.Element {
-    const children = props.topics.filter((item) => item.parent_id === topic.id).sort((a, b) => a.sort_order - b.sort_order);
-    const topicCases = visibleCases.filter((item) => item.topic_id === topic.id);
+    const children = props.topics.filter((item) => item.parent_id === topic.id).sort(compareTopicsByName);
+    const topicCases = visibleCases.filter((item) => item.topic_id === topic.id).sort(compareCasesByTitle);
     const open = props.expandedIds.includes(topic.id);
     const allTopicCaseIds = caseIdsInTopic(topic.id);
 

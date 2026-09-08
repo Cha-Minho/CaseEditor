@@ -70,6 +70,10 @@ test('review and apply an AI relationship draft', async ({ page }) => {
   const relationEdges = page.locator('.diagram-edge:not(.property-arc)');
   await expect(relationEdges).toHaveCount(2);
   await expect(page.locator('.diagram-event-list button')).toHaveText([/2013 동영상 촬영/, /2014 동영상 촬영/, /휴대전화 임의제출/]);
+  const timelineBox = await page.locator('.diagram-timeline').boundingBox();
+  const canvasBox = await page.locator('.diagram-canvas').boundingBox();
+  expect(timelineBox!.x).toBeLessThan(canvasBox!.x);
+  expect(await page.locator('.diagram-event-list span').first().evaluate(element => getComputedStyle(element).whiteSpace)).toBe('normal');
   await page.screenshot({ path: 'test-results/diagram-ai.png' });
   await page.getByLabel('사건 흐름 시점').fill('0');
   expect(await relationEdges.nth(0).locator('.react-flow__edge-path').evaluate(element => getComputedStyle(element).opacity)).toBe('1');

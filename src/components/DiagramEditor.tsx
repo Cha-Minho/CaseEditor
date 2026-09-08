@@ -125,7 +125,8 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       return { ...edge, type: 'plotEdge', style: { ...edge.style, opacity: future ? 0.09 : 1 }, data: { ...edge.data, future } };
     });
     const arcs = computePropertyArcs(graph.legalGraph).map(arc => {
-      const active = atEnd || (arc.start <= cutoffDate && (arc.end === Infinity || cutoffDate < arc.end));
+      const propertyCutoff = arc.usesSequence ? cutoffSequence : cutoffDate;
+      const active = atEnd || (arc.start <= propertyCutoff && (arc.end === Infinity || propertyCutoff < arc.end));
       const kind = arc.role === '소유' ? 'own' : arc.role === '점유' ? 'poss' : 'lien';
       return { id: arc.id, source: arc.thing, target: arc.party, type: 'plotEdge', label: arc.role, selectable: false, focusable: false, className: `diagram-edge property-arc arc-${kind}`, style: { opacity: active ? 0.88 : 0.07 }, data: { derivedArc: true, role: arc.role, kind: 'status', status: 'recognized', future: !active } };
     });
@@ -214,6 +215,17 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       <span className="diagram-review-actions"><button onClick={() => setDraft(null)}>취소</button><button className="primary" onClick={applyAiDraft}>관계도에 적용</button></span>
     </div>}
     {selectedRelation?.evidence && <div className="diagram-evidence"><span className={`relation-status status-${selectedRelation.status}`}>{selectedRelation.status === 'recognized' ? '인정 사실' : selectedRelation.status === 'alleged' ? '당사자 주장' : selectedRelation.status === 'disputed' ? '다툼 있음' : '소송 경과'}</span><span>{selectedRelation.evidence}</span><small>{Math.round((selectedRelation.confidence || 0) * 100)}%</small></div>}
+    <div className={`diagram-workspace${timeline.length ? ' has-timeline' : ''}`}>
+    {timeline.length > 0 && <aside className="diagram-timeline">
+      <div className="diagram-timeline-bar"><strong>사건 흐름</strong>
+        <span>{timeline.length < 2 ? '' : timelineIndex < 0 ? '사건 전' : atEnd ? '전체' : timeline[timelineIndex]?.date || `${cutoffSequence}단계`}</span>
+        {timeline.length > 1 && <input aria-label="사건 흐름 시점" type="range" min="-1" max={timeline.length - 1} value={timelineIndex} onChange={event => setTimelineIndex(Number(event.target.value))} />}
+      </div>
+      <div className="diagram-event-list">{timeline.map((event, index) => {
+        const future = index > timelineIndex;
+        return <button key={event.id} className={future ? 'future' : ''} onClick={() => setTimelineIndex(index)}><b>{event.date || `${event.sequence || index + 1}단계`}</b><span>{event.text}</span></button>;
+      })}</div>
+    </aside>}
     <div className="diagram-canvas"><ReactFlow nodes={renderNodes} edges={visibleEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onInit={instance => { flow.current = instance; requestAnimationFrame(() => instance.fitView({ padding: 0.18, maxZoom: 2 })); }}
       onNodesChange={changes => display({ ...current.current, nodes: applyNodeChanges(changes, current.current.nodes) })}
       onEdgesChange={changes => display({ ...current.current, edges: applyEdgeChanges(changes, current.current.edges) })}
@@ -224,15 +236,6 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       onPaneClick={() => setSelected(null)} deleteKeyCode={null} fitView minZoom={0.2} maxZoom={2.5} proOptions={{ hideAttribution: true }}>
       <Controls showInteractive={false} />
     </ReactFlow></div>
-    {timeline.length > 0 && <footer className="diagram-timeline">
-      <div className="diagram-timeline-bar"><strong>사건 흐름</strong>
-        {timeline.length > 1 && <input aria-label="사건 흐름 시점" type="range" min="-1" max={timeline.length - 1} value={timelineIndex} onChange={event => setTimelineIndex(Number(event.target.value))} />}
-        <span>{timeline.length < 2 ? '' : timelineIndex < 0 ? '사건 전' : atEnd ? '전체' : timeline[timelineIndex]?.date || `${cutoffSequence}단계`}</span>
-      </div>
-      <div className="diagram-event-list">{timeline.map((event, index) => {
-        const future = index > timelineIndex;
-        return <button key={event.id} className={future ? 'future' : ''} onClick={() => setTimelineIndex(index)}><b>{event.date || `${event.sequence || index + 1}단계`}</b><span>{event.text}</span></button>;
-      })}</div>
-    </footer>}
+    </div>
   </dialog>, document.body);
 }

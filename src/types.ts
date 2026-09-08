@@ -30,7 +30,7 @@ export type LegalGraphKind = "contract" | "money" | "security" | "dispute" | "st
 
 export type LegalGraph = {
   parties: { id: string; name: string; role?: string }[];
-  objects: { id: string; name: string }[];
+  objects: { id: string; name: string; ownerId?: string; possessorId?: string }[];
   relations: {
     id: string;
     from: string;

@@ -16,7 +16,7 @@ const responseSchema = {
   required: ["parties", "objects", "relations", "events"],
   properties: {
     parties: { type: "ARRAY", items: { type: "OBJECT", required: ["id", "name"], properties: { id: stringSchema, name: stringSchema, role: nullableStringSchema } } },
-    objects: { type: "ARRAY", items: { type: "OBJECT", required: ["id", "name"], properties: { id: stringSchema, name: stringSchema } } },
+    objects: { type: "ARRAY", items: { type: "OBJECT", required: ["id", "name"], properties: { id: stringSchema, name: stringSchema, ownerId: nullableStringSchema, possessorId: nullableStringSchema } } },
     relations: { type: "ARRAY", items: { type: "OBJECT", required: ["id", "from", "to", "label", "kind", "sequence", "evidence", "status", "confidence"], properties: {
       id: stringSchema, from: stringSchema, to: stringSchema, label: stringSchema,
       kind: { type: "STRING", enum: kinds }, sequence: { type: "INTEGER", minimum: 1 }, date: nullableStringSchema, objectId: nullableStringSchema,
@@ -51,12 +51,14 @@ function validateGraph(value: Record<string, unknown>) {
     name: cleanString(item.name, 100) || `당사자 ${index + 1}`,
     ...(cleanString(item.role, 100) ? { role: cleanString(item.role, 100) } : {})
   }));
+  const partyIds = new Set(parties.map((item) => item.id));
   const objects = rawObjects.slice(0, 20).map((item: Record<string, unknown>, index: number) => ({
     id: cleanString(item.id, 60) || `o${index + 1}`,
-    name: cleanString(item.name, 120) || `목적물 ${index + 1}`
+    name: cleanString(item.name, 120) || `목적물 ${index + 1}`,
+    ...(partyIds.has(cleanString(item.ownerId)) ? { ownerId: cleanString(item.ownerId, 60) } : {}),
+    ...(partyIds.has(cleanString(item.possessorId)) ? { possessorId: cleanString(item.possessorId, 60) } : {})
   }));
   const entityIds = new Set([...parties.map((item) => item.id), ...objects.map((item) => item.id)]);
-  const partyIds = new Set(parties.map((item) => item.id));
   const relations = (Array.isArray(value.relations) ? value.relations : [])
     .slice(0, 80)
     .map((item: Record<string, unknown>, index: number) => ({
@@ -106,6 +108,9 @@ date는 해당 사실이 발생한 날짜다. 판결 선고일이나 인용 판�
 관계에 시점이 표시되었다면 relation.date에도 같은 발생일을 넣는다. 사실관계 관계선이 하나도 없는 기관이나 소송관계인은 parties에서 빼다.
 모든 relation과 event에는 판결문에서 그대로 가져온 짧은 evidence를 넣는다.
 from과 to는 반드시 parties의 id를 사용하고 objectId는 objects의 id를 사용한다.
+목적물의 최초 소유자가 원문에 나오면 object.ownerId에, 최초 점유자가 별도로 나오면 object.possessorId에 parties의 id를 넣는다.
+relation.effect의 own은 매매, 증여, 상속, 소유권이전등기처럼 소유권이 실제로 relation.to에게 이전되는 경우에만 쓴다.
+"피고인 소유 휴대전화"처럼 기존 소유자를 설명하거나, 휴대전화를 임의제출·압수·보관·교부한 사실에는 own을 쓰지 않는다. 이러한 물리적 지배의 이동에는 poss를 쓰며 relation.to는 새 점유자로 둔다.
 
 판결문:\n${caseText}`;
     const requestBody = JSON.stringify({

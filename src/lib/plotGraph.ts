@@ -25,34 +25,55 @@ export function computeGraphTimes(data?: LegalGraph) {
   ].filter(Boolean))].sort((a, b) => a - b);
 }
 
-type PropertyArc = { id: string; thing: string; party: string; role: string; start: number; end: number };
+type PropertyArc = { id: string; thing: string; party: string; role: string; start: number; end: number; usesSequence: boolean };
+
+const ownershipTransferPattern = /소유권\s*이전|매도|매매|증여|양도|상속|유증|명의신탁/;
+const possessionTransferPattern = /임의\s*제출|제출|압수|교부|인도|보관|은닉|점유/;
 
 export function computePropertyArcs(data?: LegalGraph): PropertyArc[] {
   if (!data) return [];
   const arcs: PropertyArc[] = [];
+  const partyById = new Map(data.parties.map(party => [party.id, party]));
   for (const object of data.objects) {
     const relations = data.relations
       .filter(relation => relation.objectId === object.id && relation.from !== relation.to)
-      .slice()
-      .sort((a, b) => dateKey(a.date) - dateKey(b.date));
+      .slice();
     if (!relations.length) continue;
-    const owns = relations.filter(relation => relation.effect === 'own');
-    let holder = (owns[0] || relations.find(relation => relation.effect === 'sale') || relations[0]).from;
+    const usesSequence = relations.some(relation => Boolean(relation.sequence));
+    const timeOf = (relation: LegalGraph['relations'][number]) => usesSequence
+      ? relation.sequence || Infinity
+      : dateKey(relation.date) || 0;
+    relations.sort((left, right) => timeOf(left) - timeOf(right));
+    const inferredOwner = data.parties.find(party => {
+      const names = [party.name, party.id, party.role].filter(Boolean) as string[];
+      return names.some(name => object.name.includes(`${name} 소유`) || object.name.includes(`${name}의 소유`));
+    })?.id;
+    const owns = relations.filter(relation => relation.effect === 'own' && ownershipTransferPattern.test(relation.label));
+    const initialOwner = object.ownerId && partyById.has(object.ownerId)
+      ? object.ownerId
+      : inferredOwner || owns[0]?.from || relations.find(relation => relation.effect === 'sale')?.from;
+    let holder = initialOwner;
     let previous = 0;
     owns.forEach((relation, index) => {
-      const key = dateKey(relation.date) || previous;
-      if (holder && holder !== relation.to) arcs.push({ id: `arc-own-${object.id}-${index}`, thing: object.id, party: holder, role: '소유', start: previous, end: key });
+      const key = timeOf(relation);
+      if (holder && holder !== relation.to) arcs.push({ id: `arc-own-${object.id}-${index}`, thing: object.id, party: holder, role: '소유', start: previous, end: key, usesSequence });
       holder = relation.to;
       previous = key;
     });
-    if (holder) arcs.push({ id: `arc-own-${object.id}-last`, thing: object.id, party: holder, role: '소유', start: previous, end: Infinity });
+    if (holder) arcs.push({ id: `arc-own-${object.id}-last`, thing: object.id, party: holder, role: '소유', start: previous, end: Infinity, usesSequence });
     relations.filter(relation => relation.effect === 'lien').forEach((relation, index) => {
-      arcs.push({ id: `arc-lien-${object.id}-${index}`, thing: object.id, party: relation.to, role: '담보', start: dateKey(relation.date), end: Infinity });
+      arcs.push({ id: `arc-lien-${object.id}-${index}`, thing: object.id, party: relation.to, role: '담보', start: timeOf(relation), end: Infinity, usesSequence });
     });
-    const possessions = relations.filter(relation => relation.effect === 'poss');
+    const possessions = relations.filter(relation => relation.effect === 'poss' || (!ownershipTransferPattern.test(relation.label) && possessionTransferPattern.test(relation.label)));
+    let possessor = object.possessorId && partyById.has(object.possessorId) ? object.possessorId : possessions.length ? initialOwner : undefined;
+    let possessionStart = 0;
     possessions.forEach((relation, index) => {
-      arcs.push({ id: `arc-poss-${object.id}-${index}`, thing: object.id, party: relation.to, role: '점유', start: dateKey(relation.date), end: index + 1 < possessions.length ? dateKey(possessions[index + 1].date) || Infinity : Infinity });
+      const key = timeOf(relation);
+      if (possessor && possessor !== relation.to) arcs.push({ id: `arc-poss-${object.id}-${index}`, thing: object.id, party: possessor, role: '점유', start: possessionStart, end: key, usesSequence });
+      possessor = relation.to;
+      possessionStart = key;
     });
+    if (possessor) arcs.push({ id: `arc-poss-${object.id}-last`, thing: object.id, party: possessor, role: '점유', start: possessionStart, end: Infinity, usesSequence });
   }
   return arcs.filter(arc => arc.end > arc.start);
 }

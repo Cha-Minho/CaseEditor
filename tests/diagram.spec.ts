@@ -21,9 +21,9 @@ test('create, connect, undo deletion and reopen case diagram', async ({ page }) 
   await page.locator('.diagram-link-form').getByRole('button', { name: '추가' }).click();
   await expect(page.locator('.react-flow__edge')).toHaveCount(1);
   await page.locator('.plot-edge-chip', { hasText: '점유' }).click();
-  await expect(page.getByLabel('선택 항목 이름')).toHaveValue('점유');
-  await page.getByLabel('선택 항목 이름').fill('보관');
-  await page.getByLabel('선택 항목 이름').press('Enter');
+  await expect(page.getByLabel('선택 관계 이름')).toHaveValue('점유');
+  await page.getByLabel('선택 관계 이름').fill('보관');
+  await page.getByLabel('선택 관계 이름').press('Enter');
   await expect(page.locator('.plot-edge-chip', { hasText: '보관' })).toBeVisible();
   await page.getByLabel('선택 삭제', { exact: true }).click();
   await expect(nodes).toHaveCount(2);
@@ -124,4 +124,14 @@ test('review and apply an AI relationship draft', async ({ page }) => {
   const reopenedLabel = page.locator('.plot-edge-chip', { hasText: '2013 촬영' });
   await expect(reopenedLabel).toBeVisible();
   expect(await reopenedLabel.getAttribute('style')).toBe(savedLabelTransform);
+  await reopenedLabel.click();
+  await expect(page.getByLabel('선택 관계 시작 노드')).toHaveValue('p1');
+  await expect(page.getByLabel('선택 관계 도착 노드')).toHaveValue('p2');
+  await page.getByLabel('선택 관계 도착 노드').selectOption('p3');
+  await page.locator('.diagram-edge-editor').getByRole('button', { name: '연결 변경' }).click();
+  await expect(page.getByLabel('선택 관계 도착 노드')).toHaveValue('p3');
+  await page.locator('.diagram-edge-editor').getByRole('button', { name: '연결 끊기' }).click();
+  await expect(page.locator('.diagram-edge:not(.property-arc)')).toHaveCount(1);
+  await page.getByLabel('실행 취소', { exact: true }).click();
+  await expect(page.locator('.diagram-edge:not(.property-arc)')).toHaveCount(2);
 });

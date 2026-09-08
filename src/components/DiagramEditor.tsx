@@ -79,7 +79,6 @@ function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, mark
     if (relation?.derivedArc) return;
     event.preventDefault();
     event.stopPropagation();
-    relation?.onSelectEdge?.(id);
     const element = event.currentTarget;
     const startClientX = event.clientX;
     const startClientY = event.clientY;
@@ -135,12 +134,16 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
   const [linkSource, setLinkSource] = useState('');
   const [linkTarget, setLinkTarget] = useState('');
   const [linkLabel, setLinkLabel] = useState('관계');
+  const [edgeSource, setEdgeSource] = useState('');
+  const [edgeTarget, setEdgeTarget] = useState('');
 
   const selectEdge = useCallback((id: string) => {
     const edge = current.current.edges.find(item => item.id === id);
     if (!edge || edge.data?.derivedArc) return;
     setSelected({ kind: 'edge', id });
     setLabel(String(edge.label || ''));
+    setEdgeSource(edge.source);
+    setEdgeTarget(edge.target);
   }, []);
   const moveEdgeLabel = useCallback((id: string, x: number, y: number) => {
     change({ ...current.current, edges: current.current.edges.map(edge => edge.id === id ? { ...edge, data: { ...edge.data, manualLabelX: x, manualLabelY: y } } : edge) });
@@ -249,11 +252,30 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     const text = label.trim();
     const existing = selected.kind === 'node' ? current.current.nodes.find(n => n.id === selected.id)?.data.label : current.current.edges.find(e => e.id === selected.id)?.label;
     if (existing === text) return;
-    change(selected.kind === 'node' ? { ...current.current, nodes: current.current.nodes.map(n => n.id === selected.id ? { ...n, data: { ...n.data, label: text } } : n) } : { ...current.current, edges: current.current.edges.map(e => e.id === selected.id ? { ...e, label: text } : e) });
+    if (selected.kind === 'node') {
+      change({ ...current.current, nodes: current.current.nodes.map(n => n.id === selected.id ? { ...n, data: { ...n.data, label: text } } : n) });
+      return;
+    }
+    const legalGraph = current.current.legalGraph ? { ...current.current.legalGraph, relations: current.current.legalGraph.relations.map(relation => relation.id === selected.id ? { ...relation, label: text } : relation) } : undefined;
+    change({ ...current.current, edges: current.current.edges.map(e => e.id === selected.id ? { ...e, label: text } : e), ...(legalGraph ? { legalGraph } : {}) });
+  }
+  function updateEdgeConnection() {
+    if (selected?.kind !== 'edge' || !edgeSource || !edgeTarget) return;
+    const text = label.trim() || '관계';
+    const legalGraph = current.current.legalGraph ? {
+      ...current.current.legalGraph,
+      relations: current.current.legalGraph.relations.map(relation => relation.id === selected.id ? { ...relation, from: edgeSource, to: edgeTarget, label: text } : relation),
+    } : undefined;
+    change({
+      ...current.current,
+      edges: current.current.edges.map(edge => edge.id === selected.id ? { ...edge, source: edgeSource, target: edgeTarget, label: text } : edge),
+      ...(legalGraph ? { legalGraph } : {}),
+    });
   }
   function remove() {
     if (!selected) return;
-    change({ ...graph, nodes: graph.nodes.filter(n => selected.kind !== 'node' || n.id !== selected.id), edges: graph.edges.filter(e => selected.kind === 'edge' ? e.id !== selected.id : e.source !== selected.id && e.target !== selected.id) });
+    const legalGraph = selected.kind === 'edge' && graph.legalGraph ? { ...graph.legalGraph, relations: graph.legalGraph.relations.filter(relation => relation.id !== selected.id) } : graph.legalGraph;
+    change({ ...graph, nodes: graph.nodes.filter(n => selected.kind !== 'node' || n.id !== selected.id), edges: graph.edges.filter(e => selected.kind === 'edge' ? e.id !== selected.id : e.source !== selected.id && e.target !== selected.id), ...(legalGraph ? { legalGraph } : {}) });
     setSelected(null);
   }
 
@@ -292,7 +314,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       <button title="실행 취소 (Ctrl+Z)" aria-label="실행 취소" disabled={!undo.current.length} onClick={() => travel(true)}><Undo2 size={18} /></button>
       <button title="다시 실행 (Ctrl+Y)" aria-label="다시 실행" disabled={!redo.current.length} onClick={() => travel(false)}><Redo2 size={18} /></button>
       <button title="선택 삭제" aria-label="선택 삭제" disabled={!selected} onClick={remove}><Trash2 size={18} /></button>
-      {selected && <input aria-label="선택 항목 이름" value={label} onChange={event => setLabel(event.target.value)} onBlur={rename} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} />}
+      {selected?.kind === 'node' && <input aria-label="선택 항목 이름" value={label} onChange={event => setLabel(event.target.value)} onBlur={rename} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} />}
     </div>
     {linkFormOpen && <form className="diagram-link-form" onSubmit={event => { event.preventDefault(); addLink(); }}>
       <select aria-label="관계 시작 노드" value={linkSource} onChange={event => setLinkSource(event.target.value)}>{graph.nodes.map(node => <option key={node.id} value={node.id}>{String(node.data.label || '')}</option>)}</select>
@@ -301,6 +323,14 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       <input aria-label="관계 이름" value={linkLabel} onChange={event => setLinkLabel(event.target.value)} autoFocus />
       <button type="submit" className="primary">추가</button>
       <button type="button" onClick={() => setLinkFormOpen(false)}>취소</button>
+    </form>}
+    {selected?.kind === 'edge' && <form className="diagram-link-form diagram-edge-editor" onSubmit={event => { event.preventDefault(); updateEdgeConnection(); }}>
+      <select aria-label="선택 관계 시작 노드" value={edgeSource} onChange={event => setEdgeSource(event.target.value)}>{graph.nodes.map(node => <option key={node.id} value={node.id}>{String(node.data.label || '')}</option>)}</select>
+      <span aria-hidden="true">→</span>
+      <select aria-label="선택 관계 도착 노드" value={edgeTarget} onChange={event => setEdgeTarget(event.target.value)}>{graph.nodes.map(node => <option key={node.id} value={node.id}>{String(node.data.label || '')}</option>)}</select>
+      <input aria-label="선택 관계 이름" value={label} onChange={event => setLabel(event.target.value)} />
+      <button type="submit" className="primary">연결 변경</button>
+      <button type="button" className="danger" onClick={remove}>연결 끊기</button>
     </form>}
     {generationError && <div className="diagram-generation-error" role="alert">{generationError}<button onClick={() => setGenerationError('')}>닫기</button></div>}
     {draft && <div className="diagram-draft-review">

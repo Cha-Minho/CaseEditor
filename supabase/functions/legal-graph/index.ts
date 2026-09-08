@@ -100,12 +100,12 @@ serve(async (request) => {
 from과 to는 반드시 parties의 id를 사용하고 objectId는 objects의 id를 사용한다.
 
 판결문:\n${caseText}`;
-    const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+    const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, responseMimeType: "application/json", responseSchema }
+        generationConfig: { responseMimeType: "application/json", responseSchema }
       })
     });
     const geminiBody = await geminiResponse.json();

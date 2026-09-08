@@ -288,7 +288,7 @@ export function Editor({
           ))}
         </section>
       </div>
-      {diagramOpen && <DiagramEditor key={selectedCase.id} title={selectedCase.case_no || '관계도'} value={selectedNotes.diagram} onChange={(diagram) => onUpdateDiagram(selectedCase.id, diagram)} onClose={() => setDiagramOpen(false)} />}
+      {diagramOpen && <DiagramEditor key={selectedCase.id} title={selectedCase.case_no || '관계도'} sourceHtml={selectedNotes.source_html} value={selectedNotes.diagram} onChange={(diagram) => onUpdateDiagram(selectedCase.id, diagram)} onClose={() => setDiagramOpen(false)} />}
     </main>
   );
 }

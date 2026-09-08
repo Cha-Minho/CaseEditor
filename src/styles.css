@@ -1012,9 +1012,37 @@ select:focus {
 .diagram-heading button, .diagram-toolbar button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 36px; height: 36px; padding: 7px; flex-shrink: 0; }
 .diagram-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 8px 12px; border-bottom: 1px solid #e1e5e3; }
 .diagram-toolbar input { width: 240px; max-width: 100%; height: 36px; padding: 6px 10px; font-size: 14px; }
+.diagram-toolbar .diagram-ai-button { color: #145f4f; border-color: #80ad9f; background: #edf7f3; }
+.diagram-toolbar .diagram-ai-button:disabled { color: #8b9691; background: #f3f5f4; }
+.diagram-generation-error, .diagram-draft-review, .diagram-evidence { display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-bottom: 1px solid #dde3e0; font-size: 13px; }
+.diagram-generation-error { color: #922d25; background: #fff2f0; }
+.diagram-generation-error button { margin-left: auto; }
+.diagram-draft-review { flex-wrap: wrap; background: #f4f8f6; }
+.diagram-draft-review > div { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.diagram-draft-review p { flex: 1; min-width: 260px; margin: 0; color: #5d6762; }
+.diagram-review-actions { display: flex; gap: 6px; margin-left: auto; }
+.diagram-review-actions .primary { color: #fff; border-color: #246b59; background: #246b59; }
+.diagram-evidence { background: #fffdf7; color: #454b48; }
+.diagram-evidence > span:nth-child(2) { flex: 1; }
+.diagram-evidence small { color: #78817d; }
+.relation-status { flex: none; padding: 3px 7px; border: 1px solid #a9b4af; border-radius: 999px; font-size: 12px; }
+.relation-status.status-recognized { color: #17624f; border-color: #83ae9f; background: #edf7f3; }
+.relation-status.status-alleged { color: #7b5b18; border-color: #cdbb88; background: #fff9e8; }
+.relation-status.status-disputed { color: #922d25; border-color: #d5a19c; background: #fff2f0; }
+.relation-status.status-procedural { color: #5b6268; border-color: #bcc2c6; background: #f3f4f5; }
 .diagram-canvas { flex: 1; min-height: 0; width: 100%; }
-.diagram-canvas .react-flow__node { font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; background: #fff; color: #242a27; border: 1.5px solid #568675; border-radius: 6px; }
+.diagram-canvas .react-flow__node { display: flex; align-items: center; justify-content: center; min-width: 76px; min-height: 54px; padding: 10px; font-size: 14px; font-weight: 600; line-height: 1.3; text-align: center; white-space: pre-wrap; overflow-wrap: anywhere; background: #fff; color: #242a27; border: 1.5px solid #568675; border-radius: 50%; box-shadow: 0 2px 8px #1b2e2714; }
 .diagram-canvas .diagram-object { border-style: dashed; border-color: #9e7837; background: #fffbed; }
+.diagram-canvas .diagram-edge.status-alleged path, .diagram-canvas .diagram-edge.status-procedural path { stroke-dasharray: 7 5; }
+.diagram-canvas .diagram-edge.status-disputed path { stroke: #ad493e; stroke-dasharray: 4 4; }
+.diagram-canvas .diagram-edge.kind-money path { stroke: #2772a2; }
+.diagram-canvas .diagram-edge.kind-security path { stroke: #8a6428; }
+.diagram-canvas .diagram-edge.kind-dispute path { stroke: #ad493e; }
+.diagram-canvas .react-flow__edge-text { font-size: 12px; }
 .diagram-canvas .react-flow__handle { width: 10px; height: 10px; background: #327c65; }
 .diagram-canvas .react-flow__controls-button { min-width: 26px; width: 26px; height: 26px; padding: 5px; border-radius: 0; }
-@media (max-width: 600px) { .diagram-dialog { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; } .diagram-canvas .react-flow__minimap { display: none; } }
+.diagram-timeline { display: grid; grid-template-columns: auto minmax(120px, 280px) auto 1fr; align-items: center; gap: 10px; min-height: 46px; padding: 7px 14px; border-top: 1px solid #dde3e0; background: #fafbfa; font-size: 13px; }
+.diagram-timeline input { width: 100%; accent-color: #246b59; }
+.diagram-timeline span { color: #66706b; white-space: nowrap; }
+.diagram-timeline p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) { .diagram-dialog { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; } .diagram-heading { padding: 10px 12px; } .diagram-toolbar { flex-wrap: nowrap; overflow-x: auto; } .diagram-toolbar button span { display: none; } .diagram-toolbar input { width: 150px; flex: 0 0 150px; } .diagram-draft-review p { min-width: 100%; } .diagram-review-actions { width: 100%; justify-content: flex-end; } .diagram-evidence { align-items: flex-start; flex-wrap: wrap; } .diagram-evidence > span:nth-child(2) { min-width: calc(100% - 100px); } .diagram-timeline { grid-template-columns: auto 1fr auto; } .diagram-timeline p { grid-column: 1 / -1; } .diagram-canvas .react-flow__minimap { display: none; } }

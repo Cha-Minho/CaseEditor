@@ -25,8 +25,34 @@ export type CaseItem = {
   deleted_at: string | null;
 };
 
+export type LegalGraphStatus = "recognized" | "alleged" | "disputed" | "procedural";
+export type LegalGraphKind = "contract" | "money" | "security" | "dispute" | "status" | "notice" | "other";
+
+export type LegalGraph = {
+  parties: { id: string; name: string; role?: string }[];
+  objects: { id: string; name: string }[];
+  relations: {
+    id: string;
+    from: string;
+    to: string;
+    label: string;
+    kind: LegalGraphKind;
+    date?: string;
+    objectId?: string;
+    effect?: "own" | "sale" | "lien" | "poss";
+    evidence: string;
+    status: LegalGraphStatus;
+    confidence: number;
+  }[];
+  events: { id: string; date?: string; text: string; evidence: string }[];
+};
+
 export type CaseNotes = {
-  diagram?: { nodes: import('@xyflow/react').Node[]; edges: import('@xyflow/react').Edge[] };
+  diagram?: {
+    nodes: import('@xyflow/react').Node[];
+    edges: import('@xyflow/react').Edge[];
+    legalGraph?: LegalGraph;
+  };
   case_id: string;
   user_id: string;
   holding_html: string;

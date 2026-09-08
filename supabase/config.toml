@@ -2,3 +2,6 @@ project_id = "case-editor"
 
 [functions.law-case]
 verify_jwt = true
+
+[functions.legal-graph]
+verify_jwt = true

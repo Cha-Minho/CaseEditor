@@ -122,7 +122,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
   }
   useEffect(() => {
     dialog.current?.showModal();
-    const observer = new ResizeObserver(() => requestAnimationFrame(() => flow.current?.fitView({ padding: 0.3, maxZoom: 1.3 })));
+    const observer = new ResizeObserver(() => requestAnimationFrame(() => flow.current?.fitView({ padding: 0.18, maxZoom: 2 })));
     if (dialog.current) observer.observe(dialog.current);
     return () => observer.disconnect();
   }, []);
@@ -162,7 +162,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     if (!draft) return;
     change(legalGraphToDiagram(draft));
     setDraft(null);
-    requestAnimationFrame(() => flow.current?.fitView({ padding: 0.3, maxZoom: 1.2 }));
+    requestAnimationFrame(() => flow.current?.fitView({ padding: 0.18, maxZoom: 2 }));
   }
 
   const selectedEdge = selected?.kind === 'edge' ? graph.edges.find(edge => edge.id === selected.id) : null;
@@ -190,7 +190,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       <span className="diagram-review-actions"><button onClick={() => setDraft(null)}>취소</button><button className="primary" onClick={applyAiDraft}>관계도에 적용</button></span>
     </div>}
     {selectedRelation?.evidence && <div className="diagram-evidence"><span className={`relation-status status-${selectedRelation.status}`}>{selectedRelation.status === 'recognized' ? '인정 사실' : selectedRelation.status === 'alleged' ? '당사자 주장' : selectedRelation.status === 'disputed' ? '다툼 있음' : '소송 경과'}</span><span>{selectedRelation.evidence}</span><small>{Math.round((selectedRelation.confidence || 0) * 100)}%</small></div>}
-    <div className="diagram-canvas"><ReactFlow nodes={renderNodes} edges={visibleEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onInit={instance => { flow.current = instance; requestAnimationFrame(() => instance.fitView({ padding: 0.22, maxZoom: 1.45 })); }}
+    <div className="diagram-canvas"><ReactFlow nodes={renderNodes} edges={visibleEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onInit={instance => { flow.current = instance; requestAnimationFrame(() => instance.fitView({ padding: 0.18, maxZoom: 2 })); }}
       onNodesChange={changes => display({ ...current.current, nodes: applyNodeChanges(changes, current.current.nodes) })}
       onEdgesChange={changes => display({ ...current.current, edges: applyEdgeChanges(changes, current.current.edges) })}
       onNodeDragStart={checkpoint} onNodeDragStop={() => save(current.current)}

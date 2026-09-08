@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { ReactFlow, Controls, BaseEdge, EdgeLabelRenderer, Handle, Position, applyNodeChanges, applyEdgeChanges, addEdge, MarkerType, type Node, type Edge, type EdgeProps, type NodeProps, type ReactFlowInstance } from '@xyflow/react';
 import { UserPlus, SquarePlus, Undo2, Redo2, Trash2, WandSparkles, X } from 'lucide-react';
@@ -6,7 +6,7 @@ import '@xyflow/react/dist/style.css';
 import type { CaseNotes } from '../types';
 import type { LegalGraph } from '../types';
 import { generateLegalGraph } from '../lib/legalGraphApi';
-import { computePropertyArcs, dateKey, legalGraphToDiagram, propertyArcIsActive } from '../lib/plotGraph';
+import { computePropertyArcs, dateKey, declutterEdgeLabels, legalGraphToDiagram, propertyArcIsActive } from '../lib/plotGraph';
 
 type Graph = NonNullable<CaseNotes['diagram']>;
 type Props = { title: string; sourceHtml: string; value: CaseNotes['diagram']; onChange: (graph: Graph) => void; onClose: () => void };
@@ -28,7 +28,7 @@ function PlotObjectNode({ data, selected }: NodeProps) {
 }
 
 function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, markerEnd, style, label, data, selected }: EdgeProps) {
-  const relation = data as (Partial<LegalGraph['relations'][number]> & { derivedArc?: boolean; role?: string; future?: boolean; pairIndex?: number; pairTotal?: number; centerX?: number; centerY?: number }) | undefined;
+  const relation = data as (Partial<LegalGraph['relations'][number]> & { derivedArc?: boolean; role?: string; future?: boolean; pairIndex?: number; pairTotal?: number; centerX?: number; centerY?: number; labelX?: number; labelY?: number }) | undefined;
   let path: string;
   let labelX: number;
   let labelY: number;
@@ -70,9 +70,15 @@ function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, mark
     labelX = (startX + 2 * controlX + endX) / 4;
     labelY = (startY + 2 * controlY + endY) / 4;
   }
+  const anchorX = labelX;
+  const anchorY = labelY;
+  labelX = relation?.labelX ?? labelX;
+  labelY = relation?.labelY ?? labelY;
+  const hasLeader = Math.hypot(labelX - anchorX, labelY - anchorY) > 18;
   return <>
     <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
-    <EdgeLabelRenderer><div className={`plot-edge-chip kind-${relation?.kind || 'other'} status-${relation?.status || 'recognized'}${relation?.derivedArc ? ' property' : ''}${relation?.future ? ' future' : ''}${selected ? ' selected' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)` }}>
+    {hasLeader && <path className={`plot-label-leader${relation?.future ? ' future' : ''}`} d={`M ${anchorX} ${anchorY} L ${labelX} ${labelY}`} />}
+    <EdgeLabelRenderer><div className={`plot-edge-chip kind-${relation?.kind || 'other'} status-${relation?.status || 'recognized'}${relation?.derivedArc ? ' property' : ''}${relation?.future ? ' future' : ''}${selected ? ' selected' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(var(--diagram-inverse-zoom, 1))` }}>
       {relation?.date && <small>{relation.date}</small>}
       <span>{String(label || relation?.role || '')}</span>
     </div></EdgeLabelRenderer>
@@ -97,6 +103,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
   const [generationError, setGenerationError] = useState('');
   const [draft, setDraft] = useState<LegalGraph | null>(null);
   const [timelineIndex, setTimelineIndex] = useState(0);
+  const [viewportZoom, setViewportZoom] = useState(1);
 
   const timeline = useMemo(() => (graph.legalGraph?.events || []).map((event, index) => ({ event, index })).sort((left, right) => {
     const leftSequence = left.event.sequence || left.index + 1;
@@ -129,8 +136,8 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       const kind = arc.role === '소유' ? 'own' : arc.role === '점유' ? 'poss' : 'lien';
       return { id: arc.id, source: arc.thing, target: arc.party, type: 'plotEdge', label: arc.role, selectable: false, focusable: false, className: `diagram-edge property-arc arc-${kind}`, style: { opacity: active ? 0.88 : 0.07 }, data: { derivedArc: true, role: arc.role, kind: 'status', status: 'recognized', future: !active } };
     });
-    return [...relations, ...arcs] as Edge[];
-  }, [atEnd, cutoffDate, cutoffSequence, graph.edges, graph.legalGraph, timeline.length]);
+    return declutterEdgeLabels([...relations, ...arcs] as Edge[], graph.nodes, 1 / viewportZoom);
+  }, [atEnd, cutoffDate, cutoffSequence, graph.edges, graph.legalGraph, graph.nodes, timeline.length, viewportZoom]);
 
   function display(next: Graph) { current.current = next; setGraph(next); }
   function checkpoint() { undo.current = [...undo.current.slice(-49), structuredClone(current.current)]; redo.current = []; }
@@ -225,7 +232,8 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
         return <button key={event.id} className={future ? 'future' : ''} onClick={() => setTimelineIndex(index)}><b>{event.date || `${event.sequence || index + 1}단계`}</b><span>{event.text}</span></button>;
       })}</div>
     </aside>}
-    <div className="diagram-canvas"><ReactFlow nodes={renderNodes} edges={visibleEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onInit={instance => { flow.current = instance; requestAnimationFrame(() => instance.fitView({ padding: 0.18, maxZoom: 2 })); }}
+    <div className="diagram-canvas" style={{ '--diagram-inverse-zoom': 1 / viewportZoom } as CSSProperties}><ReactFlow nodes={renderNodes} edges={visibleEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onInit={instance => { flow.current = instance; requestAnimationFrame(() => instance.fitView({ padding: 0.18, maxZoom: 2 })); }}
+      onMove={(_, viewport) => setViewportZoom(currentZoom => Math.abs(currentZoom - viewport.zoom) < 0.001 ? currentZoom : viewport.zoom)}
       onNodesChange={changes => display({ ...current.current, nodes: applyNodeChanges(changes, current.current.nodes) })}
       onEdgesChange={changes => display({ ...current.current, edges: applyEdgeChanges(changes, current.current.edges) })}
       onNodeDragStart={checkpoint} onNodeDragStop={() => save(current.current)}

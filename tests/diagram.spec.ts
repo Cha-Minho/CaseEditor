@@ -74,6 +74,18 @@ test('review and apply an AI relationship draft', async ({ page }) => {
   const canvasBox = await page.locator('.diagram-canvas').boundingBox();
   expect(timelineBox!.x).toBeLessThan(canvasBox!.x);
   expect(await page.locator('.diagram-event-list span').first().evaluate(element => getComputedStyle(element).whiteSpace)).toBe('normal');
+  const labelBoxes = await page.locator('.plot-edge-chip').evaluateAll(elements => elements.map(element => element.getBoundingClientRect()).filter(rect => rect.width > 0 && rect.height > 0).map(rect => ({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom })));
+  for (let left = 0; left < labelBoxes.length; left += 1) for (let right = left + 1; right < labelBoxes.length; right += 1) {
+    const a = labelBoxes[left];
+    const b = labelBoxes[right];
+    expect(a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1).toBe(true);
+  }
+  const nodeText = page.locator('.plot-party-node > span').first();
+  const textHeightBeforeZoom = (await nodeText.boundingBox())!.height;
+  await page.locator('.react-flow__controls-zoomin').click();
+  await page.waitForTimeout(150);
+  const textHeightAfterZoom = (await nodeText.boundingBox())!.height;
+  expect(Math.abs(textHeightAfterZoom - textHeightBeforeZoom)).toBeLessThan(1.5);
   await page.screenshot({ path: 'test-results/diagram-ai.png' });
   await page.getByLabel('사건 흐름 시점').fill('0');
   expect(await relationEdges.nth(0).locator('.react-flow__edge-path').evaluate(element => getComputedStyle(element).opacity)).toBe('1');

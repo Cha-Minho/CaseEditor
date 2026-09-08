@@ -40,6 +40,7 @@ export function computePropertyArcs(data?: LegalGraph): PropertyArc[] {
   const arcs: PropertyArc[] = [];
   const partyById = new Map(data.parties.map(party => [party.id, party]));
   for (const object of data.objects) {
+    if (/영장/.test(object.name)) continue;
     const relations = data.relations
       .filter(relation => relation.objectId === object.id && relation.from !== relation.to)
       .slice();
@@ -81,6 +82,83 @@ export function computePropertyArcs(data?: LegalGraph): PropertyArc[] {
     if (possessor) arcs.push({ id: `arc-poss-${object.id}-last`, thing: object.id, party: possessor, role: '점유', start: possessionStart, end: Infinity, usesSequence });
   }
   return arcs.filter(arc => arc.end > arc.start);
+}
+
+type LabelEdgeData = { labelX?: number; labelY?: number };
+
+function labelBoxSize(edge: Edge, inverseZoom: number) {
+  const date = String((edge.data as Partial<LegalGraph['relations'][number]> | undefined)?.date || '');
+  const text = `${date} ${String(edge.label || '관계')}`.trim();
+  const lines = Math.max(1, Math.ceil(text.length / 18));
+  return {
+    w: Math.min(210, Math.max(54, text.length * 7 + 18)) * inverseZoom,
+    h: (18 + lines * 12) * inverseZoom
+  };
+}
+
+export function declutterEdgeLabels(edges: Edge[], nodes: Node[], inverseZoom = 1) {
+  const centers = new Map(nodes.map(node => {
+    const object = node.className?.includes('diagram-object');
+    return [node.id, { x: node.position.x + (object ? 60 : 34), y: node.position.y + (object ? 22 : 34), w: object ? 130 : 76, h: object ? 54 : 76 }] as const;
+  }));
+  const boxes = edges.map(edge => {
+    const from = centers.get(edge.source);
+    const to = centers.get(edge.target);
+    if (!from || !to) return null;
+    const size = labelBoxSize(edge, inverseZoom);
+    const self = edge.source === edge.target;
+    const ax = self ? from.x : (from.x + to.x) / 2;
+    const ay = self ? from.y - 64 : (from.y + to.y) / 2;
+    return { edge, x: ax, y: ay, ax, ay, ...size };
+  }).filter((box): box is NonNullable<typeof box> => Boolean(box));
+  const obstacles = [...centers.values()];
+  const maxX = Math.max(640, ...obstacles.map(item => item.x + item.w));
+  const maxY = Math.max(480, ...obstacles.map(item => item.y + item.h));
+  const steps = Math.max(70, Math.min(240, 250 - boxes.length * 4));
+  for (let step = 0; step < steps; step += 1) {
+    const pull = 0.06 * (1 - step / steps);
+    boxes.forEach(box => {
+      box.x += (box.ax - box.x) * pull;
+      box.y += (box.ay - box.y) * pull;
+    });
+    for (let left = 0; left < boxes.length; left += 1) {
+      const current = boxes[left];
+      for (let right = left + 1; right < boxes.length; right += 1) {
+        const other = boxes[right];
+        const dx = other.x - current.x;
+        const dy = other.y - current.y;
+        const overlapX = (current.w + other.w) / 2 + 6 * inverseZoom - Math.abs(dx);
+        const overlapY = (current.h + other.h) / 2 + 5 * inverseZoom - Math.abs(dy);
+        if (overlapX <= 0 || overlapY <= 0) continue;
+        if (overlapY * 1.7 < overlapX) {
+          const push = overlapY / 2 * (dy < 0 ? -1 : 1);
+          current.y -= push;
+          other.y += push;
+        } else {
+          const push = overlapX / 2 * (dx < 0 ? -1 : 1);
+          current.x -= push;
+          other.x += push;
+        }
+      }
+      obstacles.forEach(obstacle => {
+        const dx = current.x - obstacle.x;
+        const dy = current.y - obstacle.y;
+        const overlapX = (current.w + obstacle.w) / 2 - Math.abs(dx);
+        const overlapY = (current.h + obstacle.h) / 2 - Math.abs(dy);
+        if (overlapX <= 0 || overlapY <= 0) return;
+        if (overlapY < overlapX) current.y += dy < 0 ? -overlapY : overlapY;
+        else current.x += dx < 0 ? -overlapX : overlapX;
+      });
+      current.x = Math.max(current.w / 2 + 5, Math.min(maxX - current.w / 2 - 5, current.x));
+      current.y = Math.max(current.h / 2 + 5, Math.min(maxY - current.h / 2 - 5, current.y));
+    }
+  }
+  const positions = new Map(boxes.map(box => [box.edge.id, { x: box.x, y: box.y }]));
+  return edges.map(edge => {
+    const position = positions.get(edge.id);
+    if (!position) return edge;
+    return { ...edge, data: { ...(edge.data as LabelEdgeData | undefined), labelX: position.x, labelY: position.y } };
+  });
 }
 
 function orderParties(data: LegalGraph) {

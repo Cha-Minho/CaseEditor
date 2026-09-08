@@ -111,6 +111,7 @@ from과 to는 반드시 parties의 id를 사용하고 objectId는 objects의 id�
 목적물의 최초 소유자가 원문에 나오면 object.ownerId에, 최초 점유자가 별도로 나오면 object.possessorId에 parties의 id를 넣는다.
 relation.effect의 own은 매매, 증여, 상속, 소유권이전등기처럼 소유권이 실제로 relation.to에게 이전되는 경우에만 쓴다.
 "피고인 소유 휴대전화"처럼 기존 소유자를 설명하거나, 휴대전화를 임의제출·압수·보관·교부한 사실에는 own을 쓰지 않는다. 이러한 물리적 지배의 이동에는 poss를 쓰며 relation.to는 새 점유자로 둔다.
+압수수색영장 자체는 소유·점유를 표시할 목적물이 아니다. 영장의 발부·제시·집행이 사실관계상 중요하면 relation으로만 표현하고 영장에 ownerId, possessorId 또는 재산상 effect를 붙이지 않는다.
 
 판결문:\n${caseText}`;
     const requestBody = JSON.stringify({

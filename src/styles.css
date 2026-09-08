@@ -1044,6 +1044,7 @@ select:focus {
 .plot-party-node.selected { outline: 3px solid #d3d8ea; outline-offset: 3px; }
 .plot-object-node { display: grid; place-items: center; width: 120px; min-height: 44px; padding: 8px 10px; border: 1.5px dashed #6e79a3; border-radius: 9px; background: #f0f1f7; color: #292a28; font-size: 12px; font-weight: 650; line-height: 1.25; text-align: center; overflow-wrap: anywhere; box-shadow: 0 3px 12px #252a280d; transition: opacity .18s; }
 .plot-party-node.future, .plot-object-node.future { opacity: .12; }
+.plot-party-node > span, .plot-object-node > span { display: block; transform: scale(var(--diagram-inverse-zoom, 1)); transform-origin: center; }
 .plot-object-node.selected { outline: 3px solid #d3d8ea; outline-offset: 3px; }
 .diagram-canvas .react-flow__handle { width: 7px; height: 7px; border: 1px solid #fff; background: #6e79a3; opacity: 0; transition: opacity .15s; }
 .diagram-canvas .react-flow__node:hover .react-flow__handle, .diagram-canvas .react-flow__node.selected .react-flow__handle { opacity: 1; }
@@ -1064,6 +1065,8 @@ select:focus {
 .plot-edge-chip.selected { border-color: #6e79a3; box-shadow: 0 0 0 2px #d3d8ea; }
 .plot-edge-chip.property { color: #666a67; font-size: 10px; }
 .plot-edge-chip.future { opacity: .09; }
+.plot-label-leader { fill: none; stroke: #a7aaa7; stroke-width: 1; stroke-dasharray: 2 3; pointer-events: none; }
+.plot-label-leader.future { opacity: .09; }
 .diagram-canvas .react-flow__controls-button { min-width: 26px; width: 26px; height: 26px; padding: 5px; border-radius: 0; }
 .diagram-timeline { display: flex; flex-direction: column; min-height: 0; padding: 12px 10px; border-right: 1px solid #dde3e0; background: #fafbfa; font-size: 12px; overflow: hidden; }
 .diagram-timeline-bar { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 0 2px 10px; }

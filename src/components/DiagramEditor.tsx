@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { ReactFlow, Controls, BaseEdge, EdgeLabelRenderer, Handle, Position, applyNodeChanges, applyEdgeChanges, addEdge, MarkerType, type Node, type Edge, type EdgeProps, type NodeProps, type ReactFlowInstance } from '@xyflow/react';
-import { UserPlus, SquarePlus, Undo2, Redo2, Trash2, WandSparkles, X } from 'lucide-react';
+import { GitBranchPlus, UserPlus, SquarePlus, Undo2, Redo2, Trash2, WandSparkles, X } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 import type { CaseNotes } from '../types';
 import type { LegalGraph } from '../types';
@@ -28,7 +28,7 @@ function PlotObjectNode({ data, selected }: NodeProps) {
 }
 
 function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, markerEnd, style, label, data, selected }: EdgeProps) {
-  const relation = data as (Partial<LegalGraph['relations'][number]> & { derivedArc?: boolean; role?: string; future?: boolean; pairIndex?: number; pairTotal?: number; centerX?: number; centerY?: number; labelX?: number; labelY?: number }) | undefined;
+  const relation = data as (Partial<LegalGraph['relations'][number]> & { derivedArc?: boolean; role?: string; future?: boolean; pairIndex?: number; pairTotal?: number; centerX?: number; centerY?: number; labelX?: number; labelY?: number; onSelectEdge?: (id: string) => void }) | undefined;
   let path: string;
   let labelX: number;
   let labelY: number;
@@ -78,10 +78,10 @@ function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, mark
   return <>
     <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
     {hasLeader && <path className={`plot-label-leader${relation?.future ? ' future' : ''}`} d={`M ${anchorX} ${anchorY} L ${labelX} ${labelY}`} />}
-    <EdgeLabelRenderer><div className={`plot-edge-chip kind-${relation?.kind || 'other'} status-${relation?.status || 'recognized'}${relation?.derivedArc ? ' property' : ''}${relation?.future ? ' future' : ''}${selected ? ' selected' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(var(--diagram-inverse-zoom, 1))` }}>
+    <EdgeLabelRenderer><button type="button" disabled={relation?.derivedArc} className={`plot-edge-chip nodrag nopan kind-${relation?.kind || 'other'} status-${relation?.status || 'recognized'}${relation?.derivedArc ? ' property' : ''}${relation?.future ? ' future' : ''}${selected ? ' selected' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(var(--diagram-inverse-zoom, 1))` }} onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); relation?.onSelectEdge?.(id); }}>
       {relation?.date && <small>{relation.date}</small>}
       <span>{String(label || relation?.role || '')}</span>
-    </div></EdgeLabelRenderer>
+    </button></EdgeLabelRenderer>
   </>;
 }
 
@@ -104,6 +104,17 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
   const [draft, setDraft] = useState<LegalGraph | null>(null);
   const [timelineIndex, setTimelineIndex] = useState(0);
   const [viewportZoom, setViewportZoom] = useState(1);
+  const [linkFormOpen, setLinkFormOpen] = useState(false);
+  const [linkSource, setLinkSource] = useState('');
+  const [linkTarget, setLinkTarget] = useState('');
+  const [linkLabel, setLinkLabel] = useState('관계');
+
+  const selectEdge = useCallback((id: string) => {
+    const edge = current.current.edges.find(item => item.id === id);
+    if (!edge || edge.data?.derivedArc) return;
+    setSelected({ kind: 'edge', id });
+    setLabel(String(edge.label || ''));
+  }, []);
 
   const timeline = useMemo(() => (graph.legalGraph?.events || []).map((event, index) => ({ event, index })).sort((left, right) => {
     const leftSequence = left.event.sequence || left.index + 1;
@@ -129,7 +140,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     const relations = graph.edges.map(edge => {
       const relation = edge.data as LegalGraph['relations'][number] | undefined;
       const future = relationIsFuture(relation);
-      return { ...edge, type: 'plotEdge', style: { ...edge.style, opacity: future ? 0.09 : 1 }, data: { ...edge.data, future } };
+      return { ...edge, type: 'plotEdge', selected: selected?.kind === 'edge' && selected.id === edge.id, style: { ...edge.style, opacity: future ? 0.09 : 1 }, data: { ...edge.data, future, onSelectEdge: selectEdge } };
     });
     const arcs = computePropertyArcs(graph.legalGraph).map(arc => {
       const active = propertyArcIsActive(arc, cutoffSequence, cutoffDate, atEnd);
@@ -137,7 +148,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       return { id: arc.id, source: arc.thing, target: arc.party, type: 'plotEdge', label: arc.role, selectable: false, focusable: false, className: `diagram-edge property-arc arc-${kind}`, style: { opacity: active ? 0.88 : 0.07 }, data: { derivedArc: true, role: arc.role, kind: 'status', status: 'recognized', future: !active } };
     });
     return declutterEdgeLabels([...relations, ...arcs] as Edge[], graph.nodes, 1 / viewportZoom);
-  }, [atEnd, cutoffDate, cutoffSequence, graph.edges, graph.legalGraph, graph.nodes, timeline.length, viewportZoom]);
+  }, [atEnd, cutoffDate, cutoffSequence, graph.edges, graph.legalGraph, graph.nodes, selectEdge, selected, timeline.length, viewportZoom]);
 
   function display(next: Graph) { current.current = next; setGraph(next); }
   function checkpoint() { undo.current = [...undo.current.slice(-49), structuredClone(current.current)]; redo.current = []; }
@@ -163,6 +174,31 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     const node: Node = { id: crypto.randomUUID(), type: kind === 'person' ? 'plotParty' : 'plotObject', position: { x: 80 + (graph.nodes.length % 4) * 190, y: 80 + Math.floor(graph.nodes.length / 4) * 130 }, data: { label: kind === 'person' ? '당사자' : '목적물' }, className: kind === 'person' ? 'diagram-person' : 'diagram-object' };
     change({ ...graph, nodes: [...graph.nodes, node] });
     setSelected({ kind: 'node', id: node.id }); setLabel(String(node.data.label));
+  }
+  function openLinkForm() {
+    const source = graph.nodes[0]?.id || '';
+    setLinkSource(source);
+    setLinkTarget(graph.nodes.find(node => node.id !== source)?.id || source);
+    setLinkLabel('관계');
+    setLinkFormOpen(true);
+  }
+  function addLink() {
+    if (!linkSource || !linkTarget) return;
+    const id = crypto.randomUUID();
+    const edge: Edge = {
+      id,
+      source: linkSource,
+      target: linkTarget,
+      type: 'plotEdge',
+      className: 'diagram-edge status-recognized kind-other',
+      label: linkLabel.trim() || '관계',
+      markerEnd: { type: MarkerType.ArrowClosed },
+      style: { strokeWidth: 2 },
+      data: { kind: 'other', status: 'recognized', confidence: 1, evidence: '' },
+    };
+    change({ ...current.current, edges: addEdge(edge, current.current.edges) });
+    setLinkFormOpen(false);
+    selectEdge(id);
   }
   function rename() {
     if (!selected) return;
@@ -208,11 +244,20 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       <button className="diagram-ai-button" title="판례 원문에서 AI 관계도 초안 만들기" disabled={generating || !sourceHtml.trim()} onClick={createAiDraft}><WandSparkles size={18} /><span>{generating ? '분석 중' : 'AI 초안'}</span></button>
       <button title="당사자 추가" onClick={() => add('person')}><UserPlus size={18} /><span>당사자</span></button>
       <button title="목적물 추가" onClick={() => add('object')}><SquarePlus size={18} /><span>목적물</span></button>
+      <button title="관계 추가" disabled={graph.nodes.length < 2} onClick={openLinkForm}><GitBranchPlus size={18} /><span>관계</span></button>
       <button title="실행 취소 (Ctrl+Z)" aria-label="실행 취소" disabled={!undo.current.length} onClick={() => travel(true)}><Undo2 size={18} /></button>
       <button title="다시 실행 (Ctrl+Y)" aria-label="다시 실행" disabled={!redo.current.length} onClick={() => travel(false)}><Redo2 size={18} /></button>
       <button title="선택 삭제" aria-label="선택 삭제" disabled={!selected} onClick={remove}><Trash2 size={18} /></button>
       {selected && <input aria-label="선택 항목 이름" value={label} onChange={event => setLabel(event.target.value)} onBlur={rename} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} />}
     </div>
+    {linkFormOpen && <form className="diagram-link-form" onSubmit={event => { event.preventDefault(); addLink(); }}>
+      <select aria-label="관계 시작 노드" value={linkSource} onChange={event => setLinkSource(event.target.value)}>{graph.nodes.map(node => <option key={node.id} value={node.id}>{String(node.data.label || '')}</option>)}</select>
+      <span aria-hidden="true">→</span>
+      <select aria-label="관계 도착 노드" value={linkTarget} onChange={event => setLinkTarget(event.target.value)}>{graph.nodes.map(node => <option key={node.id} value={node.id}>{String(node.data.label || '')}</option>)}</select>
+      <input aria-label="관계 이름" value={linkLabel} onChange={event => setLinkLabel(event.target.value)} autoFocus />
+      <button type="submit" className="primary">추가</button>
+      <button type="button" onClick={() => setLinkFormOpen(false)}>취소</button>
+    </form>}
     {generationError && <div className="diagram-generation-error" role="alert">{generationError}<button onClick={() => setGenerationError('')}>닫기</button></div>}
     {draft && <div className="diagram-draft-review">
       <div><strong>AI 초안</strong><span>당사자 {draft.parties.length} · 목적물 {draft.objects.length} · 관계 {draft.relations.length} · 사건 {draft.events.length}</span>{reviewCount > 0 && <span>주장·분쟁·절차 {reviewCount}개 포함</span>}</div>
@@ -220,7 +265,6 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       {draft.events.length > 0 && <details className="diagram-draft-events"><summary>사건 순서 확인</summary><ol>{draft.events.slice().sort((a, b) => (a.sequence || 0) - (b.sequence || 0)).slice(0, 8).map(event => <li key={event.id}><b>{event.date || '날짜 미상'}</b><span>{event.text}</span></li>)}</ol></details>}
       <span className="diagram-review-actions"><button onClick={() => setDraft(null)}>취소</button><button className="primary" onClick={applyAiDraft}>관계도에 적용</button></span>
     </div>}
-    {selectedRelation?.evidence && <div className="diagram-evidence"><span className={`relation-status status-${selectedRelation.status}`}>{selectedRelation.status === 'recognized' ? '인정 사실' : selectedRelation.status === 'alleged' ? '당사자 주장' : selectedRelation.status === 'disputed' ? '다툼 있음' : '소송 경과'}</span><span>{selectedRelation.evidence}</span><small>{Math.round((selectedRelation.confidence || 0) * 100)}%</small></div>}
     <div className={`diagram-workspace${timeline.length ? ' has-timeline' : ''}`}>
     {timeline.length > 0 && <aside className="diagram-timeline">
       <div className="diagram-timeline-bar"><strong>사건 흐름</strong>
@@ -232,17 +276,19 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
         return <button key={event.id} className={future ? 'future' : ''} onClick={() => setTimelineIndex(index)}><b>{event.date || `${event.sequence || index + 1}단계`}</b><span>{event.text}</span></button>;
       })}</div>
     </aside>}
-    <div className="diagram-canvas" style={{ '--diagram-inverse-zoom': 1 / viewportZoom } as CSSProperties}><ReactFlow nodes={renderNodes} edges={visibleEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onInit={instance => { flow.current = instance; requestAnimationFrame(() => instance.fitView({ padding: 0.18, maxZoom: 2 })); }}
+    <div className="diagram-stage"><div className="diagram-canvas" style={{ '--diagram-inverse-zoom': 1 / viewportZoom } as CSSProperties}><ReactFlow nodes={renderNodes} edges={visibleEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onInit={instance => { flow.current = instance; requestAnimationFrame(() => instance.fitView({ padding: 0.18, maxZoom: 2 })); }}
       onMove={(_, viewport) => setViewportZoom(currentZoom => Math.abs(currentZoom - viewport.zoom) < 0.001 ? currentZoom : viewport.zoom)}
       onNodesChange={changes => display({ ...current.current, nodes: applyNodeChanges(changes, current.current.nodes) })}
       onEdgesChange={changes => display({ ...current.current, edges: applyEdgeChanges(changes, current.current.edges) })}
       onNodeDragStart={checkpoint} onNodeDragStop={() => save(current.current)}
       onConnect={connection => change({ ...current.current, edges: addEdge({ ...connection, id: crypto.randomUUID(), type: 'plotEdge', label: '관계', markerEnd: { type: MarkerType.ArrowClosed }, style: { strokeWidth: 2 } }, current.current.edges) })}
       onNodeClick={(_, node) => { setSelected({ kind: 'node', id: node.id }); setLabel(String(node.data.label || '')); }}
-      onEdgeClick={(_, edge) => { if (edge.data?.derivedArc) return; setSelected({ kind: 'edge', id: edge.id }); setLabel(String(edge.label || '')); }}
+      onEdgeClick={(_, edge) => selectEdge(edge.id)}
       onPaneClick={() => setSelected(null)} deleteKeyCode={null} fitView minZoom={0.2} maxZoom={2.5} proOptions={{ hideAttribution: true }}>
       <Controls showInteractive={false} />
     </ReactFlow></div>
+    {selectedRelation?.evidence && <div className="diagram-evidence"><span className={`relation-status status-${selectedRelation.status}`}>{selectedRelation.status === 'recognized' ? '인정 사실' : selectedRelation.status === 'alleged' ? '당사자 주장' : selectedRelation.status === 'disputed' ? '다툼 있음' : '소송 경과'}</span><span>{selectedRelation.evidence}</span><small>{Math.round((selectedRelation.confidence || 0) * 100)}%</small></div>}
+    </div>
     </div>
   </dialog>, document.body);
 }

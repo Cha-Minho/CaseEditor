@@ -180,10 +180,13 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       activeIds.add(arc.thing);
       activeIds.add(arc.party);
     });
-    return graph.nodes.filter(node => !timeline.length || activeIds.has(node.id)).map(node => ({ ...node, type: node.className?.includes('diagram-object') ? 'plotObject' : 'plotParty', data: { ...node.data, future: false } }));
+    return graph.nodes.map(node => ({ ...node, type: node.className?.includes('diagram-object') ? 'plotObject' : 'plotParty', data: { ...node.data, future: Boolean(timeline.length && !activeIds.has(node.id)) } }));
   }, [graph.edges, graph.nodes, selectedMoments, timeline.length, visiblePropertyArcs]);
   const visibleEdges = useMemo<Edge[]>(() => {
-    const relations = graph.edges.filter(edge => relationIsVisible(edge.data as LegalGraph['relations'][number] | undefined)).map(edge => ({ ...edge, type: 'plotEdge', selected: selected?.kind === 'edge' && selected.id === edge.id, style: { ...edge.style, opacity: 1 }, data: { ...edge.data, future: false, viewportZoom, onSelectEdge: selectEdge, onMoveLabel: moveEdgeLabel } }));
+    const relations = graph.edges.map(edge => {
+      const visible = relationIsVisible(edge.data as LegalGraph['relations'][number] | undefined);
+      return { ...edge, type: 'plotEdge', selected: selected?.kind === 'edge' && selected.id === edge.id, style: { ...edge.style, opacity: visible ? 1 : 0.09 }, data: { ...edge.data, future: !visible, viewportZoom, onSelectEdge: selectEdge, onMoveLabel: moveEdgeLabel } };
+    });
     const arcs = visiblePropertyArcs.map(arc => {
       const kind = arc.role === '소유' ? 'own' : arc.role === '점유' ? 'poss' : 'lien';
       return { id: arc.id, source: arc.thing, target: arc.party, type: 'plotEdge', label: arc.role, selectable: false, focusable: false, className: `diagram-edge property-arc arc-${kind}`, style: { opacity: 0.88 }, data: { derivedArc: true, role: arc.role, kind: 'status', status: 'recognized', future: false } };

@@ -44,7 +44,7 @@ export type LegalGraph = {
     status: LegalGraphStatus;
     confidence: number;
   }[];
-  events: { id: string; date?: string; text: string; evidence: string }[];
+  events: { id: string; sequence?: number; date?: string; text: string; evidence: string }[];
 };
 
 export type CaseNotes = {

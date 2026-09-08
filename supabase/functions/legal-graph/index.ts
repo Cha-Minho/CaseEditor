@@ -23,7 +23,7 @@ const responseSchema = {
       effect: { type: "STRING", enum: effects, nullable: true }, evidence: stringSchema,
       status: { type: "STRING", enum: statuses }, confidence: { type: "NUMBER", minimum: 0, maximum: 1 }
     } } },
-    events: { type: "ARRAY", items: { type: "OBJECT", required: ["id", "text", "evidence"], properties: { id: stringSchema, date: nullableStringSchema, text: stringSchema, evidence: stringSchema } } }
+    events: { type: "ARRAY", items: { type: "OBJECT", required: ["id", "sequence", "text", "evidence"], properties: { id: stringSchema, sequence: { type: "INTEGER", minimum: 1 }, date: nullableStringSchema, text: stringSchema, evidence: stringSchema } } }
   }
 };
 
@@ -73,10 +73,13 @@ function validateGraph(value: Record<string, unknown>) {
     .filter((item) => partyIds.has(item.from) && partyIds.has(item.to) && item.label && item.evidence);
   const events = (Array.isArray(value.events) ? value.events : []).slice(0, 80).map((item: Record<string, unknown>, index: number) => ({
     id: cleanString(item.id, 60) || `ev${index + 1}`,
+    sequence: Math.max(1, Math.round(Number(item.sequence) || index + 1)),
     ...(cleanString(item.date, 40) ? { date: cleanString(item.date, 40) } : {}),
     text: cleanString(item.text, 300), evidence: cleanString(item.evidence, 500)
-  })).filter((item) => item.text && item.evidence);
-  return { parties, objects, relations, events };
+  })).filter((item) => item.text && item.evidence).sort((a, b) => a.sequence - b.sequence);
+  const connectedParties = parties.filter((party) => relations.some((relation) => relation.from === party.id || relation.to === party.id));
+  const connectedObjects = objects.filter((object) => relations.some((relation) => relation.objectId === object.id));
+  return { parties: connectedParties.length ? connectedParties : parties, objects: connectedObjects, relations, events };
 }
 
 serve(async (request) => {
@@ -96,6 +99,10 @@ serve(async (request) => {
 법원이 인정한 사실을 중심으로 하되 당사자의 주장, 원심 판단, 배척된 판단, 소송 경과를 status로 구분한다.
 근거 없는 사실, 날짜, 관계를 추정하지 않는다. 동일 인물의 여러 호칭은 하나로 통합한다.
 일반 법리 설명이나 인용 판례의 사실관계는 현재 사건의 사실관계에 넣지 않는다.
+판결문에 써진 순서가 아니라 실제 발생 시간 순으로 events를 정렬하고 sequence를 1부터 부여한다.
+date는 해당 사실이 발생한 날짜다. 판결 선고일이나 인용 판례의 날짜를 사실 발생일로 사용하지 말고, 원문에 알 수 있는 날짜만 YYYY.MM.DD, YYYY.MM, YYYY 형식으로 넣는다.
+즉시, 그 후, 다음날 같은 상대적 시점은 원문으로 선후관계가 분명한 범위에서 sequence에 반영한다.
+관계에 시점이 표시되었다면 relation.date에도 같은 발생일을 넣는다. 사실관계 관계선이 하나도 없는 기관이나 소송관계인은 parties에서 빼다.
 모든 relation과 event에는 판결문에서 그대로 가져온 짧은 evidence를 넣는다.
 from과 to는 반드시 parties의 id를 사용하고 objectId는 objects의 id를 사용한다.
 

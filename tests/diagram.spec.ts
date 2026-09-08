@@ -47,21 +47,34 @@ test('review and apply an AI relationship draft', async ({ page }) => {
     status: 200,
     contentType: 'application/json',
     body: JSON.stringify({
-      parties: [{ id: 'p1', name: '갑', role: '원고' }, { id: 'p2', name: '을', role: '피고' }],
+      parties: [{ id: 'p1', name: '갑', role: '원고' }, { id: 'p2', name: '을', role: '피고' }, { id: 'p3', name: '병', role: '피해자' }],
       objects: [{ id: 'o1', name: 'X 토지' }],
-      relations: [{ id: 'r1', from: 'p1', to: 'p2', label: '매도', kind: 'contract', objectId: 'o1', evidence: '갑은 을에게 X 토지를 매도하였다', status: 'recognized', confidence: 0.94 }],
-      events: [{ id: 'ev1', text: '매매계약 체결', evidence: 'X 토지를 매도하고 매매대금을 받았다' }]
+      relations: [
+        { id: 'r1', from: 'p1', to: 'p2', label: '2013 촬영', kind: 'other', date: '2013.12', evidence: '갑은 2013. 12. 을을 촬영하였다', status: 'recognized', confidence: 0.94 },
+        { id: 'r2', from: 'p1', to: 'p3', label: '2014 촬영', kind: 'other', date: '2014.12.11', objectId: 'o1', effect: 'sale', evidence: '갑은 2014. 12. 11. 병을 촬영하였다', status: 'recognized', confidence: 0.92 }
+      ],
+      events: [
+        { id: 'ev3', sequence: 3, date: '2014.12.11', text: '휴대전화 임의제출', evidence: '피해 사실을 신고하면서 즉시 제출하였다' },
+        { id: 'ev1', sequence: 1, date: '2013.12', text: '2013 동영상 촬영', evidence: '2013. 12.경 촬영하였다' },
+        { id: 'ev2', sequence: 2, date: '2014.12.11', text: '2014 동영상 촬영', evidence: '2014. 12. 11. 촬영하였다' }
+      ]
     })
   }));
   await page.goto('/tests/diagram.html');
   await page.getByText('관계도 열기').click();
   await page.getByTitle('판례 원문에서 AI 관계도 초안 만들기').click();
   await expect(page.locator('.diagram-draft-review strong', { hasText: 'AI 초안' })).toBeVisible();
-  await expect(page.getByText('당사자 2 · 목적물 1 · 관계 1 · 사건 1')).toBeVisible();
+  await expect(page.getByText('당사자 3 · 목적물 1 · 관계 2 · 사건 3')).toBeVisible();
   await page.getByText('관계도에 적용').click();
-  await expect(page.locator('.react-flow__node')).toHaveCount(3);
-  await expect(page.locator('.react-flow__edge')).toHaveCount(1);
-  await page.locator('.react-flow__edge-interaction').dispatchEvent('click');
+  await expect(page.locator('.react-flow__node')).toHaveCount(4);
+  const relationEdges = page.locator('.diagram-edge:not(.property-arc)');
+  await expect(relationEdges).toHaveCount(2);
+  await expect(page.locator('.diagram-event-list button')).toHaveText([/2013 동영상 촬영/, /2014 동영상 촬영/, /휴대전화 임의제출/]);
+  await page.screenshot({ path: 'test-results/diagram-ai.png' });
+  await page.getByLabel('사건 흐름 시점').fill('0');
+  expect(await relationEdges.nth(0).locator('.react-flow__edge-path').evaluate(element => getComputedStyle(element).opacity)).toBe('1');
+  expect(Number(await relationEdges.nth(1).locator('.react-flow__edge-path').evaluate(element => getComputedStyle(element).opacity))).toBeLessThan(0.2);
+  await relationEdges.nth(0).locator('.react-flow__edge-interaction').dispatchEvent('click');
   await expect(page.getByText('인정 사실')).toBeVisible();
-  await expect(page.getByText('갑은 을에게 X 토지를 매도하였다')).toBeVisible();
+  await expect(page.getByText('갑은 2013. 12. 을을 촬영하였다')).toBeVisible();
 });

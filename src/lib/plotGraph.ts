@@ -1,22 +1,76 @@
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 import type { LegalGraph } from "../types";
 
-// Circular ordering and inner object placement are adapted from plot.app.yebni.cc
-// with the author's permission. React Flow remains the interaction layer.
-export function legalGraphToDiagram(data: LegalGraph) {
-  const partyIds = data.parties.map((party) => party.id);
+// Layout and time-axis rules are ported from plot.app.yebni.cc with the
+// author's permission. React Flow only supplies editing, pan and zoom.
+export function dateKey(date?: string) {
+  if (!date) return 0;
+  const numbers = String(date).match(/\d+/g)?.map(Number) || [];
+  if (!numbers.length || numbers[0] < 1000) return 0;
+  return numbers[0] * 10000 + (numbers[1] || 0) * 100 + (numbers[2] || 0);
+}
+
+export function dateLabel(key: number) {
+  const year = Math.floor(key / 10000);
+  const month = Math.floor(key / 100) % 100;
+  const day = key % 100;
+  return [year, month || null, day || null].filter(value => value !== null).join('.');
+}
+
+export function computeGraphTimes(data?: LegalGraph) {
+  if (!data) return [];
+  return [...new Set([
+    ...data.relations.map(relation => dateKey(relation.date)),
+    ...data.events.map(event => dateKey(event.date))
+  ].filter(Boolean))].sort((a, b) => a - b);
+}
+
+type PropertyArc = { id: string; thing: string; party: string; role: string; start: number; end: number };
+
+export function computePropertyArcs(data?: LegalGraph): PropertyArc[] {
+  if (!data) return [];
+  const arcs: PropertyArc[] = [];
+  for (const object of data.objects) {
+    const relations = data.relations
+      .filter(relation => relation.objectId === object.id && relation.from !== relation.to)
+      .slice()
+      .sort((a, b) => dateKey(a.date) - dateKey(b.date));
+    if (!relations.length) continue;
+    const owns = relations.filter(relation => relation.effect === 'own');
+    let holder = (owns[0] || relations.find(relation => relation.effect === 'sale') || relations[0]).from;
+    let previous = 0;
+    owns.forEach((relation, index) => {
+      const key = dateKey(relation.date) || previous;
+      if (holder && holder !== relation.to) arcs.push({ id: `arc-own-${object.id}-${index}`, thing: object.id, party: holder, role: '소유', start: previous, end: key });
+      holder = relation.to;
+      previous = key;
+    });
+    if (holder) arcs.push({ id: `arc-own-${object.id}-last`, thing: object.id, party: holder, role: '소유', start: previous, end: Infinity });
+    relations.filter(relation => relation.effect === 'lien').forEach((relation, index) => {
+      arcs.push({ id: `arc-lien-${object.id}-${index}`, thing: object.id, party: relation.to, role: '담보', start: dateKey(relation.date), end: Infinity });
+    });
+    const possessions = relations.filter(relation => relation.effect === 'poss');
+    possessions.forEach((relation, index) => {
+      arcs.push({ id: `arc-poss-${object.id}-${index}`, thing: object.id, party: relation.to, role: '점유', start: dateKey(relation.date), end: index + 1 < possessions.length ? dateKey(possessions[index + 1].date) || Infinity : Infinity });
+    });
+  }
+  return arcs.filter(arc => arc.end > arc.start);
+}
+
+function orderParties(data: LegalGraph) {
+  const ids = [...new Set([...data.parties.map(party => party.id), ...data.relations.flatMap(relation => [relation.from, relation.to])])].filter(Boolean);
   const weights = new Map<string, Map<string, number>>();
   const addWeight = (from: string, to: string) => {
     if (!weights.has(from)) weights.set(from, new Map());
     weights.get(from)!.set(to, (weights.get(from)!.get(to) || 0) + 1);
   };
-  data.relations.forEach((relation) => {
+  data.relations.forEach(relation => {
     if (relation.from === relation.to) return;
     addWeight(relation.from, relation.to);
     addWeight(relation.to, relation.from);
   });
-  const degree = (id: string) => Array.from(weights.get(id)?.values() || []).reduce((sum, value) => sum + value, 0);
-  const rest = [...partyIds].sort((a, b) => degree(b) - degree(a) || partyIds.indexOf(a) - partyIds.indexOf(b));
+  const degree = (id: string) => [...(weights.get(id)?.values() || [])].reduce((sum, value) => sum + value, 0);
+  const rest = [...ids].sort((a, b) => degree(b) - degree(a) || ids.indexOf(a) - ids.indexOf(b));
   const order: string[] = [];
   let cursor = rest.shift();
   if (cursor) order.push(cursor);
@@ -30,43 +84,101 @@ export function legalGraphToDiagram(data: LegalGraph) {
     cursor = rest.splice(best, 1)[0];
     order.push(cursor);
   }
+  const cost = (items: string[]) => {
+    let total = 0;
+    for (let left = 0; left < items.length; left += 1) for (let right = left + 1; right < items.length; right += 1) {
+      const weight = weights.get(items[left])?.get(items[right]) || 0;
+      const distance = right - left;
+      total += weight * Math.min(distance, items.length - distance);
+    }
+    return total;
+  };
+  let bestCost = cost(order);
+  for (let pass = 0; pass < 6 && order.length > 3; pass += 1) {
+    let improved = false;
+    for (let left = 0; left < order.length; left += 1) for (let right = left + 1; right < order.length; right += 1) {
+      const candidate = order.slice();
+      [candidate[left], candidate[right]] = [candidate[right], candidate[left]];
+      const candidateCost = cost(candidate);
+      if (candidateCost < bestCost) {
+        bestCost = candidateCost;
+        order.splice(0, order.length, ...candidate);
+        improved = true;
+      }
+    }
+    if (!improved) break;
+  }
+  return order;
+}
 
-  const center = { x: 480, y: 330 };
-  const radius = Math.max(190, Math.min(270, 170 + order.length * 18));
-  const partyMap = new Map(data.parties.map((party) => [party.id, party]));
+export function legalGraphToDiagram(data: LegalGraph) {
+  const order = orderParties(data);
+  const partyMap = new Map(data.parties.map(party => [party.id, party]));
+  const pairCounts = new Map<string, number>();
+  data.relations.forEach(relation => {
+    const key = [relation.from, relation.to].sort().join('|');
+    pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
+  });
+  const maxPairCount = Math.max(0, ...pairCounts.values());
+  const objects = data.objects.filter(object => data.relations.some(relation => relation.objectId === object.id)).slice(0, 8);
+  const width = 640;
+  const height = Math.round(Math.min(1300, Math.max(480, 450 + Math.max(0, maxPairCount - 2) * 54 + Math.max(0, order.length - 5) * 36 + (objects.length > 1 ? 60 : 0))));
+  const center = { x: width / 2, y: height / 2 };
+  const radius = Math.max(140, Math.min(232, Math.min(width, height) * 0.34)) + (objects.length ? 26 : 0);
+  const centers = new Map<string, { x: number; y: number }>();
   const nodes: Node[] = order.map((id, index) => {
-    const angle = -Math.PI / 2 + index * 2 * Math.PI / Math.max(1, order.length);
-    return {
-      id,
-      position: order.length === 1 ? center : { x: center.x + radius * Math.cos(angle), y: center.y + radius * Math.sin(angle) },
-      data: { label: partyMap.get(id)?.role ? `${partyMap.get(id)?.name || id}\n${partyMap.get(id)?.role}` : partyMap.get(id)?.name || id, role: partyMap.get(id)?.role || "" },
-      className: "diagram-person"
-    };
+    const point = order.length === 1
+      ? center
+      : order.length === 2
+        ? { x: center.x + (index ? 1 : -1) * radius, y: center.y }
+        : { x: center.x + radius * Math.cos(-Math.PI / 2 + index * 2 * Math.PI / order.length), y: center.y + radius * Math.sin(-Math.PI / 2 + index * 2 * Math.PI / order.length) };
+    centers.set(id, point);
+    return { id, type: 'plotParty', position: { x: point.x - 34, y: point.y - 34 }, data: { label: partyMap.get(id)?.name || id, role: partyMap.get(id)?.role || '' }, className: 'diagram-person' };
   });
-
-  data.objects.slice(0, 12).forEach((object, index) => {
-    const angle = -Math.PI / 2 + index * 2 * Math.PI / Math.max(1, data.objects.length);
-    const innerRadius = data.objects.length === 1 ? 0 : Math.min(135, 60 + data.objects.length * 10);
-    nodes.push({
-      id: object.id,
-      position: { x: center.x + innerRadius * Math.cos(angle), y: center.y + innerRadius * Math.sin(angle) },
-      data: { label: object.name },
-      className: "diagram-object"
-    });
+  const relatedAngle = (objectId: string) => {
+    const related = [...new Set(data.relations.filter(relation => relation.objectId === objectId).flatMap(relation => [relation.from, relation.to]))]
+      .map(id => centers.get(id)).filter((point): point is { x: number; y: number } => Boolean(point));
+    if (!related.length) return 0;
+    const x = related.reduce((sum, point) => sum + point.x, 0) / related.length - center.x;
+    const y = related.reduce((sum, point) => sum + point.y, 0) / related.length - center.y;
+    return Math.atan2(y, x);
+  };
+  const segments = data.relations.map(relation => [centers.get(relation.from), centers.get(relation.to)] as const).filter(pair => pair[0] && pair[1] && pair[0] !== pair[1]);
+  const distanceToSegment = (x: number, y: number, from: { x: number; y: number }, to: { x: number; y: number }) => {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = dx * dx + dy * dy || 1;
+    const fraction = Math.max(0, Math.min(1, ((x - from.x) * dx + (y - from.y) * dy) / length));
+    return Math.hypot(x - (from.x + fraction * dx), y - (from.y + fraction * dy));
+  };
+  const placed: { x: number; y: number }[] = [];
+  objects.map(object => ({ object, angle: relatedAngle(object.id) })).sort((a, b) => a.angle - b.angle).forEach(({ object, angle }) => {
+    let best = center;
+    let bestScore = -Infinity;
+    for (const radial of [0.12, 0.26, 0.38, 0.5, 0.62]) for (let index = 0; index < 18; index += 1) {
+      const candidateAngle = angle + (index % 2 ? 1 : -1) * Math.ceil(index / 2) * Math.PI / 9;
+      const x = center.x + radius * radial * Math.cos(candidateAngle);
+      const y = center.y + radius * radial * Math.sin(candidateAngle);
+      let score = 1e9;
+      segments.forEach(segment => { score = Math.min(score, distanceToSegment(x, y, segment[0]!, segment[1]!)); });
+      centers.forEach(point => { score = Math.min(score, Math.hypot(x - point.x, y - point.y) - 36); });
+      placed.forEach(point => { score = Math.min(score, Math.hypot(x - point.x, y - point.y) - 52); });
+      score = Math.min(score, 62) - Math.abs(((candidateAngle - angle + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI) * 16;
+      if (score > bestScore) { bestScore = score; best = { x, y }; }
+    }
+    placed.push(best);
+    nodes.push({ id: object.id, type: 'plotObject', position: { x: best.x - 60, y: best.y - 22 }, data: { label: object.name }, className: 'diagram-object' });
   });
-
-  const objectMap = new Map(data.objects.map((object) => [object.id, object.name]));
-  const edges: Edge[] = data.relations.map((relation) => ({
+  const objectMap = new Map(data.objects.map(object => [object.id, object.name]));
+  const edges: Edge[] = data.relations.map((relation, index) => ({
     id: relation.id,
     source: relation.from,
     target: relation.to,
-    type: "bezier",
-    label: relation.objectId && objectMap.get(relation.objectId)
-      ? `${relation.label} (${objectMap.get(relation.objectId)})`
-      : relation.label,
+    type: 'plotEdge',
+    label: relation.objectId && objectMap.get(relation.objectId) ? `${relation.label} (${objectMap.get(relation.objectId)})` : relation.label,
     markerEnd: { type: MarkerType.ArrowClosed },
     className: `diagram-edge kind-${relation.kind} status-${relation.status}`,
-    data: { ...relation, objectName: relation.objectId ? objectMap.get(relation.objectId) : undefined }
-  }));
+    data: { ...relation, order: index, objectName: relation.objectId ? objectMap.get(relation.objectId) : undefined }
+  })).sort((a, b) => (dateKey((a.data as LegalGraph['relations'][number])?.date) || Infinity) - (dateKey((b.data as LegalGraph['relations'][number])?.date) || Infinity) || Number(a.data?.order) - Number(b.data?.order));
   return { nodes, edges, legalGraph: data };
 }

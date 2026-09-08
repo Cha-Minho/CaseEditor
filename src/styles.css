@@ -1020,6 +1020,12 @@ select:focus {
 .diagram-draft-review { flex-wrap: wrap; background: #f4f8f6; }
 .diagram-draft-review > div { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .diagram-draft-review p { flex: 1; min-width: 260px; margin: 0; color: #5d6762; }
+.diagram-draft-events { flex: 0 0 100%; }
+.diagram-draft-events summary { width: max-content; color: #4c5d56; cursor: pointer; font-weight: 650; }
+.diagram-draft-events ol { display: flex; gap: 6px; margin: 7px 0 0; padding: 0; list-style: none; overflow-x: auto; }
+.diagram-draft-events li { display: flex; gap: 6px; flex: 0 0 auto; max-width: 300px; padding: 5px 8px; border: 1px solid #dce2df; border-radius: 6px; background: #fff; }
+.diagram-draft-events li b { color: #6e79a3; white-space: nowrap; }
+.diagram-draft-events li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .diagram-review-actions { display: flex; gap: 6px; margin-left: auto; }
 .diagram-review-actions .primary { color: #fff; border-color: #246b59; background: #246b59; }
 .diagram-evidence { background: #fffdf7; color: #454b48; }
@@ -1030,19 +1036,39 @@ select:focus {
 .relation-status.status-alleged { color: #7b5b18; border-color: #cdbb88; background: #fff9e8; }
 .relation-status.status-disputed { color: #922d25; border-color: #d5a19c; background: #fff2f0; }
 .relation-status.status-procedural { color: #5b6268; border-color: #bcc2c6; background: #f3f4f5; }
-.diagram-canvas { flex: 1; min-height: 0; width: 100%; }
-.diagram-canvas .react-flow__node { display: flex; align-items: center; justify-content: center; min-width: 76px; min-height: 54px; padding: 10px; font-size: 14px; font-weight: 600; line-height: 1.3; text-align: center; white-space: pre-wrap; overflow-wrap: anywhere; background: #fff; color: #242a27; border: 1.5px solid #568675; border-radius: 50%; box-shadow: 0 2px 8px #1b2e2714; }
-.diagram-canvas .diagram-object { border-style: dashed; border-color: #9e7837; background: #fffbed; }
-.diagram-canvas .diagram-edge.status-alleged path, .diagram-canvas .diagram-edge.status-procedural path { stroke-dasharray: 7 5; }
-.diagram-canvas .diagram-edge.status-disputed path { stroke: #ad493e; stroke-dasharray: 4 4; }
-.diagram-canvas .diagram-edge.kind-money path { stroke: #2772a2; }
-.diagram-canvas .diagram-edge.kind-security path { stroke: #8a6428; }
-.diagram-canvas .diagram-edge.kind-dispute path { stroke: #ad493e; }
-.diagram-canvas .react-flow__edge-text { font-size: 12px; }
-.diagram-canvas .react-flow__handle { width: 10px; height: 10px; background: #327c65; }
+.diagram-canvas { flex: 1; min-height: 280px; width: 100%; background: #f7f7f5; }
+.diagram-canvas .react-flow__node { width: auto; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.plot-party-node { display: grid; place-items: center; width: 68px; height: 68px; padding: 7px; border: 1.6px solid #292a28; border-radius: 50%; background: #fff; color: #242522; font-size: 13px; font-weight: 700; line-height: 1.2; text-align: center; overflow-wrap: anywhere; box-shadow: 0 4px 14px #252a2812; }
+.plot-party-node.selected { outline: 3px solid #d3d8ea; outline-offset: 3px; }
+.plot-object-node { display: grid; place-items: center; width: 120px; min-height: 44px; padding: 8px 10px; border: 1.5px dashed #6e79a3; border-radius: 9px; background: #f0f1f7; color: #292a28; font-size: 12px; font-weight: 650; line-height: 1.25; text-align: center; overflow-wrap: anywhere; box-shadow: 0 3px 12px #252a280d; }
+.plot-object-node.selected { outline: 3px solid #d3d8ea; outline-offset: 3px; }
+.diagram-canvas .react-flow__handle { width: 7px; height: 7px; border: 1px solid #fff; background: #6e79a3; opacity: 0; transition: opacity .15s; }
+.diagram-canvas .react-flow__node:hover .react-flow__handle, .diagram-canvas .react-flow__node.selected .react-flow__handle { opacity: 1; }
+.diagram-canvas .react-flow__edge-path { stroke: #6e79a3; stroke-width: 1.8; }
+.diagram-canvas .diagram-edge.status-alleged .react-flow__edge-path, .diagram-canvas .diagram-edge.status-procedural .react-flow__edge-path { stroke-dasharray: 5 4; }
+.diagram-canvas .diagram-edge.status-disputed .react-flow__edge-path { stroke: #bc6169; stroke-width: 2; stroke-dasharray: 4 4; }
+.diagram-canvas .diagram-edge.kind-money .react-flow__edge-path { stroke: #5e9071; }
+.diagram-canvas .diagram-edge.kind-security .react-flow__edge-path { stroke-dasharray: 6 5; }
+.diagram-canvas .diagram-edge.kind-notice .react-flow__edge-path { stroke: #777b78; stroke-dasharray: 5 4; }
+.diagram-canvas .diagram-edge.kind-status .react-flow__edge-path { stroke: #777b78; stroke-dasharray: 2 5; }
+.diagram-canvas .diagram-edge.kind-dispute .react-flow__edge-path { stroke: #bc6169; stroke-width: 2; }
+.diagram-canvas .property-arc .react-flow__edge-path { stroke: #6e79a3; stroke-width: 1.5; }
+.diagram-canvas .property-arc.arc-own .react-flow__edge-path { stroke: #292a28; stroke-width: 2; }
+.diagram-canvas .property-arc.arc-poss .react-flow__edge-path { stroke: #777b78; stroke-dasharray: 2 4; }
+.diagram-canvas .property-arc.arc-lien .react-flow__edge-path { stroke: #8c95b8; stroke-dasharray: 6 4; }
+.plot-edge-chip { position: absolute; z-index: 4; display: flex; align-items: center; gap: 5px; max-width: 210px; padding: 4px 8px; border: 1px solid #d5d6d2; border-radius: 8px; background: #f7f7f5; color: #292a28; font-size: 11px; font-weight: 600; line-height: 1.2; text-align: center; white-space: normal; pointer-events: none; box-shadow: 0 1px 3px #252a280a; }
+.plot-edge-chip small { color: #6e79a3; font-size: 9px; font-weight: 600; white-space: nowrap; }
+.plot-edge-chip.selected { border-color: #6e79a3; box-shadow: 0 0 0 2px #d3d8ea; }
+.plot-edge-chip.property { color: #666a67; font-size: 10px; }
+.plot-edge-chip.future { opacity: .09; }
 .diagram-canvas .react-flow__controls-button { min-width: 26px; width: 26px; height: 26px; padding: 5px; border-radius: 0; }
-.diagram-timeline { display: grid; grid-template-columns: auto minmax(120px, 280px) auto 1fr; align-items: center; gap: 10px; min-height: 46px; padding: 7px 14px; border-top: 1px solid #dde3e0; background: #fafbfa; font-size: 13px; }
-.diagram-timeline input { width: 100%; accent-color: #246b59; }
-.diagram-timeline span { color: #66706b; white-space: nowrap; }
-.diagram-timeline p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 600px) { .diagram-dialog { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; } .diagram-heading { padding: 10px 12px; } .diagram-toolbar { flex-wrap: nowrap; overflow-x: auto; } .diagram-toolbar button span { display: none; } .diagram-toolbar input { width: 150px; flex: 0 0 150px; } .diagram-draft-review p { min-width: 100%; } .diagram-review-actions { width: 100%; justify-content: flex-end; } .diagram-evidence { align-items: flex-start; flex-wrap: wrap; } .diagram-evidence > span:nth-child(2) { min-width: calc(100% - 100px); } .diagram-timeline { grid-template-columns: auto 1fr auto; } .diagram-timeline p { grid-column: 1 / -1; } .diagram-canvas .react-flow__minimap { display: none; } }
+.diagram-timeline { flex: none; max-height: 170px; padding: 9px 14px 11px; border-top: 1px solid #dde3e0; background: #fafbfa; font-size: 12px; overflow: auto; }
+.diagram-timeline-bar { display: grid; grid-template-columns: auto minmax(120px, 1fr) auto; align-items: center; gap: 10px; }
+.diagram-timeline-bar input { width: 100%; accent-color: #6e79a3; }
+.diagram-timeline-bar span { min-width: 64px; color: #6d716e; text-align: right; white-space: nowrap; }
+.diagram-event-list { display: flex; gap: 6px; padding-top: 8px; overflow-x: auto; }
+.diagram-event-list button { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; max-width: 340px; min-height: 32px; padding: 6px 9px; border: 1px solid #e0e1de; border-radius: 7px; background: #fff; color: #303330; font-size: 11px; text-align: left; }
+.diagram-event-list button.future { opacity: .28; }
+.diagram-event-list b { color: #6e79a3; white-space: nowrap; }
+.diagram-event-list span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) { .diagram-dialog { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; } .diagram-heading { padding: 10px 12px; } .diagram-toolbar { flex-wrap: nowrap; overflow-x: auto; } .diagram-toolbar button span { display: none; } .diagram-toolbar input { width: 150px; flex: 0 0 150px; } .diagram-draft-review p { min-width: 100%; } .diagram-review-actions { width: 100%; justify-content: flex-end; } .diagram-evidence { align-items: flex-start; flex-wrap: wrap; } .diagram-evidence > span:nth-child(2) { min-width: calc(100% - 100px); } .diagram-timeline { max-height: 150px; padding-inline: 10px; } .diagram-timeline-bar { grid-template-columns: auto 1fr; } .diagram-timeline-bar span { grid-column: 2; } .diagram-canvas .react-flow__minimap { display: none; } }

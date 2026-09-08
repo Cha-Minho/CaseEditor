@@ -11,6 +11,10 @@ type History = {
 type SelectionOffset = {
   start: number;
   end: number;
+  startPath?: number[];
+  endPath?: number[];
+  startNodeOffset?: number;
+  endNodeOffset?: number;
 };
 
 const HISTORY_LIMIT = 60;
@@ -31,11 +35,15 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   const history = useRef<History>({ undo: [], redo: [] });
   const savedSelection = useRef<SelectionOffset | null>(null);
   const restoreAfterWindowFocus = useRef(false);
+  const recentlyBlurred = useRef(false);
+  const focusedRef = useRef(false);
   const typingMode = useRef<"highlight" | "plain" | null>(null);
   const typingInputStart = useRef<number | null>(null);
   const [focused, setFocused] = useState(false);
 
   function commit(event: FocusEvent<HTMLDivElement>) {
+    recentlyBlurred.current = true;
+    focusedRef.current = false;
     const html = sanitizeHtml(event.currentTarget.innerHTML);
     event.currentTarget.innerHTML = html;
     lastHtml.current = html;
@@ -249,7 +257,25 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
     const endRange = document.createRange();
     endRange.selectNodeContents(root);
     endRange.setEnd(range.endContainer, range.endOffset);
-    savedSelection.current = { start: startRange.toString().length, end: endRange.toString().length };
+    const pathTo = (node: Node) => {
+      const path: number[] = [];
+      let current: Node | null = node;
+      while (current && current !== root) {
+        const parent: Node | null = current.parentNode;
+        if (!parent) return undefined;
+        path.unshift(Array.prototype.indexOf.call(parent.childNodes, current));
+        current = parent;
+      }
+      return current === root ? path : undefined;
+    };
+    savedSelection.current = {
+      start: startRange.toString().length,
+      end: endRange.toString().length,
+      startPath: pathTo(range.startContainer),
+      endPath: pathTo(range.endContainer),
+      startNodeOffset: range.startOffset,
+      endNodeOffset: range.endOffset,
+    };
   }
 
   function restoreSelection() {
@@ -269,9 +295,28 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
       return { node: root as Node, offset: root.childNodes.length };
     };
 
+    const resolvePath = (path?: number[]) => {
+      if (!path) return null;
+      let node: Node = root;
+      for (const index of path) {
+        const child: ChildNode | undefined = node.childNodes[index];
+        if (!child) return null;
+        node = child;
+      }
+      return node;
+    };
+    const validOffset = (node: Node, offset?: number) => {
+      if (offset === undefined) return null;
+      const limit = node.nodeType === Node.TEXT_NODE ? (node as Text).data.length : node.childNodes.length;
+      return offset <= limit ? offset : null;
+    };
+    const pathStartNode = resolvePath(saved.startPath);
+    const pathEndNode = resolvePath(saved.endPath);
+    const pathStartOffset = pathStartNode ? validOffset(pathStartNode, saved.startNodeOffset) : null;
+    const pathEndOffset = pathEndNode ? validOffset(pathEndNode, saved.endNodeOffset) : null;
+    const start = pathStartNode && pathStartOffset !== null ? { node: pathStartNode, offset: pathStartOffset } : findBoundary(saved.start);
+    const end = pathEndNode && pathEndOffset !== null ? { node: pathEndNode, offset: pathEndOffset } : findBoundary(saved.end);
     const range = document.createRange();
-    const start = findBoundary(saved.start);
-    const end = findBoundary(saved.end);
     range.setStart(start.node, start.offset);
     range.setEnd(end.node, end.offset);
     const selection = window.getSelection();
@@ -292,9 +337,12 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
 
   useEffect(() => {
     const onWindowBlur = () => {
-      if (document.activeElement !== ref.current) return;
-      captureSelection();
+      const root = ref.current;
+      const selection = window.getSelection();
+      const selectionInside = Boolean(root && selection?.anchorNode && root.contains(selection.anchorNode));
+      if (!focusedRef.current && !recentlyBlurred.current && !selectionInside) return;
       restoreAfterWindowFocus.current = Boolean(savedSelection.current);
+      recentlyBlurred.current = false;
     };
     const onWindowFocus = () => {
       if (!restoreAfterWindowFocus.current) return;
@@ -304,11 +352,24 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
         restoreSelection();
       });
     };
+    const onDocumentFocusIn = (event: globalThis.FocusEvent) => {
+      if (event.target === ref.current) return;
+      recentlyBlurred.current = false;
+      restoreAfterWindowFocus.current = false;
+    };
+    const onSelectionChange = () => {
+      if (!focusedRef.current || document.activeElement !== ref.current) return;
+      captureSelection();
+    };
     window.addEventListener("blur", onWindowBlur);
     window.addEventListener("focus", onWindowFocus);
+    document.addEventListener("focusin", onDocumentFocusIn);
+    document.addEventListener("selectionchange", onSelectionChange);
     return () => {
       window.removeEventListener("blur", onWindowBlur);
       window.removeEventListener("focus", onWindowFocus);
+      document.removeEventListener("focusin", onDocumentFocusIn);
+      document.removeEventListener("selectionchange", onSelectionChange);
     };
   }, []);
 
@@ -325,9 +386,14 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
           contentEditable
           suppressContentEditableWarning
           spellCheck={false}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            focusedRef.current = true;
+            recentlyBlurred.current = false;
+            setFocused(true);
+          }}
           onBlur={commit}
           onInput={handleInput}
+          onSelect={captureSelection}
           onPaste={handlePaste}
           onMouseUp={pointerUp}
           onKeyDown={handleKeyDown}

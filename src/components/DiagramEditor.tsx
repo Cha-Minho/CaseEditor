@@ -6,7 +6,7 @@ import '@xyflow/react/dist/style.css';
 import type { CaseNotes } from '../types';
 import type { LegalGraph } from '../types';
 import { generateLegalGraph } from '../lib/legalGraphApi';
-import { computePropertyArcs, dateKey, declutterEdgeLabels, legalGraphToDiagram, propertyArcIsActive } from '../lib/plotGraph';
+import { computePropertyArcs, dateKey, declutterEdgeLabels, legalGraphToDiagram } from '../lib/plotGraph';
 
 type Graph = NonNullable<CaseNotes['diagram']>;
 type Props = { title: string; sourceHtml: string; value: CaseNotes['diagram']; onChange: (graph: Graph) => void; onClose: () => void };
@@ -129,6 +129,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
   const [generationError, setGenerationError] = useState('');
   const [draft, setDraft] = useState<LegalGraph | null>(null);
   const [timelineIndex, setTimelineIndex] = useState(0);
+  const [visibleTimelineIndexes, setVisibleTimelineIndexes] = useState<number[]>([]);
   const [viewportZoom, setViewportZoom] = useState(1);
   const [linkFormOpen, setLinkFormOpen] = useState(false);
   const [linkSource, setLinkSource] = useState('');
@@ -154,48 +155,41 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     const rightSequence = right.event.sequence || right.index + 1;
     return leftSequence - rightSequence || dateKey(left.event.date) - dateKey(right.event.date);
   }).map(item => item.event), [graph.legalGraph]);
-  const atEnd = timelineIndex >= timeline.length - 1;
-  const cutoffSequence = timelineIndex < 0 ? 0 : timeline[timelineIndex]?.sequence || timelineIndex + 1;
-  const cutoffDate = atEnd ? Infinity : timeline.slice(0, timelineIndex + 1).reduce((latest, event) => Math.max(latest, dateKey(event.date)), 0);
-  const relationIsFuture = (relation?: Partial<LegalGraph['relations'][number]>) => {
-    if (!timeline.length || atEnd) return false;
-    if (relation?.sequence) return relation.sequence > cutoffSequence;
-    const relationDate = dateKey(relation?.date);
-    if (relationDate) return relationDate > cutoffDate;
-    return true;
+  const timelineKey = timeline.map(event => event.id).join('|');
+  const selectedMoments = visibleTimelineIndexes.map(index => ({ index, event: timeline[index] })).filter(item => item.event);
+  const relationIsVisible = (relation?: Partial<LegalGraph['relations'][number]>) => {
+    if (!timeline.length) return true;
+    if (!selectedMoments.length) return false;
+    return selectedMoments.some(({ index, event }) => {
+      const sequence = event.sequence || index + 1;
+      if (relation?.sequence) return relation.sequence === sequence;
+      const relationDate = dateKey(relation?.date);
+      const eventDate = dateKey(event.date);
+      return Boolean(relationDate && eventDate && relationDate === eventDate);
+    });
   };
   const propertyArcs = useMemo(() => computePropertyArcs(graph.legalGraph), [graph.legalGraph]);
+  const visiblePropertyArcs = propertyArcs;
   const renderNodes = useMemo<Node[]>(() => {
-    const relatedIds = new Set<string>();
     const activeIds = new Set<string>();
     graph.edges.forEach(edge => {
       const relation = edge.data as Partial<LegalGraph['relations'][number]> | undefined;
-      [edge.source, edge.target, relation?.objectId].filter(Boolean).forEach(id => relatedIds.add(id!));
-      if (!relationIsFuture(relation)) [edge.source, edge.target, relation?.objectId].filter(Boolean).forEach(id => activeIds.add(id!));
+      if (relationIsVisible(relation)) [edge.source, edge.target, relation?.objectId].filter(Boolean).forEach(id => activeIds.add(id!));
     });
-    propertyArcs.forEach(arc => {
-      relatedIds.add(arc.thing);
-      relatedIds.add(arc.party);
-      if (propertyArcIsActive(arc, cutoffSequence, cutoffDate, atEnd)) {
-        activeIds.add(arc.thing);
-        activeIds.add(arc.party);
-      }
+    visiblePropertyArcs.forEach(arc => {
+      activeIds.add(arc.thing);
+      activeIds.add(arc.party);
     });
-    return graph.nodes.map(node => ({ ...node, type: node.className?.includes('diagram-object') ? 'plotObject' : 'plotParty', data: { ...node.data, future: relatedIds.has(node.id) && !activeIds.has(node.id) } }));
-  }, [atEnd, cutoffDate, cutoffSequence, graph.edges, graph.nodes, propertyArcs, timeline.length]);
+    return graph.nodes.filter(node => !timeline.length || activeIds.has(node.id)).map(node => ({ ...node, type: node.className?.includes('diagram-object') ? 'plotObject' : 'plotParty', data: { ...node.data, future: false } }));
+  }, [graph.edges, graph.nodes, selectedMoments, timeline.length, visiblePropertyArcs]);
   const visibleEdges = useMemo<Edge[]>(() => {
-    const relations = graph.edges.map(edge => {
-      const relation = edge.data as LegalGraph['relations'][number] | undefined;
-      const future = relationIsFuture(relation);
-      return { ...edge, type: 'plotEdge', selected: selected?.kind === 'edge' && selected.id === edge.id, style: { ...edge.style, opacity: future ? 0.09 : 1 }, data: { ...edge.data, future, viewportZoom, onSelectEdge: selectEdge, onMoveLabel: moveEdgeLabel } };
-    });
-    const arcs = propertyArcs.map(arc => {
-      const active = propertyArcIsActive(arc, cutoffSequence, cutoffDate, atEnd);
+    const relations = graph.edges.filter(edge => relationIsVisible(edge.data as LegalGraph['relations'][number] | undefined)).map(edge => ({ ...edge, type: 'plotEdge', selected: selected?.kind === 'edge' && selected.id === edge.id, style: { ...edge.style, opacity: 1 }, data: { ...edge.data, future: false, viewportZoom, onSelectEdge: selectEdge, onMoveLabel: moveEdgeLabel } }));
+    const arcs = visiblePropertyArcs.map(arc => {
       const kind = arc.role === '소유' ? 'own' : arc.role === '점유' ? 'poss' : 'lien';
-      return { id: arc.id, source: arc.thing, target: arc.party, type: 'plotEdge', label: arc.role, selectable: false, focusable: false, className: `diagram-edge property-arc arc-${kind}`, style: { opacity: active ? 0.88 : 0.07 }, data: { derivedArc: true, role: arc.role, kind: 'status', status: 'recognized', future: !active } };
+      return { id: arc.id, source: arc.thing, target: arc.party, type: 'plotEdge', label: arc.role, selectable: false, focusable: false, className: `diagram-edge property-arc arc-${kind}`, style: { opacity: 0.88 }, data: { derivedArc: true, role: arc.role, kind: 'status', status: 'recognized', future: false } };
     });
     return declutterEdgeLabels([...relations, ...arcs] as Edge[], graph.nodes, 1 / viewportZoom);
-  }, [atEnd, cutoffDate, cutoffSequence, graph.edges, graph.nodes, moveEdgeLabel, propertyArcs, selectEdge, selected, timeline.length, viewportZoom]);
+  }, [graph.edges, graph.nodes, moveEdgeLabel, selectEdge, selected, selectedMoments, timeline.length, viewportZoom, visiblePropertyArcs]);
 
   function display(next: Graph) { current.current = next; setGraph(next); }
   function checkpoint() { undo.current = [...undo.current.slice(-49), structuredClone(current.current)]; redo.current = []; }
@@ -215,7 +209,15 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     if (dialog.current) observer.observe(dialog.current);
     return () => observer.disconnect();
   }, []);
-  useEffect(() => setTimelineIndex(timeline.length - 1), [graph.legalGraph, timeline.length]);
+  useEffect(() => {
+    const last = timeline.length - 1;
+    setTimelineIndex(Math.max(0, last));
+    setVisibleTimelineIndexes(last >= 0 ? [last] : []);
+  }, [timelineKey]);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => window.requestAnimationFrame(() => flow.current?.fitView({ padding: 0.24, maxZoom: 1.7 })));
+    return () => window.cancelAnimationFrame(frame);
+  }, [selected?.id, visibleTimelineIndexes.join('|')]);
 
   function add(kind: 'person' | 'object') {
     const node: Node = { id: crypto.randomUUID(), type: kind === 'person' ? 'plotParty' : 'plotObject', position: { x: 80 + (graph.nodes.length % 4) * 190, y: 80 + Math.floor(graph.nodes.length / 4) * 130 }, data: { label: kind === 'person' ? '당사자' : '목적물' }, className: kind === 'person' ? 'diagram-person' : 'diagram-object' };
@@ -342,12 +344,12 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     <div className={`diagram-workspace${timeline.length ? ' has-timeline' : ''}`}>
     {timeline.length > 0 && <aside className="diagram-timeline">
       <div className="diagram-timeline-bar"><strong>사건 흐름</strong>
-        <span>{timeline.length < 2 ? '' : timelineIndex < 0 ? '사건 전' : atEnd ? '전체' : timeline[timelineIndex]?.date || `${cutoffSequence}단계`}</span>
-        {timeline.length > 1 && <input aria-label="사건 흐름 시점" type="range" min="-1" max={timeline.length - 1} value={timelineIndex} onChange={event => setTimelineIndex(Number(event.target.value))} />}
+        <span>{timeline[timelineIndex]?.date || `${timeline[timelineIndex]?.sequence || timelineIndex + 1}단계`}</span>
+        {timeline.length > 1 && <input aria-label="사건 흐름 시점" type="range" min="0" max={timeline.length - 1} value={timelineIndex} onChange={event => { const index = Number(event.target.value); setTimelineIndex(index); setVisibleTimelineIndexes([index]); }} />}
       </div>
       <div className="diagram-event-list">{timeline.map((event, index) => {
-        const future = index > timelineIndex;
-        return <button key={event.id} className={future ? 'future' : ''} onClick={() => setTimelineIndex(index)}><b>{event.date || `${event.sequence || index + 1}단계`}</b><span>{event.text}</span></button>;
+        const visible = visibleTimelineIndexes.includes(index);
+        return <button key={event.id} className={visible ? 'on' : 'off'} aria-pressed={visible} onClick={() => { setTimelineIndex(index); setVisibleTimelineIndexes(current => current.includes(index) ? current.filter(item => item !== index) : [...current, index].sort((a, b) => a - b)); }}><b>{event.date || `${event.sequence || index + 1}단계`}</b><span>{event.text}</span></button>;
       })}</div>
     </aside>}
     <div className="diagram-stage"><div className="diagram-canvas" style={{ '--diagram-inverse-zoom': 1 / viewportZoom } as CSSProperties}><ReactFlow nodes={renderNodes} edges={visibleEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onInit={instance => { flow.current = instance; requestAnimationFrame(() => instance.fitView({ padding: 0.18, maxZoom: 2 })); }}

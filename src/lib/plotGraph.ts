@@ -30,6 +30,11 @@ type PropertyArc = { id: string; thing: string; party: string; role: string; sta
 const ownershipTransferPattern = /소유권\s*이전|매도|매매|증여|양도|상속|유증|명의신탁/;
 const possessionTransferPattern = /임의\s*제출|제출|압수|교부|인도|보관|은닉|점유/;
 
+export function propertyArcIsActive(arc: PropertyArc, cutoffSequence: number, cutoffDate: number, atEnd: boolean) {
+  const cutoff = atEnd ? Infinity : arc.usesSequence ? cutoffSequence : cutoffDate;
+  return arc.start <= cutoff && (arc.end === Infinity || cutoff < arc.end);
+}
+
 export function computePropertyArcs(data?: LegalGraph): PropertyArc[] {
   if (!data) return [];
   const arcs: PropertyArc[] = [];

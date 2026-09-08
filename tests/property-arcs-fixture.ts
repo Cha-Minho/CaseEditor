@@ -1,4 +1,4 @@
-import { computePropertyArcs } from '../src/lib/plotGraph';
+import { computePropertyArcs, propertyArcIsActive } from '../src/lib/plotGraph';
 import type { LegalGraph } from '../src/types';
 
 const graph: LegalGraph = {
@@ -14,4 +14,8 @@ const graph: LegalGraph = {
   events: []
 };
 
-document.getElementById('result')!.textContent = JSON.stringify(computePropertyArcs(graph));
+const arcs = computePropertyArcs(graph);
+document.getElementById('result')!.textContent = JSON.stringify({
+  arcs,
+  final: arcs.filter(arc => propertyArcIsActive(arc, 3, Infinity, true))
+});

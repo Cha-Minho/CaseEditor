@@ -6,7 +6,7 @@ import '@xyflow/react/dist/style.css';
 import type { CaseNotes } from '../types';
 import type { LegalGraph } from '../types';
 import { generateLegalGraph } from '../lib/legalGraphApi';
-import { computePropertyArcs, dateKey, legalGraphToDiagram } from '../lib/plotGraph';
+import { computePropertyArcs, dateKey, legalGraphToDiagram, propertyArcIsActive } from '../lib/plotGraph';
 
 type Graph = NonNullable<CaseNotes['diagram']>;
 type Props = { title: string; sourceHtml: string; value: CaseNotes['diagram']; onChange: (graph: Graph) => void; onClose: () => void };
@@ -125,8 +125,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       return { ...edge, type: 'plotEdge', style: { ...edge.style, opacity: future ? 0.09 : 1 }, data: { ...edge.data, future } };
     });
     const arcs = computePropertyArcs(graph.legalGraph).map(arc => {
-      const propertyCutoff = arc.usesSequence ? cutoffSequence : cutoffDate;
-      const active = atEnd || (arc.start <= propertyCutoff && (arc.end === Infinity || propertyCutoff < arc.end));
+      const active = propertyArcIsActive(arc, cutoffSequence, cutoffDate, atEnd);
       const kind = arc.role === '소유' ? 'own' : arc.role === '점유' ? 'poss' : 'lien';
       return { id: arc.id, source: arc.thing, target: arc.party, type: 'plotEdge', label: arc.role, selectable: false, focusable: false, className: `diagram-edge property-arc arc-${kind}`, style: { opacity: active ? 0.88 : 0.07 }, data: { derivedArc: true, role: arc.role, kind: 'status', status: 'recognized', future: !active } };
     });

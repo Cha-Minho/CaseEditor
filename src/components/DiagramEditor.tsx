@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ReactFlow, Controls, BaseEdge, EdgeLabelRenderer, Handle, Position, applyNodeChanges, applyEdgeChanges, addEdge, getBezierPath, MarkerType, type Node, type Edge, type EdgeProps, type NodeProps, type ReactFlowInstance } from '@xyflow/react';
+import { ReactFlow, Controls, BaseEdge, EdgeLabelRenderer, Handle, Position, applyNodeChanges, applyEdgeChanges, addEdge, MarkerType, type Node, type Edge, type EdgeProps, type NodeProps, type ReactFlowInstance } from '@xyflow/react';
 import { UserPlus, SquarePlus, Undo2, Redo2, Trash2, WandSparkles, X } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 import type { CaseNotes } from '../types';
@@ -27,9 +27,37 @@ function PlotObjectNode({ data, selected }: NodeProps) {
   </div>;
 }
 
-function PlotEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, style, label, data, selected }: EdgeProps) {
-  const [path, labelX, labelY] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, curvature: 0.28 });
-  const relation = data as (Partial<LegalGraph['relations'][number]> & { derivedArc?: boolean; role?: string; future?: boolean }) | undefined;
+function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, markerEnd, style, label, data, selected }: EdgeProps) {
+  const relation = data as (Partial<LegalGraph['relations'][number]> & { derivedArc?: boolean; role?: string; future?: boolean; pairIndex?: number; pairTotal?: number; centerX?: number; centerY?: number }) | undefined;
+  let path: string;
+  let labelX: number;
+  let labelY: number;
+  if (source === target) {
+    path = `M ${sourceX} ${sourceY} C ${sourceX + 72} ${sourceY - 78}, ${targetX - 72} ${targetY - 78}, ${targetX} ${targetY}`;
+    labelX = (sourceX + targetX) / 2;
+    labelY = Math.min(sourceY, targetY) - 64;
+  } else {
+    const dx = targetX - sourceX;
+    const dy = targetY - sourceY;
+    const length = Math.hypot(dx, dy) || 1;
+    let normalX = -dy / length;
+    let normalY = dx / length;
+    const middleX = (sourceX + targetX) / 2;
+    const middleY = (sourceY + targetY) / 2;
+    if ((middleX - (relation?.centerX || 320)) * normalX + (middleY - (relation?.centerY || 240)) * normalY < 0) {
+      normalX *= -1;
+      normalY *= -1;
+    }
+    const total = relation?.pairTotal || 1;
+    const index = relation?.pairIndex || 0;
+    const step = total > 4 ? 26 : total > 2 ? 32 : 36;
+    const offset = index * step - (total - 1) * step * 0.3;
+    const controlX = middleX + normalX * offset * 2;
+    const controlY = middleY + normalY * offset * 2;
+    path = `M ${sourceX} ${sourceY} Q ${controlX} ${controlY} ${targetX} ${targetY}`;
+    labelX = (sourceX + 2 * controlX + targetX) / 4;
+    labelY = (sourceY + 2 * controlY + targetY) / 4;
+  }
   return <>
     <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
     <EdgeLabelRenderer><div className={`plot-edge-chip kind-${relation?.kind || 'other'} status-${relation?.status || 'recognized'}${relation?.derivedArc ? ' property' : ''}${relation?.future ? ' future' : ''}${selected ? ' selected' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)` }}>

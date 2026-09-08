@@ -170,6 +170,7 @@ export function legalGraphToDiagram(data: LegalGraph) {
     nodes.push({ id: object.id, type: 'plotObject', position: { x: best.x - 60, y: best.y - 22 }, data: { label: object.name }, className: 'diagram-object' });
   });
   const objectMap = new Map(data.objects.map(object => [object.id, object.name]));
+  const pairSeen = new Map<string, number>();
   const edges: Edge[] = data.relations.map((relation, index) => ({
     id: relation.id,
     source: relation.from,
@@ -178,7 +179,12 @@ export function legalGraphToDiagram(data: LegalGraph) {
     label: relation.objectId && objectMap.get(relation.objectId) ? `${relation.label} (${objectMap.get(relation.objectId)})` : relation.label,
     markerEnd: { type: MarkerType.ArrowClosed },
     className: `diagram-edge kind-${relation.kind} status-${relation.status}`,
-    data: { ...relation, order: index, objectName: relation.objectId ? objectMap.get(relation.objectId) : undefined }
+    data: (() => {
+      const pair = [relation.from, relation.to].sort().join('|');
+      const pairIndex = pairSeen.get(pair) || 0;
+      pairSeen.set(pair, pairIndex + 1);
+      return { ...relation, order: index, pairIndex, pairTotal: pairCounts.get(pair) || 1, centerX: center.x, centerY: center.y, objectName: relation.objectId ? objectMap.get(relation.objectId) : undefined };
+    })()
   })).sort((a, b) => (dateKey((a.data as LegalGraph['relations'][number])?.date) || Infinity) - (dateKey((b.data as LegalGraph['relations'][number])?.date) || Infinity) || Number(a.data?.order) - Number(b.data?.order));
   return { nodes, edges, legalGraph: data };
 }

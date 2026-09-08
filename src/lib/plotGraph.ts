@@ -31,8 +31,18 @@ const ownershipTransferPattern = /소유권\s*이전|매도|매매|증여|양도
 const possessionTransferPattern = /임의\s*제출|제출|압수|교부|인도|보관|은닉|점유/;
 
 export function propertyArcIsActive(arc: PropertyArc, cutoffSequence: number, cutoffDate: number, atEnd: boolean) {
+  if (!atEnd && cutoffSequence <= 0 && cutoffDate <= 0) return false;
   const cutoff = atEnd ? Infinity : arc.usesSequence ? cutoffSequence : cutoffDate;
   return arc.start <= cutoff && (arc.end === Infinity || cutoff < arc.end);
+}
+
+function possessionRecipient(relation: LegalGraph['relations'][number], parties: Map<string, LegalGraph['parties'][number]>) {
+  if (!/압수/.test(relation.label)) return relation.to;
+  const authorityPattern = /경찰|검사|검찰|수사기관|수사관/;
+  return [relation.from, relation.to].find(id => {
+    const party = parties.get(id);
+    return party && authorityPattern.test(`${party.name} ${party.role || ''}`);
+  }) || relation.from;
 }
 
 export function computePropertyArcs(data?: LegalGraph): PropertyArc[] {
@@ -75,8 +85,10 @@ export function computePropertyArcs(data?: LegalGraph): PropertyArc[] {
     let possessionStart = 0;
     possessions.forEach((relation, index) => {
       const key = timeOf(relation);
-      if (possessor && possessor !== relation.to) arcs.push({ id: `arc-poss-${object.id}-${index}`, thing: object.id, party: possessor, role: '점유', start: possessionStart, end: key, usesSequence });
-      possessor = relation.to;
+      const nextPossessor = possessionRecipient(relation, partyById);
+      if (possessor === nextPossessor) return;
+      if (possessor) arcs.push({ id: `arc-poss-${object.id}-${index}`, thing: object.id, party: possessor, role: '점유', start: possessionStart, end: key, usesSequence });
+      possessor = nextPossessor;
       possessionStart = key;
     });
     if (possessor) arcs.push({ id: `arc-poss-${object.id}-last`, thing: object.id, party: possessor, role: '점유', start: possessionStart, end: Infinity, usesSequence });

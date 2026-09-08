@@ -1066,7 +1066,8 @@ select:focus {
 .diagram-canvas .property-arc.arc-own .react-flow__edge-path { stroke: #292a28; stroke-width: 2; }
 .diagram-canvas .property-arc.arc-poss .react-flow__edge-path { stroke: #777b78; stroke-dasharray: 2 4; }
 .diagram-canvas .property-arc.arc-lien .react-flow__edge-path { stroke: #8c95b8; stroke-dasharray: 6 4; }
-.plot-edge-chip { position: absolute; z-index: 4; display: flex; align-items: center; gap: 5px; max-width: 210px; height: auto; min-width: 0; padding: 4px 8px; border: 1px solid #d5d6d2; border-radius: 8px; background: #f7f7f5; color: #292a28; font: inherit; font-size: 11px; font-weight: 600; line-height: 1.2; text-align: center; white-space: normal; pointer-events: auto; cursor: pointer; box-shadow: 0 1px 3px #252a280a; }
+.plot-edge-chip { position: absolute; z-index: 4; display: flex; align-items: center; gap: 5px; max-width: 210px; height: auto; min-width: 0; padding: 4px 8px; border: 1px solid #d5d6d2; border-radius: 8px; background: #f7f7f5; color: #292a28; font: inherit; font-size: 11px; font-weight: 600; line-height: 1.2; text-align: center; white-space: normal; pointer-events: auto; cursor: grab; touch-action: none; user-select: none; box-shadow: 0 1px 3px #252a280a; }
+.plot-edge-chip:active:not(:disabled) { cursor: grabbing; }
 .plot-edge-chip:hover:not(:disabled), .plot-edge-chip:focus-visible { border-color: #6e79a3; background: #fff; }
 .plot-edge-chip:disabled { opacity: 1; cursor: default; pointer-events: none; }
 .plot-edge-chip small { color: #6e79a3; font-size: 9px; font-weight: 600; white-space: nowrap; }

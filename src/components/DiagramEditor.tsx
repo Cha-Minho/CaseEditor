@@ -28,7 +28,7 @@ function PlotObjectNode({ data, selected }: NodeProps) {
 }
 
 function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, markerEnd, style, label, data, selected }: EdgeProps) {
-  const relation = data as (Partial<LegalGraph['relations'][number]> & { derivedArc?: boolean; role?: string; future?: boolean; pairIndex?: number; pairTotal?: number; centerX?: number; centerY?: number; labelX?: number; labelY?: number; onSelectEdge?: (id: string) => void }) | undefined;
+  const relation = data as (Partial<LegalGraph['relations'][number]> & { derivedArc?: boolean; role?: string; future?: boolean; pairIndex?: number; pairTotal?: number; centerX?: number; centerY?: number; labelX?: number; labelY?: number; viewportZoom?: number; onSelectEdge?: (id: string) => void; onMoveLabel?: (id: string, x: number, y: number) => void }) | undefined;
   let path: string;
   let labelX: number;
   let labelY: number;
@@ -75,10 +75,37 @@ function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, mark
   labelX = relation?.labelX ?? labelX;
   labelY = relation?.labelY ?? labelY;
   const hasLeader = Math.hypot(labelX - anchorX, labelY - anchorY) > 18;
+  const startLabelDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (relation?.derivedArc) return;
+    event.preventDefault();
+    event.stopPropagation();
+    relation?.onSelectEdge?.(id);
+    const element = event.currentTarget;
+    const startClientX = event.clientX;
+    const startClientY = event.clientY;
+    const startX = labelX;
+    const startY = labelY;
+    const zoom = relation?.viewportZoom || 1;
+    let moved = false;
+    const onMove = (pointer: PointerEvent) => {
+      const dx = (pointer.clientX - startClientX) / zoom;
+      const dy = (pointer.clientY - startClientY) / zoom;
+      moved ||= Math.hypot(dx, dy) > 3;
+      element.style.transform = `translate(-50%, -50%) translate(${startX + dx}px,${startY + dy}px) scale(var(--diagram-inverse-zoom, 1))`;
+    };
+    const onUp = (pointer: PointerEvent) => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      if (!moved) return;
+      relation?.onMoveLabel?.(id, startX + (pointer.clientX - startClientX) / zoom, startY + (pointer.clientY - startClientY) / zoom);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+  };
   return <>
     <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
     {hasLeader && <path className={`plot-label-leader${relation?.future ? ' future' : ''}`} d={`M ${anchorX} ${anchorY} L ${labelX} ${labelY}`} />}
-    <EdgeLabelRenderer><button type="button" disabled={relation?.derivedArc} className={`plot-edge-chip nodrag nopan kind-${relation?.kind || 'other'} status-${relation?.status || 'recognized'}${relation?.derivedArc ? ' property' : ''}${relation?.future ? ' future' : ''}${selected ? ' selected' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(var(--diagram-inverse-zoom, 1))` }} onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); relation?.onSelectEdge?.(id); }}>
+    <EdgeLabelRenderer><button type="button" disabled={relation?.derivedArc} className={`plot-edge-chip nodrag nopan kind-${relation?.kind || 'other'} status-${relation?.status || 'recognized'}${relation?.derivedArc ? ' property' : ''}${relation?.future ? ' future' : ''}${selected ? ' selected' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(var(--diagram-inverse-zoom, 1))` }} onPointerDown={startLabelDrag} onClick={event => { event.stopPropagation(); relation?.onSelectEdge?.(id); }}>
       {relation?.date && <small>{relation.date}</small>}
       <span>{String(label || relation?.role || '')}</span>
     </button></EdgeLabelRenderer>
@@ -115,6 +142,9 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     setSelected({ kind: 'edge', id });
     setLabel(String(edge.label || ''));
   }, []);
+  const moveEdgeLabel = useCallback((id: string, x: number, y: number) => {
+    change({ ...current.current, edges: current.current.edges.map(edge => edge.id === id ? { ...edge, data: { ...edge.data, manualLabelX: x, manualLabelY: y } } : edge) });
+  }, []);
 
   const timeline = useMemo(() => (graph.legalGraph?.events || []).map((event, index) => ({ event, index })).sort((left, right) => {
     const leftSequence = left.event.sequence || left.index + 1;
@@ -131,24 +161,38 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     if (relationDate) return relationDate > cutoffDate;
     return true;
   };
-  const renderNodes = useMemo<Node[]>(() => graph.nodes.map(node => {
-    const related = graph.edges.filter(edge => edge.source === node.id || edge.target === node.id || (edge.data as Partial<LegalGraph['relations'][number]> | undefined)?.objectId === node.id);
-    const future = related.length > 0 && related.every(edge => relationIsFuture(edge.data as Partial<LegalGraph['relations'][number]> | undefined));
-    return { ...node, type: node.className?.includes('diagram-object') ? 'plotObject' : 'plotParty', data: { ...node.data, future } };
-  }), [atEnd, cutoffDate, cutoffSequence, graph.edges, graph.nodes, timeline.length]);
+  const propertyArcs = useMemo(() => computePropertyArcs(graph.legalGraph), [graph.legalGraph]);
+  const renderNodes = useMemo<Node[]>(() => {
+    const relatedIds = new Set<string>();
+    const activeIds = new Set<string>();
+    graph.edges.forEach(edge => {
+      const relation = edge.data as Partial<LegalGraph['relations'][number]> | undefined;
+      [edge.source, edge.target, relation?.objectId].filter(Boolean).forEach(id => relatedIds.add(id!));
+      if (!relationIsFuture(relation)) [edge.source, edge.target, relation?.objectId].filter(Boolean).forEach(id => activeIds.add(id!));
+    });
+    propertyArcs.forEach(arc => {
+      relatedIds.add(arc.thing);
+      relatedIds.add(arc.party);
+      if (propertyArcIsActive(arc, cutoffSequence, cutoffDate, atEnd)) {
+        activeIds.add(arc.thing);
+        activeIds.add(arc.party);
+      }
+    });
+    return graph.nodes.map(node => ({ ...node, type: node.className?.includes('diagram-object') ? 'plotObject' : 'plotParty', data: { ...node.data, future: relatedIds.has(node.id) && !activeIds.has(node.id) } }));
+  }, [atEnd, cutoffDate, cutoffSequence, graph.edges, graph.nodes, propertyArcs, timeline.length]);
   const visibleEdges = useMemo<Edge[]>(() => {
     const relations = graph.edges.map(edge => {
       const relation = edge.data as LegalGraph['relations'][number] | undefined;
       const future = relationIsFuture(relation);
-      return { ...edge, type: 'plotEdge', selected: selected?.kind === 'edge' && selected.id === edge.id, style: { ...edge.style, opacity: future ? 0.09 : 1 }, data: { ...edge.data, future, onSelectEdge: selectEdge } };
+      return { ...edge, type: 'plotEdge', selected: selected?.kind === 'edge' && selected.id === edge.id, style: { ...edge.style, opacity: future ? 0.09 : 1 }, data: { ...edge.data, future, viewportZoom, onSelectEdge: selectEdge, onMoveLabel: moveEdgeLabel } };
     });
-    const arcs = computePropertyArcs(graph.legalGraph).map(arc => {
+    const arcs = propertyArcs.map(arc => {
       const active = propertyArcIsActive(arc, cutoffSequence, cutoffDate, atEnd);
       const kind = arc.role === '소유' ? 'own' : arc.role === '점유' ? 'poss' : 'lien';
       return { id: arc.id, source: arc.thing, target: arc.party, type: 'plotEdge', label: arc.role, selectable: false, focusable: false, className: `diagram-edge property-arc arc-${kind}`, style: { opacity: active ? 0.88 : 0.07 }, data: { derivedArc: true, role: arc.role, kind: 'status', status: 'recognized', future: !active } };
     });
     return declutterEdgeLabels([...relations, ...arcs] as Edge[], graph.nodes, 1 / viewportZoom);
-  }, [atEnd, cutoffDate, cutoffSequence, graph.edges, graph.legalGraph, graph.nodes, selectEdge, selected, timeline.length, viewportZoom]);
+  }, [atEnd, cutoffDate, cutoffSequence, graph.edges, graph.nodes, moveEdgeLabel, propertyArcs, selectEdge, selected, timeline.length, viewportZoom]);
 
   function display(next: Graph) { current.current = next; setGraph(next); }
   function checkpoint() { undo.current = [...undo.current.slice(-49), structuredClone(current.current)]; redo.current = []; }

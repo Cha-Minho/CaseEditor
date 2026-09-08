@@ -96,7 +96,7 @@ export function computePropertyArcs(data?: LegalGraph): PropertyArc[] {
   return arcs.filter(arc => arc.end > arc.start);
 }
 
-type LabelEdgeData = { labelX?: number; labelY?: number };
+type LabelEdgeData = { labelX?: number; labelY?: number; manualLabelX?: number; manualLabelY?: number };
 
 function labelBoxSize(edge: Edge, inverseZoom: number) {
   const date = String((edge.data as Partial<LegalGraph['relations'][number]> | undefined)?.date || '');
@@ -121,7 +121,9 @@ export function declutterEdgeLabels(edges: Edge[], nodes: Node[], inverseZoom = 
     const self = edge.source === edge.target;
     const ax = self ? from.x : (from.x + to.x) / 2;
     const ay = self ? from.y - 64 : (from.y + to.y) / 2;
-    return { edge, x: ax, y: ay, ax, ay, ...size };
+    const data = edge.data as LabelEdgeData | undefined;
+    const fixed = data?.manualLabelX !== undefined && data.manualLabelY !== undefined;
+    return { edge, x: fixed ? data.manualLabelX! : ax, y: fixed ? data.manualLabelY! : ay, ax, ay, fixed, ...size };
   }).filter((box): box is NonNullable<typeof box> => Boolean(box));
   const obstacles = [...centers.values()];
   const maxX = Math.max(640, ...obstacles.map(item => item.x + item.w));
@@ -130,6 +132,7 @@ export function declutterEdgeLabels(edges: Edge[], nodes: Node[], inverseZoom = 
   for (let step = 0; step < steps; step += 1) {
     const pull = 0.06 * (1 - step / steps);
     boxes.forEach(box => {
+      if (box.fixed) return;
       box.x += (box.ax - box.x) * pull;
       box.y += (box.ay - box.y) * pull;
     });
@@ -142,16 +145,18 @@ export function declutterEdgeLabels(edges: Edge[], nodes: Node[], inverseZoom = 
         const overlapX = (current.w + other.w) / 2 + 6 * inverseZoom - Math.abs(dx);
         const overlapY = (current.h + other.h) / 2 + 5 * inverseZoom - Math.abs(dy);
         if (overlapX <= 0 || overlapY <= 0) continue;
+        if (current.fixed && other.fixed) continue;
         if (overlapY * 1.7 < overlapX) {
-          const push = overlapY / 2 * (dy < 0 ? -1 : 1);
-          current.y -= push;
-          other.y += push;
+          const direction = dy < 0 ? -1 : 1;
+          if (!current.fixed) current.y -= overlapY * (other.fixed ? 1 : 0.5) * direction;
+          if (!other.fixed) other.y += overlapY * (current.fixed ? 1 : 0.5) * direction;
         } else {
-          const push = overlapX / 2 * (dx < 0 ? -1 : 1);
-          current.x -= push;
-          other.x += push;
+          const direction = dx < 0 ? -1 : 1;
+          if (!current.fixed) current.x -= overlapX * (other.fixed ? 1 : 0.5) * direction;
+          if (!other.fixed) other.x += overlapX * (current.fixed ? 1 : 0.5) * direction;
         }
       }
+      if (current.fixed) continue;
       obstacles.forEach(obstacle => {
         const dx = current.x - obstacle.x;
         const dy = current.y - obstacle.y;

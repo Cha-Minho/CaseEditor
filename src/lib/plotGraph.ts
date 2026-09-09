@@ -25,7 +25,7 @@ export function computeGraphTimes(data?: LegalGraph) {
   ].filter(Boolean))].sort((a, b) => a - b);
 }
 
-type PropertyArc = { id: string; thing: string; party: string; role: string; start: number; end: number; usesSequence: boolean };
+type PropertyArc = { id: string; thing: string; party: string; role: '소유' | '점유' | '압수' | '담보'; start: number; end: number; usesSequence: boolean };
 
 const ownershipTransferPattern = /소유권\s*이전|매도|매매|증여|양도|상속|유증|명의신탁/;
 const possessionTransferPattern = /임의\s*제출|제출|압수|교부|인도|보관|은닉|점유/;
@@ -37,7 +37,7 @@ export function propertyArcIsActive(arc: PropertyArc, cutoffSequence: number, cu
 }
 
 function possessionRecipient(relation: LegalGraph['relations'][number], parties: Map<string, LegalGraph['parties'][number]>) {
-  if (!/압수/.test(relation.label)) return relation.to;
+  if (relation.effect !== 'seize' && !/압수/.test(relation.label)) return relation.to;
   const authorityPattern = /경찰|검사|검찰|수사기관|수사관/;
   return [relation.from, relation.to].find(id => {
     const party = parties.get(id);
@@ -80,18 +80,21 @@ export function computePropertyArcs(data?: LegalGraph): PropertyArc[] {
     relations.filter(relation => relation.effect === 'lien').forEach((relation, index) => {
       arcs.push({ id: `arc-lien-${object.id}-${index}`, thing: object.id, party: relation.to, role: '담보', start: timeOf(relation), end: Infinity, usesSequence });
     });
-    const possessions = relations.filter(relation => relation.effect === 'poss' || (!ownershipTransferPattern.test(relation.label) && possessionTransferPattern.test(relation.label)));
+    const possessions = relations.filter(relation => relation.effect === 'poss' || relation.effect === 'seize' || (!ownershipTransferPattern.test(relation.label) && possessionTransferPattern.test(relation.label)));
     let possessor = object.possessorId && partyById.has(object.possessorId) ? object.possessorId : possessions.length ? initialOwner : undefined;
+    let possessionRole: PropertyArc['role'] = '점유';
     let possessionStart = 0;
     possessions.forEach((relation, index) => {
       const key = timeOf(relation);
       const nextPossessor = possessionRecipient(relation, partyById);
-      if (possessor === nextPossessor) return;
-      if (possessor) arcs.push({ id: `arc-poss-${object.id}-${index}`, thing: object.id, party: possessor, role: '점유', start: possessionStart, end: key, usesSequence });
+      const nextRole: PropertyArc['role'] = relation.effect === 'seize' || /압수/.test(relation.label) ? '압수' : '점유';
+      if (possessor === nextPossessor && possessionRole === nextRole) return;
+      if (possessor) arcs.push({ id: `arc-poss-${object.id}-${index}`, thing: object.id, party: possessor, role: possessionRole, start: possessionStart, end: key, usesSequence });
       possessor = nextPossessor;
+      possessionRole = nextRole;
       possessionStart = key;
     });
-    if (possessor) arcs.push({ id: `arc-poss-${object.id}-last`, thing: object.id, party: possessor, role: '점유', start: possessionStart, end: Infinity, usesSequence });
+    if (possessor) arcs.push({ id: `arc-poss-${object.id}-last`, thing: object.id, party: possessor, role: possessionRole, start: possessionStart, end: Infinity, usesSequence });
   }
   return arcs.filter(arc => arc.end > arc.start);
 }

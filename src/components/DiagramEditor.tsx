@@ -188,8 +188,8 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       return { ...edge, type: 'plotEdge', selected: selected?.kind === 'edge' && selected.id === edge.id, style: { ...edge.style, opacity: visible ? 1 : 0.09 }, data: { ...edge.data, future: !visible, viewportZoom, onSelectEdge: selectEdge, onMoveLabel: moveEdgeLabel } };
     });
     const arcs = visiblePropertyArcs.map(arc => {
-      const kind = arc.role === '소유' ? 'own' : arc.role === '점유' ? 'poss' : 'lien';
-      return { id: arc.id, source: arc.thing, target: arc.party, type: 'plotEdge', label: arc.role, selectable: false, focusable: false, className: `diagram-edge property-arc arc-${kind}`, style: { opacity: 0.88 }, data: { derivedArc: true, role: arc.role, kind: 'status', status: 'recognized', future: false } };
+      const kind = arc.role === '소유' ? 'own' : arc.role === '점유' ? 'poss' : arc.role === '압수' ? 'seize' : 'lien';
+      return { id: arc.id, source: arc.thing, target: arc.party, type: 'plotEdge', label: arc.role, selectable: false, focusable: false, className: `diagram-edge property-arc arc-${kind}`, style: { opacity: 0.88 }, data: { derivedArc: true, role: arc.role, kind, status: 'recognized', future: false } };
     });
     return declutterEdgeLabels([...relations, ...arcs] as Edge[], graph.nodes, 1 / viewportZoom);
   }, [graph.edges, graph.nodes, moveEdgeLabel, selectEdge, selected, selectedMoments, timeline.length, viewportZoom, visiblePropertyArcs]);

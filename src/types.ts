@@ -40,7 +40,7 @@ export type LegalGraph = {
     sequence?: number;
     date?: string;
     objectId?: string;
-    effect?: "own" | "sale" | "lien" | "poss";
+    effect?: "own" | "sale" | "lien" | "poss" | "seize";
     evidence: string;
     status: LegalGraphStatus;
     confidence: number;

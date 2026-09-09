@@ -1065,6 +1065,7 @@ select:focus {
 .diagram-canvas .property-arc .react-flow__edge-path { stroke: #6e79a3; stroke-width: 1.5; }
 .diagram-canvas .property-arc.arc-own .react-flow__edge-path { stroke: #292a28; stroke-width: 2; }
 .diagram-canvas .property-arc.arc-poss .react-flow__edge-path { stroke: #777b78; stroke-dasharray: 2 4; }
+.diagram-canvas .property-arc.arc-seize .react-flow__edge-path { stroke: #a6533d; stroke-width: 2.2; stroke-dasharray: 7 3; }
 .diagram-canvas .property-arc.arc-lien .react-flow__edge-path { stroke: #8c95b8; stroke-dasharray: 6 4; }
 .plot-edge-chip { position: absolute; z-index: 4; display: flex; align-items: center; gap: 5px; max-width: 210px; height: auto; min-width: 0; padding: 4px 8px; border: 1px solid #d5d6d2; border-radius: 8px; background: #f7f7f5; color: #292a28; font: inherit; font-size: 11px; font-weight: 600; line-height: 1.2; text-align: center; white-space: normal; pointer-events: auto; cursor: grab; touch-action: none; user-select: none; box-shadow: 0 1px 3px #252a280a; }
 .plot-edge-chip:active:not(:disabled) { cursor: grabbing; }
@@ -1073,6 +1074,7 @@ select:focus {
 .plot-edge-chip small { color: #6e79a3; font-size: 9px; font-weight: 600; white-space: nowrap; }
 .plot-edge-chip.selected { border-color: #6e79a3; box-shadow: 0 0 0 2px #d3d8ea; }
 .plot-edge-chip.property { color: #666a67; font-size: 10px; }
+.plot-edge-chip.property.kind-seize { border-color: #d8a99b; background: #fff5f1; color: #873f2d; }
 .plot-edge-chip.future { opacity: .09; }
 .plot-label-leader { fill: none; stroke: #a7aaa7; stroke-width: 1; stroke-dasharray: 2 3; pointer-events: none; }
 .plot-label-leader.future { opacity: .09; }

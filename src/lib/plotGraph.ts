@@ -61,7 +61,7 @@ export function computePropertyArcs(data?: LegalGraph): PropertyArc[] {
   for (const object of data.objects) {
     if (/영장/.test(object.name)) continue;
     const relations = data.relations
-      .filter(relation => relation.objectId === object.id && relation.from !== relation.to)
+      .filter(relation => relation.objectId === object.id && (relation.from !== relation.to || ['own', 'lien', 'poss', 'seize'].includes(relation.effect || '')))
       .slice();
     if (!relations.length) continue;
     const usesSequence = relations.some(relation => Boolean(relation.sequence));

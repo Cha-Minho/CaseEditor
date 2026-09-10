@@ -6,7 +6,7 @@ import '@xyflow/react/dist/style.css';
 import type { CaseNotes } from '../types';
 import type { LegalGraph } from '../types';
 import { generateLegalGraph } from '../lib/legalGraphApi';
-import { computePropertyArcs, dateKey, declutterEdgeLabels, legalGraphToDiagram } from '../lib/plotGraph';
+import { computePropertyArcs, dateKey, declutterEdgeLabels, legalGraphToDiagram, propertyArcIsActive } from '../lib/plotGraph';
 
 type Graph = NonNullable<CaseNotes['diagram']>;
 type Props = { title: string; sourceHtml: string; value: CaseNotes['diagram']; onChange: (graph: Graph) => void; onClose: () => void };
@@ -26,12 +26,34 @@ function proceduralRoleKind(label: unknown, role: unknown): ProceduralRoleKind |
   return null;
 }
 
+function concisePartyLabel(label: unknown, role: unknown) {
+  const fullLabel = String(label || '').trim();
+  const anonymous = fullLabel.match(/공소외\s*\d+/);
+  if (anonymous) return anonymous[0].replace(/공소외\s*/, '공소외 ');
+  const roleKind = proceduralRoleKind(fullLabel, role);
+  if (roleKind === 'police' && fullLabel.length > 8) {
+    const station = fullLabel.match(/([^\s]{1,8}파출소)/)?.[1];
+    if (station) return `${station} 경찰관`;
+    if (/형사과/.test(fullLabel)) return '형사과 경찰관';
+    return '경찰관';
+  }
+  if (roleKind === 'prosecutor' && fullLabel.length > 8) return '검사';
+  if (roleKind === 'court' && fullLabel.length > 8) {
+    if (/관련사건/.test(fullLabel)) return '관련사건 법원';
+    if (/이 사건/.test(fullLabel)) return '이 사건 법원';
+    return '법원';
+  }
+  return fullLabel;
+}
+
 function PlotPartyNode({ data, selected }: NodeProps) {
   const roleKind = proceduralRoleKind(data.label, data.role);
   const roleLabel = roleKind ? proceduralRoleLabels[roleKind] : String(data.role || '');
-  return <div className={`plot-party-node${roleKind ? ` role-${roleKind}` : ''}${selected ? ' selected' : ''}${data.future ? ' future' : ''}`} data-procedural-role={roleKind || undefined} title={roleLabel}>
+  const fullLabel = String(data.label || '');
+  const tooltip = [fullLabel, String(data.role || '')].filter((part, index, parts) => part && parts.indexOf(part) === index).join(' · ');
+  return <div className={`plot-party-node${roleKind ? ` role-${roleKind}` : ''}${selected ? ' selected' : ''}${data.future ? ' future' : ''}`} data-procedural-role={roleKind || undefined} title={tooltip || roleLabel}>
     <Handle type="target" position={Position.Top} style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }} />
-    <span>{String(data.label || '')}</span>
+    <span>{concisePartyLabel(data.label, data.role)}</span>
     <Handle type="source" position={Position.Bottom} style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }} />
   </div>;
 }
@@ -186,7 +208,13 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     });
   };
   const propertyArcs = useMemo(() => computePropertyArcs(graph.legalGraph), [graph.legalGraph]);
-  const visiblePropertyArcs = propertyArcs;
+  const activeTimelineEvent = timeline[timelineIndex];
+  const propertyCutoffSequence = activeTimelineEvent?.sequence || timelineIndex + 1;
+  const propertyCutoffDate = dateKey(activeTimelineEvent?.date);
+  const visiblePropertyArcs = useMemo(() => timeline.length
+    ? propertyArcs.filter(arc => propertyArcIsActive(arc, propertyCutoffSequence, propertyCutoffDate, timelineIndex === timeline.length - 1))
+    : propertyArcs,
+  [propertyArcs, propertyCutoffSequence, propertyCutoffDate, timelineIndex, timeline.length]);
   const showTimelineIndex = (index: number) => {
     const next = Math.max(0, Math.min(timeline.length - 1, index));
     setTimelineIndex(next);

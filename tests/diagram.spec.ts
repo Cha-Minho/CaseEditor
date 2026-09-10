@@ -53,7 +53,7 @@ test('review and apply an AI relationship draft', async ({ page }) => {
     status: 200,
     contentType: 'application/json',
     body: JSON.stringify({
-      parties: [{ id: 'p1', name: '갑', role: '원고' }, { id: 'p2', name: '을', role: '피고' }, { id: 'p3', name: '공소외 1', role: '경찰관' }],
+      parties: [{ id: 'p1', name: '갑', role: '원고' }, { id: 'p2', name: '을', role: '피고' }, { id: 'p3', name: '공소외 1(대전중부경찰서 형사과 소속 경찰관)', role: '경찰관' }],
       objects: [{ id: 'o1', name: 'X 토지' }],
       relations: [
         { id: 'r1', from: 'p1', to: 'p2', label: '2013 촬영', kind: 'other', sequence: 1, date: '2013.12', evidence: '갑은 2013. 12. 을을 촬영하였다', status: 'recognized', confidence: 0.94 },
@@ -80,6 +80,7 @@ test('review and apply an AI relationship draft', async ({ page }) => {
   await page.getByText('관계도에 적용').click();
   await expect(page.locator('.react-flow__node')).toHaveCount(4);
   await expect(page.locator('.react-flow__node[data-id="p3"] .plot-party-node')).toHaveAttribute('data-procedural-role', 'police');
+  await expect(page.locator('.react-flow__node[data-id="p3"] .plot-party-node')).toHaveText('공소외 1');
   await expect(page.getByLabel('당사자 신분 범례')).toContainText('경찰·수사기관');
   await expect(page.getByLabel('당사자 신분 범례')).not.toContainText('검사·검찰');
   const relationEdges = page.locator('.diagram-edge:not(.property-arc)');

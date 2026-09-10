@@ -96,6 +96,12 @@ test('review and apply an AI relationship draft', async ({ page }) => {
   const canvasBox = await page.locator('.diagram-canvas').boundingBox();
   expect(timelineBox!.x).toBeLessThan(canvasBox!.x);
   expect(await page.locator('.diagram-event-list span').first().evaluate(element => getComputedStyle(element).whiteSpace)).toBe('normal');
+  const timelineButtonBottomGaps = await page.locator('.diagram-event-list button').evaluateAll(buttons => buttons.map(button => {
+    const buttonBox = button.getBoundingClientRect();
+    const contentBottom = Math.max(...Array.from(button.children, child => child.getBoundingClientRect().bottom));
+    return buttonBox.bottom - contentBottom;
+  }));
+  expect(Math.min(...timelineButtonBottomGaps)).toBeGreaterThanOrEqual(8);
   const labelBoxes = await page.locator('.plot-edge-chip').evaluateAll(elements => elements.map(element => element.getBoundingClientRect()).filter(rect => rect.width > 0 && rect.height > 0).map(rect => ({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom })));
   for (let left = 0; left < labelBoxes.length; left += 1) for (let right = left + 1; right < labelBoxes.length; right += 1) {
     const a = labelBoxes[left];

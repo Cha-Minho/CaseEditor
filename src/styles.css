@@ -1004,10 +1004,10 @@ select:focus {
 .diagram-draft-review p { flex: 1; min-width: 260px; margin: 0; color: #5d6762; }
 .diagram-draft-events { flex: 0 0 100%; }
 .diagram-draft-events summary { width: max-content; color: #4c5d56; cursor: pointer; font-weight: 650; }
-.diagram-draft-events ol { display: flex; gap: 6px; margin: 7px 0 0; padding: 0; list-style: none; overflow-x: auto; }
-.diagram-draft-events li { display: flex; gap: 6px; flex: 0 0 auto; max-width: 300px; padding: 5px 8px; border: 1px solid #dce2df; border-radius: 6px; background: #fff; }
+.diagram-draft-events ol { display: flex; flex-direction: column; gap: 6px; max-height: min(280px, 34dvh); margin: 7px 0 0; padding: 0 4px 0 0; list-style: none; overflow-y: auto; }
+.diagram-draft-events li { display: grid; grid-template-columns: minmax(72px, auto) minmax(0, 1fr); align-items: start; gap: 8px; width: 100%; padding: 7px 9px; border: 1px solid #dce2df; border-radius: 6px; background: #fff; }
 .diagram-draft-events li b { color: #6e79a3; white-space: nowrap; }
-.diagram-draft-events li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.diagram-draft-events li span { white-space: normal; overflow-wrap: anywhere; }
 .diagram-review-actions { display: flex; gap: 6px; margin-left: auto; }
 .diagram-review-actions .primary { color: #fff; border-color: #246b59; background: #246b59; }
 .diagram-evidence { background: #fffdf7; color: #454b48; }
@@ -1031,13 +1031,14 @@ select:focus {
 .plot-party-node > span, .plot-object-node > span { display: block; transform: scale(var(--diagram-inverse-zoom, 1)); transform-origin: center; }
 .plot-object-node.selected { outline: 3px solid #d3d8ea; outline-offset: 3px; }
 .diagram-canvas .react-flow__handle { width: 7px; height: 7px; border: 1px solid #fff; background: #6e79a3; opacity: 0; transition: opacity .15s; }
-.diagram-canvas .react-flow__node:hover .react-flow__handle, .diagram-canvas .react-flow__node.selected .react-flow__handle { opacity: 1; }
+.diagram-canvas .react-flow__handle { pointer-events: none; }
 .diagram-canvas .react-flow__edge-path { stroke: #6e79a3; stroke-width: 1.8; }
 .diagram-canvas .diagram-edge.status-alleged .react-flow__edge-path, .diagram-canvas .diagram-edge.status-procedural .react-flow__edge-path { stroke-dasharray: 5 4; }
 .diagram-canvas .diagram-edge.status-disputed .react-flow__edge-path { stroke: #bc6169; stroke-width: 2; stroke-dasharray: 4 4; }
 .diagram-canvas .diagram-edge.kind-money .react-flow__edge-path { stroke: #5e9071; }
 .diagram-canvas .diagram-edge.kind-security .react-flow__edge-path { stroke-dasharray: 6 5; }
 .diagram-canvas .diagram-edge.kind-notice .react-flow__edge-path { stroke: #777b78; stroke-dasharray: 5 4; }
+.diagram-canvas .diagram-edge.kind-statement .react-flow__edge-path { stroke: #526b9b; stroke-width: 2; }
 .diagram-canvas .diagram-edge.kind-status .react-flow__edge-path { stroke: #777b78; stroke-dasharray: 2 5; }
 .diagram-canvas .diagram-edge.kind-dispute .react-flow__edge-path { stroke: #bc6169; stroke-width: 2; }
 .diagram-canvas .property-arc .react-flow__edge-path { stroke: #6e79a3; stroke-width: 1.5; }
@@ -1059,7 +1060,9 @@ select:focus {
 .diagram-canvas .react-flow__controls-button { min-width: 26px; width: 26px; height: 26px; padding: 5px; border-radius: 0; }
 .diagram-timeline { display: flex; flex-direction: column; min-height: 0; padding: 12px 10px; border-right: 1px solid #dde3e0; background: #fafbfa; font-size: 12px; overflow: hidden; }
 .diagram-timeline-bar { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 0 0 10px; }
-.diagram-timeline-bar input { appearance: none; grid-column: 1 / -1; width: calc(100% + 14px); height: 16px; margin: 0 -7px; padding: 0; background: transparent; cursor: pointer; }
+.diagram-timeline-controls { grid-column: 1 / -1; display: grid; grid-template-columns: 28px minmax(0, 1fr) 28px; align-items: center; gap: 5px; }
+.diagram-timeline-controls button { display: grid; place-items: center; width: 28px; min-width: 28px; height: 28px; min-height: 28px; padding: 0; }
+.diagram-timeline-bar input { appearance: none; width: 100%; height: 16px; margin: 0; padding: 0; background: transparent; cursor: pointer; }
 .diagram-timeline-bar input::-webkit-slider-runnable-track { width: 100%; height: 4px; border-radius: 2px; background: #c9cedd; }
 .diagram-timeline-bar input::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; margin-top: -5px; border: 1px solid #66729e; border-radius: 50%; background: #6e79a3; }
 .diagram-timeline-bar input::-moz-range-track { width: 100%; height: 4px; border: 0; border-radius: 2px; background: #c9cedd; }

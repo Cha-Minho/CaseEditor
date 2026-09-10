@@ -9,6 +9,7 @@ test('create, connect, undo deletion and reopen case diagram', async ({ page }) 
   await page.getByTitle('당사자 추가').click();
   await page.getByRole('textbox').fill('갑');
   await page.getByRole('textbox').press('Enter');
+  await expect(page.locator('.react-flow__handle').first()).toHaveCSS('opacity', '0');
   await page.getByTitle('목적물 추가').click();
   await page.getByRole('textbox').fill('X 토지');
   await page.getByRole('textbox').press('Enter');
@@ -61,7 +62,8 @@ test('review and apply an AI relationship draft', async ({ page }) => {
       events: [
         { id: 'ev3', sequence: 3, date: '2014.12.11', text: '휴대전화 임의제출', evidence: '피해 사실을 신고하면서 즉시 제출하였다' },
         { id: 'ev1', sequence: 1, date: '2013.12', text: '2013 동영상 촬영', evidence: '2013. 12.경 촬영하였다' },
-        { id: 'ev2', sequence: 2, date: '2014.12.11', text: '2014 동영상 촬영', evidence: '2014. 12. 11. 촬영하였다' }
+        { id: 'ev2', sequence: 2, date: '2014.12.11', text: '2014 동영상 촬영', evidence: '2014. 12. 11. 촬영하였다' },
+        ...Array.from({ length: 6 }, (_, index) => ({ id: `ev${index + 4}`, sequence: index + 4, text: `${index + 4}단계 후속 조사와 진술 내용을 빠짐없이 확인하는 긴 사건 설명`, evidence: '후속 절차가 진행되었다' }))
       ]
     })
   }));
@@ -69,7 +71,12 @@ test('review and apply an AI relationship draft', async ({ page }) => {
   await page.getByText('관계도 열기').click();
   await page.getByTitle('판례 원문에서 AI 관계도 초안 만들기').click();
   await expect(page.locator('.diagram-draft-review strong', { hasText: 'AI 초안' })).toBeVisible();
-  await expect(page.getByText('당사자 3 · 목적물 1 · 관계 2 · 사건 3')).toBeVisible();
+  await expect(page.getByText('당사자 3 · 목적물 1 · 관계 2 · 사건 9')).toBeVisible();
+  await expect(page.locator('.diagram-draft-events li')).toHaveCount(9);
+  await expect(page.locator('.diagram-draft-events ol')).toHaveCSS('flex-direction', 'column');
+  await expect(page.locator('.diagram-draft-events ol')).toHaveCSS('overflow-y', 'auto');
+  await expect(page.locator('.diagram-draft-events li').first().locator('span')).toHaveCSS('white-space', 'normal');
+  await page.screenshot({ path: 'test-results/diagram-draft-events.png' });
   await page.getByText('관계도에 적용').click();
   await expect(page.locator('.react-flow__node')).toHaveCount(4);
   const relationEdges = page.locator('.diagram-edge:not(.property-arc)');
@@ -77,8 +84,14 @@ test('review and apply an AI relationship draft', async ({ page }) => {
   await expect(relationEdges).toHaveCount(2);
   await expect(propertyEdges).toHaveCount(1);
   await expect(page.locator('.plot-edge-chip.future:not(.property-arc)')).toHaveCount(2);
-  await expect(page.locator('.diagram-event-list button')).toHaveText([/2013 동영상 촬영/, /2014 동영상 촬영/, /휴대전화 임의제출/]);
-  await expect.poll(() => page.locator('.diagram-event-list button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-pressed')))).toEqual(['false', 'false', 'true']);
+  await expect(page.locator('.diagram-event-list button')).toHaveCount(9);
+  await expect(page.locator('.diagram-event-list button').first()).toContainText('2013 동영상 촬영');
+  await expect(page.locator('.diagram-event-list button').last()).toContainText('9단계 후속 조사');
+  await expect.poll(() => page.locator('.diagram-event-list button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-pressed')))).toEqual([...Array(8).fill('false'), 'true']);
+  await page.getByRole('button', { name: '이전 사건' }).click();
+  await expect(page.getByLabel('사건 흐름 시점')).toHaveValue('7');
+  await page.getByRole('button', { name: '다음 사건' }).click();
+  await expect(page.getByLabel('사건 흐름 시점')).toHaveValue('8');
   const timelineBox = await page.locator('.diagram-timeline').boundingBox();
   const canvasBox = await page.locator('.diagram-canvas').boundingBox();
   expect(timelineBox!.x).toBeLessThan(canvasBox!.x);
@@ -100,12 +113,12 @@ test('review and apply an AI relationship draft', async ({ page }) => {
   await expect(relationEdges).toHaveCount(2);
   await expect(propertyEdges).toHaveCount(1);
   await expect(page.locator('.plot-edge-chip.future')).toHaveCount(1);
-  await expect.poll(() => page.locator('.diagram-event-list button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-pressed')))).toEqual(['true', 'false', 'false']);
+  await expect.poll(() => page.locator('.diagram-event-list button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-pressed')))).toEqual(['true', ...Array(8).fill('false')]);
   await page.locator('.diagram-event-list button').nth(1).click();
   await expect(relationEdges).toHaveCount(2);
   await expect(propertyEdges).toHaveCount(1);
   await expect(page.locator('.plot-edge-chip.future')).toHaveCount(0);
-  await expect.poll(() => page.locator('.diagram-event-list button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-pressed')))).toEqual(['true', 'true', 'false']);
+  await expect.poll(() => page.locator('.diagram-event-list button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-pressed')))).toEqual(['true', 'true', ...Array(7).fill('false')]);
   await page.locator('.diagram-event-list button').nth(1).click();
   await expect(relationEdges).toHaveCount(2);
   await expect(page.locator('.plot-edge-chip.future')).toHaveCount(1);

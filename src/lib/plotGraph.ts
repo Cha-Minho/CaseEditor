@@ -39,10 +39,19 @@ export function propertyArcIsActive(arc: PropertyArc, cutoffSequence: number, cu
 function possessionRecipient(relation: LegalGraph['relations'][number], parties: Map<string, LegalGraph['parties'][number]>) {
   if (relation.effect !== 'seize' && !/압수/.test(relation.label)) return relation.to;
   const authorityPattern = /경찰|검사|검찰|수사기관|수사관/;
-  return [relation.from, relation.to].find(id => {
+  const authority = [relation.from, relation.to].find(id => {
     const party = parties.get(id);
     return party && authorityPattern.test(`${party.name} ${party.role || ''}`);
-  }) || relation.from;
+  });
+  if (authority) return authority;
+  const text = `${relation.label} ${relation.evidence}`;
+  const actor = [relation.from, relation.to].find(id => {
+    const name = parties.get(id)?.name;
+    if (!name) return false;
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`${escaped}\\s*(?:이|가|은|는)[^.!?\\n]{0,100}압수(?:하|했|하여|한|함|받)`).test(text);
+  });
+  return actor || relation.to;
 }
 
 export function computePropertyArcs(data?: LegalGraph): PropertyArc[] {

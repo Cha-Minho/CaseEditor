@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { ReactFlow, Controls, BaseEdge, EdgeLabelRenderer, Handle, Position, applyNodeChanges, applyEdgeChanges, addEdge, MarkerType, type Node, type Edge, type EdgeProps, type NodeProps, type ReactFlowInstance } from '@xyflow/react';
-import { GitBranchPlus, UserPlus, SquarePlus, Undo2, Redo2, Trash2, WandSparkles, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GitBranchPlus, UserPlus, SquarePlus, Undo2, Redo2, Trash2, WandSparkles, X } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 import type { CaseNotes } from '../types';
 import type { LegalGraph } from '../types';
@@ -170,6 +170,11 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
   };
   const propertyArcs = useMemo(() => computePropertyArcs(graph.legalGraph), [graph.legalGraph]);
   const visiblePropertyArcs = propertyArcs;
+  const showTimelineIndex = (index: number) => {
+    const next = Math.max(0, Math.min(timeline.length - 1, index));
+    setTimelineIndex(next);
+    setVisibleTimelineIndexes([next]);
+  };
   const renderNodes = useMemo<Node[]>(() => {
     const activeIds = new Set<string>();
     graph.edges.forEach(edge => {
@@ -341,14 +346,18 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     {draft && <div className="diagram-draft-review">
       <div><strong>AI 초안</strong><span>당사자 {draft.parties.length} · 목적물 {draft.objects.length} · 관계 {draft.relations.length} · 사건 {draft.events.length}</span>{reviewCount > 0 && <span>주장·분쟁·절차 {reviewCount}개 포함</span>}</div>
       <p>AI가 추출한 초안입니다. 적용한 뒤 각 관계의 근거와 인정 여부를 확인하세요.{graph.nodes.length ? ' 적용하면 현재 관계도를 교체합니다.' : ''}</p>
-      {draft.events.length > 0 && <details className="diagram-draft-events"><summary>사건 순서 확인</summary><ol>{draft.events.slice().sort((a, b) => (a.sequence || 0) - (b.sequence || 0)).slice(0, 8).map(event => <li key={event.id}><b>{event.date || '날짜 미상'}</b><span>{event.text}</span></li>)}</ol></details>}
+      {draft.events.length > 0 && <details className="diagram-draft-events" open><summary>사건 순서 확인</summary><ol>{draft.events.slice().sort((a, b) => (a.sequence || 0) - (b.sequence || 0)).map(event => <li key={event.id}><b>{event.date || `${event.sequence || '?'}단계`}</b><span>{event.text}</span></li>)}</ol></details>}
       <span className="diagram-review-actions"><button onClick={() => setDraft(null)}>취소</button><button className="primary" onClick={applyAiDraft}>관계도에 적용</button></span>
     </div>}
     <div className={`diagram-workspace${timeline.length ? ' has-timeline' : ''}`}>
     {timeline.length > 0 && <aside className="diagram-timeline">
       <div className="diagram-timeline-bar"><strong>사건 흐름</strong>
         <span>{timeline[timelineIndex]?.date || `${timeline[timelineIndex]?.sequence || timelineIndex + 1}단계`}</span>
-        {timeline.length > 1 && <input aria-label="사건 흐름 시점" type="range" min="0" max={timeline.length - 1} value={timelineIndex} onChange={event => { const index = Number(event.target.value); setTimelineIndex(index); setVisibleTimelineIndexes([index]); }} />}
+        {timeline.length > 1 && <div className="diagram-timeline-controls">
+          <button type="button" aria-label="이전 사건" title="이전 사건" disabled={timelineIndex === 0} onClick={() => showTimelineIndex(timelineIndex - 1)}><ChevronLeft size={16} /></button>
+          <input aria-label="사건 흐름 시점" type="range" min="0" max={timeline.length - 1} value={timelineIndex} onChange={event => showTimelineIndex(Number(event.target.value))} />
+          <button type="button" aria-label="다음 사건" title="다음 사건" disabled={timelineIndex === timeline.length - 1} onClick={() => showTimelineIndex(timelineIndex + 1)}><ChevronRight size={16} /></button>
+        </div>}
       </div>
       <div className="diagram-event-list">{timeline.map((event, index) => {
         const visible = visibleTimelineIndexes.includes(index);

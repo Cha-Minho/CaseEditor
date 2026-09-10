@@ -26,7 +26,7 @@ export type CaseItem = {
 };
 
 export type LegalGraphStatus = "recognized" | "alleged" | "disputed" | "procedural";
-export type LegalGraphKind = "contract" | "money" | "security" | "dispute" | "status" | "notice" | "other";
+export type LegalGraphKind = "contract" | "money" | "security" | "dispute" | "status" | "notice" | "statement" | "other";
 
 export type LegalGraph = {
   parties: { id: string; name: string; role?: string }[];

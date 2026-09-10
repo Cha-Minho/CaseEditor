@@ -5,6 +5,39 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
 };
 
+const retryableStatuses = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+function wait(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function fetchJsonWithRetry(url: URL, label: string, attempts = 3) {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        const error = new Error(`${label} API 오류: ${response.status}`);
+        if (!retryableStatuses.has(response.status)) throw error;
+        lastError = error;
+      } else {
+        try {
+          return await response.json();
+        } catch {
+          lastError = new Error(`${label} API 응답을 해석하지 못했습니다.`);
+        }
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(`${label} API 호출 실패`);
+    }
+
+    if (attempt < attempts - 1) await wait(350 * (2 ** attempt));
+  }
+
+  throw lastError || new Error(`${label} API 호출 실패`);
+}
+
 function text(value: unknown) {
   return typeof value === "string" ? value : "";
 }
@@ -19,6 +52,25 @@ function detailText(detail: Record<string, unknown>, ...keys: string[]) {
     if (value) return value;
   }
   return "";
+}
+
+async function fetchDetailWithRetry(url: URL, attempts = 3) {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const data = await fetchJsonWithRetry(url, "국가법령정보 상세", 1);
+      const detail = data?.PrecService || data?.precService;
+      if (detail && detailText(detail, "판례내용", "판결문", "본문")) return detail;
+      lastError = new Error("국가법령정보 상세 응답에 판결문이 없습니다.");
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("국가법령정보 상세조회 실패");
+    }
+
+    if (attempt < attempts - 1) await wait(350 * (2 ** attempt));
+  }
+
+  throw lastError || new Error("국가법령정보 상세조회 실패");
 }
 
 function parseCaseInput(value: string) {
@@ -53,9 +105,7 @@ serve(async (request) => {
       if (courtName !== "대법원") searchUrl.searchParams.set("org", "400202");
     }
 
-    const searchResponse = await fetch(searchUrl);
-    if (!searchResponse.ok) throw new Error(`국가법령정보 검색 API 오류: ${searchResponse.status}`);
-    const searchData = await searchResponse.json();
+    const searchData = await fetchJsonWithRetry(searchUrl, "국가법령정보 검색");
     let candidates = Array.isArray(searchData?.PrecSearch?.prec)
       ? searchData.PrecSearch.prec
       : searchData?.PrecSearch?.prec ? [searchData.PrecSearch.prec] : [];
@@ -70,16 +120,13 @@ serve(async (request) => {
       const fallbackUrl = new URL(searchUrl);
       fallbackUrl.searchParams.delete("curt");
       fallbackUrl.searchParams.delete("org");
-      const fallbackResponse = await fetch(fallbackUrl);
-      if (fallbackResponse.ok) {
-        const fallbackData = await fallbackResponse.json();
-        candidates = Array.isArray(fallbackData?.PrecSearch?.prec)
-          ? fallbackData.PrecSearch.prec
-          : fallbackData?.PrecSearch?.prec ? [fallbackData.PrecSearch.prec] : [];
-        first = candidates.find((item: Record<string, unknown>) =>
-          normalizedCaseNo(text(item.사건번호)) === normalizedCaseNo(searchableCaseNo)
-        );
-      }
+      const fallbackData = await fetchJsonWithRetry(fallbackUrl, "국가법령정보 검색");
+      candidates = Array.isArray(fallbackData?.PrecSearch?.prec)
+        ? fallbackData.PrecSearch.prec
+        : fallbackData?.PrecSearch?.prec ? [fallbackData.PrecSearch.prec] : [];
+      first = candidates.find((item: Record<string, unknown>) =>
+        normalizedCaseNo(text(item.사건번호)) === normalizedCaseNo(searchableCaseNo)
+      );
     }
 
     if (!first) {
@@ -109,6 +156,7 @@ serve(async (request) => {
 
     // 2단계: 판례일련번호로 상세조회해서 판시사항/판결요지/판례내용을 채운다
     const serial = text(first.판례일련번호);
+    const detailErrors: string[] = [];
     if (serial) {
       const detailUrl = new URL("https://www.law.go.kr/DRF/lawService.do");
       detailUrl.searchParams.set("OC", oc);
@@ -117,35 +165,45 @@ serve(async (request) => {
       // 검색 응답의 판례상세링크도 ID를 쓰는 것처럼, 판례일련번호는 ID로 조회한다.
       detailUrl.searchParams.set("ID", serial);
 
-      const detailResponse = await fetch(detailUrl);
-      if (detailResponse.ok) {
-        const detailData = await detailResponse.json();
-        const detail = detailData?.PrecService || detailData?.precService;
-        if (detail) {
-          result.title = detailText(detail, "사건명") || result.title;
-          result.case_no = detailText(detail, "사건번호") || result.case_no;
-          result.holding_html = detailText(detail, "판시사항", "판시요지");
-          result.judgment_summary_html = detailText(detail, "판결요지", "판결요약");
-          result.source_html = detailText(detail, "판례내용", "판결문", "본문");
-        }
+      try {
+        const detail = await fetchDetailWithRetry(detailUrl);
+        result.title = detailText(detail, "사건명") || result.title;
+        result.case_no = detailText(detail, "사건번호") || result.case_no;
+        result.holding_html = detailText(detail, "판시사항", "판시요지");
+        result.judgment_summary_html = detailText(detail, "판결요지", "판결요약");
+        result.source_html = detailText(detail, "판례내용", "판결문", "본문");
+      } catch (error) {
+        detailErrors.push(error instanceof Error ? error.message : "ID 상세조회 실패");
       }
 
       if (!result.source_html) {
         detailUrl.searchParams.delete("ID");
         detailUrl.searchParams.set("MST", serial);
-        const fallbackResponse = await fetch(detailUrl);
-        if (fallbackResponse.ok) {
-          const fallbackData = await fallbackResponse.json();
-          const detail = fallbackData?.PrecService || fallbackData?.precService;
-          if (detail) {
-            result.title = detailText(detail, "사건명") || result.title;
-            result.case_no = detailText(detail, "사건번호") || result.case_no;
-            result.holding_html = detailText(detail, "판시사항", "판시요지") || result.holding_html;
-            result.judgment_summary_html = detailText(detail, "판결요지", "판결요약") || result.judgment_summary_html;
-            result.source_html = detailText(detail, "판례내용", "판결문", "본문") || result.source_html;
-          }
+        try {
+          const detail = await fetchDetailWithRetry(detailUrl);
+          result.title = detailText(detail, "사건명") || result.title;
+          result.case_no = detailText(detail, "사건번호") || result.case_no;
+          result.holding_html = detailText(detail, "판시사항", "판시요지") || result.holding_html;
+          result.judgment_summary_html = detailText(detail, "판결요지", "판결요약") || result.judgment_summary_html;
+          result.source_html = detailText(detail, "판례내용", "판결문", "본문") || result.source_html;
+        } catch (error) {
+          detailErrors.push(error instanceof Error ? error.message : "MST 상세조회 실패");
         }
       }
+    } else {
+      detailErrors.push("검색 결과에 판례일련번호가 없습니다.");
+    }
+
+    // 검색 결과의 제목만 저장되고 참고자료가 비는 상태를 성공으로 확정하지 않는다.
+    if (!result.source_html) {
+      return Response.json(
+        {
+          ...result,
+          found: false,
+          api_error: `판례 제목은 찾았지만 원문을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.${detailErrors.length ? ` (${detailErrors.join(" ")})` : ""}`
+        },
+        { headers: corsHeaders }
+      );
     }
 
     return Response.json(result, { headers: corsHeaders });

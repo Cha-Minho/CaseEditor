@@ -104,7 +104,10 @@ export function Sidebar(props: Props) {
     if (!values.length || addingCaseNos) return;
     setAddingCaseNos(true);
     try {
-      for (const value of values) await props.onAddApiCase(value);
+      for (const [index, value] of values.entries()) {
+        if (index > 0) await new Promise((resolve) => window.setTimeout(resolve, 300));
+        await props.onAddApiCase(value);
+      }
       setCaseNo("");
       setAddMenuOpen(false);
     } finally {

@@ -17,6 +17,51 @@ export function dateLabel(key: number) {
   return [year, month || null, day || null].filter(value => value !== null).join('.');
 }
 
+export function alignLegalGraphTimeline(data?: LegalGraph) {
+  if (!data?.events.length || !data.relations.length) return data;
+  const eventSlots = data.events.map((event, index) => ({
+    sequence: event.sequence || index + 1,
+    date: dateKey(event.date)
+  }));
+  const eventSequences = [...new Set(eventSlots.map(event => event.sequence))].sort((a, b) => a - b);
+  const anchors = data.relations.flatMap((relation, index) => {
+    const relationDate = dateKey(relation.date);
+    if (!relationDate) return [];
+    const matches = eventSlots.filter(event => event.date === relationDate);
+    if (!matches.length) return [];
+    const rawSequence = relation.sequence || index + 1;
+    const target = matches.reduce((closest, candidate) =>
+      Math.abs(candidate.sequence - rawSequence) < Math.abs(closest.sequence - rawSequence) ? candidate : closest
+    );
+    return [{ rawSequence, targetSequence: target.sequence }];
+  }).sort((left, right) => left.rawSequence - right.rawSequence);
+  const nearestEventSequence = (value: number) => eventSequences.reduce((closest, candidate) =>
+    Math.abs(candidate - value) < Math.abs(closest - value) ? candidate : closest
+  );
+
+  const relations = data.relations.map((relation, index) => {
+    const rawSequence = relation.sequence || index + 1;
+    const relationDate = dateKey(relation.date);
+    const sameDateEvents = relationDate ? eventSlots.filter(event => event.date === relationDate) : [];
+    if (sameDateEvents.length) {
+      const target = sameDateEvents.reduce((closest, candidate) =>
+        Math.abs(candidate.sequence - rawSequence) < Math.abs(closest.sequence - rawSequence) ? candidate : closest
+      );
+      return { ...relation, sequence: target.sequence };
+    }
+    if (!anchors.length) return relation;
+    const precedingAnchors = anchors.filter(anchor => anchor.rawSequence <= rawSequence);
+    const preceding = precedingAnchors[precedingAnchors.length - 1];
+    const anchor = preceding || anchors.reduce((closest, candidate) =>
+      Math.abs(candidate.rawSequence - rawSequence) < Math.abs(closest.rawSequence - rawSequence) ? candidate : closest
+    );
+    const shifted = rawSequence + anchor.targetSequence - anchor.rawSequence;
+    return { ...relation, sequence: nearestEventSequence(shifted) };
+  });
+
+  return { ...data, relations };
+}
+
 export function computeGraphTimes(data?: LegalGraph) {
   if (!data) return [];
   return [...new Set([

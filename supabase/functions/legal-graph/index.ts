@@ -35,6 +35,55 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function dateKey(date?: string) {
+  if (!date) return 0;
+  const numbers = String(date).match(/\d+/g)?.map(Number) || [];
+  if (!numbers.length || numbers[0] < 1000) return 0;
+  return numbers[0] * 10000 + (numbers[1] || 0) * 100 + (numbers[2] || 0);
+}
+
+function alignRelationSequences(relations: Array<Record<string, unknown>>, events: Array<Record<string, unknown>>) {
+  if (!relations.length || !events.length) return relations;
+  const eventSlots = events.map((event, index) => ({
+    sequence: Math.max(1, Math.round(Number(event.sequence) || index + 1)),
+    date: dateKey(cleanString(event.date, 40))
+  }));
+  const eventSequences = [...new Set(eventSlots.map(event => event.sequence))].sort((a, b) => a - b);
+  const anchors = relations.flatMap((relation, index) => {
+    const relationDate = dateKey(cleanString(relation.date, 40));
+    if (!relationDate) return [];
+    const matches = eventSlots.filter(event => event.date === relationDate);
+    if (!matches.length) return [];
+    const rawSequence = Math.max(1, Math.round(Number(relation.sequence) || index + 1));
+    const target = matches.reduce((closest, candidate) =>
+      Math.abs(candidate.sequence - rawSequence) < Math.abs(closest.sequence - rawSequence) ? candidate : closest
+    );
+    return [{ rawSequence, targetSequence: target.sequence }];
+  }).sort((left, right) => left.rawSequence - right.rawSequence);
+  const nearestEventSequence = (value: number) => eventSequences.reduce((closest, candidate) =>
+    Math.abs(candidate - value) < Math.abs(closest - value) ? candidate : closest
+  );
+
+  return relations.map((relation, index) => {
+    const rawSequence = Math.max(1, Math.round(Number(relation.sequence) || index + 1));
+    const relationDate = dateKey(cleanString(relation.date, 40));
+    const sameDateEvents = relationDate ? eventSlots.filter(event => event.date === relationDate) : [];
+    if (sameDateEvents.length) {
+      const target = sameDateEvents.reduce((closest, candidate) =>
+        Math.abs(candidate.sequence - rawSequence) < Math.abs(closest.sequence - rawSequence) ? candidate : closest
+      );
+      return { ...relation, sequence: target.sequence };
+    }
+    if (!anchors.length) return relation;
+    const precedingAnchors = anchors.filter(anchor => anchor.rawSequence <= rawSequence);
+    const preceding = precedingAnchors[precedingAnchors.length - 1];
+    const anchor = preceding || anchors.reduce((closest, candidate) =>
+      Math.abs(candidate.rawSequence - rawSequence) < Math.abs(closest.rawSequence - rawSequence) ? candidate : closest
+    );
+    return { ...relation, sequence: nearestEventSequence(rawSequence + anchor.targetSequence - anchor.rawSequence) };
+  });
+}
+
 function isAuthority(party?: { name: string; role?: string }) {
   return Boolean(party && /경찰|검사|검찰|수사기관|수사관/.test(`${party.name} ${party.role || ""}`));
 }
@@ -107,9 +156,10 @@ function validateGraph(value: Record<string, unknown>) {
     ...(cleanString(item.date, 40) ? { date: cleanString(item.date, 40) } : {}),
     text: cleanString(item.text, 300), evidence: cleanString(item.evidence, 500)
   })).filter((item) => item.text && item.evidence).sort((a, b) => a.sequence - b.sequence);
-  const connectedParties = parties.filter((party) => relations.some((relation) => relation.from === party.id || relation.to === party.id));
-  const connectedObjects = objects.filter((object) => relations.some((relation) => relation.objectId === object.id));
-  return { parties: connectedParties.length ? connectedParties : parties, objects: connectedObjects, relations, events };
+  const alignedRelations = alignRelationSequences(relations, events);
+  const connectedParties = parties.filter((party) => alignedRelations.some((relation) => relation.from === party.id || relation.to === party.id));
+  const connectedObjects = objects.filter((object) => alignedRelations.some((relation) => relation.objectId === object.id));
+  return { parties: connectedParties.length ? connectedParties : parties, objects: connectedObjects, relations: alignedRelations, events };
 }
 
 serve(async (request) => {
@@ -130,6 +180,7 @@ serve(async (request) => {
 근거 없는 사실, 날짜, 관계를 추정하지 않는다. 동일 인물의 여러 호칭은 하나로 통합한다.
 일반 법리 설명이나 인용 판례의 사실관계는 현재 사건의 사실관계에 넣지 않는다.
 판결문에 써진 순서가 아니라 실제 발생 시간 순으로 events를 정렬하고 sequence를 1부터 부여한다. 각 relation에도 대응하는 사건 단계의 sequence를 반드시 넣는다.
+하나의 event에 여러 행위나 관계가 함께 포함되면 그 관계들은 모두 해당 event와 같은 sequence를 쓴다. relation의 개수에 맞춰 sequence를 별도로 증가시키지 않는다.
 두 명 이상의 당사자가 관련된 event는 반드시 같은 sequence의 relation으로도 만든다. 사건 목록에만 넣고 관계에서는 생략하지 않는다.
 화살표 방향은 관계의 의미에 맞게 통일한다. 범행은 행위자에서 피해자로, 체포·신문·고지는 수사기관에서 상대방으로, 물건의 소유·점유 이전은 이전 보유자에서 새 보유자로 향하게 한다.
 date는 해당 사실이 발생한 날짜다. 판결 선고일이나 인용 판례의 날짜를 사실 발생일로 사용하지 말고, 원문에 알 수 있는 날짜만 YYYY.MM.DD, YYYY.MM, YYYY 형식으로 넣는다.

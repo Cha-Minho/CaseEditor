@@ -2,12 +2,13 @@ import { expect, test } from '@playwright/test';
 
 test('submission and seizure keep ownership while distinguishing custody', async ({ page }) => {
   await page.goto('/tests/property-arcs.html');
-  const result = JSON.parse(await page.locator('#result').innerText()) as { arcs: { party: string; role: string }[]; before: { party: string; role: string }[]; step3: { party: string; role: string }[]; step4: { party: string; role: string }[]; cartridgeStep1: { party: string; role: string }[]; cartridgeStep2: { party: string; role: string }[]; final: { party: string; role: string }[] };
+  const result = JSON.parse(await page.locator('#result').innerText()) as { arcs: { party: string; role: string }[]; alignedSequences: number[]; before: { party: string; role: string }[]; step3: { party: string; role: string }[]; step4: { party: string; role: string }[]; cartridgeStep1: { party: string; role: string }[]; cartridgeStep2: { party: string; role: string }[]; final: { party: string; role: string }[] };
   const arcs = result.arcs;
   expect(arcs).toContainEqual(expect.objectContaining({ party: 'accused', role: '소유' }));
   expect(arcs).toContainEqual(expect.objectContaining({ party: 'police', role: '압수' }));
   expect(arcs).not.toContainEqual(expect.objectContaining({ party: 'victim', role: '소유' }));
   expect(arcs.some(arc => (arc as { thing?: string }).thing === 'warrant')).toBe(false);
+  expect(result.alignedSequences).toEqual([1, 2, 2, 3, 4]);
   expect(result.before).toHaveLength(0);
   expect(result.step3.filter(arc => (arc as { thing?: string }).thing === 'phone' && arc.role === '점유')).toEqual([expect.objectContaining({ party: 'police' })]);
   expect(result.step4.filter(arc => (arc as { thing?: string }).thing === 'phone' && arc.role === '압수')).toEqual([expect.objectContaining({ party: 'police' })]);

@@ -6,7 +6,7 @@ import '@xyflow/react/dist/style.css';
 import type { CaseNotes } from '../types';
 import type { LegalGraph } from '../types';
 import { generateLegalGraph } from '../lib/legalGraphApi';
-import { computePropertyArcs, dateKey, declutterEdgeLabels, legalGraphToDiagram, propertyArcIsActive } from '../lib/plotGraph';
+import { alignLegalGraphTimeline, computePropertyArcs, dateKey, declutterEdgeLabels, legalGraphToDiagram, propertyArcIsActive } from '../lib/plotGraph';
 
 type Graph = NonNullable<CaseNotes['diagram']>;
 type Props = { title: string; sourceHtml: string; value: CaseNotes['diagram']; onChange: (graph: Graph) => void; onClose: () => void };
@@ -189,25 +189,28 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     change({ ...current.current, edges: current.current.edges.map(edge => edge.id === id ? { ...edge, data: { ...edge.data, manualLabelX: x, manualLabelY: y } } : edge) });
   }, []);
 
-  const timeline = useMemo(() => (graph.legalGraph?.events || []).map((event, index) => ({ event, index })).sort((left, right) => {
+  const alignedLegalGraph = useMemo(() => alignLegalGraphTimeline(graph.legalGraph), [graph.legalGraph]);
+  const alignedRelationsById = useMemo(() => new Map((alignedLegalGraph?.relations || []).map(relation => [relation.id, relation])), [alignedLegalGraph]);
+  const timeline = useMemo(() => (alignedLegalGraph?.events || []).map((event, index) => ({ event, index })).sort((left, right) => {
     const leftSequence = left.event.sequence || left.index + 1;
     const rightSequence = right.event.sequence || right.index + 1;
     return leftSequence - rightSequence || dateKey(left.event.date) - dateKey(right.event.date);
-  }).map(item => item.event), [graph.legalGraph]);
+  }).map(item => item.event), [alignedLegalGraph]);
   const timelineKey = timeline.map(event => event.id).join('|');
   const selectedMoments = visibleTimelineIndexes.map(index => ({ index, event: timeline[index] })).filter(item => item.event);
   const relationIsVisible = (relation?: Partial<LegalGraph['relations'][number]>) => {
     if (!timeline.length) return true;
     if (!selectedMoments.length) return false;
+    const alignedRelation = relation?.id ? alignedRelationsById.get(relation.id) || relation : relation;
     return selectedMoments.some(({ index, event }) => {
       const sequence = event.sequence || index + 1;
-      if (relation?.sequence) return relation.sequence === sequence;
-      const relationDate = dateKey(relation?.date);
+      if (alignedRelation?.sequence) return alignedRelation.sequence === sequence;
+      const relationDate = dateKey(alignedRelation?.date);
       const eventDate = dateKey(event.date);
       return Boolean(relationDate && eventDate && relationDate === eventDate);
     });
   };
-  const propertyArcs = useMemo(() => computePropertyArcs(graph.legalGraph), [graph.legalGraph]);
+  const propertyArcs = useMemo(() => computePropertyArcs(alignedLegalGraph), [alignedLegalGraph]);
   const activeTimelineEvent = timeline[timelineIndex];
   const propertyCutoffSequence = activeTimelineEvent?.sequence || timelineIndex + 1;
   const propertyCutoffDate = dateKey(activeTimelineEvent?.date);

@@ -1025,9 +1025,10 @@ select:focus {
 .relation-status.status-procedural { color: #5b6268; border-color: #bcc2c6; background: #f3f4f5; }
 .diagram-workspace { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1; min-height: 280px; min-width: 0; }
 .diagram-workspace.has-timeline { grid-template-columns: clamp(220px, 23vw, 310px) minmax(0, 1fr); }
-.diagram-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.diagram-stage { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .diagram-canvas { position: relative; flex: 1; min-height: 280px; min-width: 0; width: 100%; background: #f7f7f5; }
-.diagram-stage .diagram-evidence { flex: none; border-top: 1px solid #dde3e0; border-bottom: 0; }
+.diagram-stage .diagram-edge-editor { position: absolute; top: 10px; right: 12px; left: 12px; z-index: 12; border: 1px solid #d8ddda; border-radius: 7px; background: #fffffff2; box-shadow: 0 4px 16px #252a2818; }
+.diagram-stage .diagram-evidence { position: absolute; right: 12px; bottom: 12px; left: 12px; z-index: 12; max-height: min(130px, 25%); overflow-y: auto; border: 1px solid #ded9c9; border-radius: 7px; background: #fffdf7f2; box-shadow: 0 4px 16px #252a2814; }
 .diagram-canvas .react-flow__node { width: auto; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .plot-party-node { display: grid; place-items: center; width: 68px; height: 68px; padding: 7px; border: 1.6px solid #292a28; border-radius: 50%; background: #fff; color: #242522; font-size: 13px; font-weight: 700; line-height: 1.2; text-align: center; overflow-wrap: anywhere; box-shadow: 0 4px 14px #252a2812; transition: opacity .18s; }
 .plot-party-node.role-police { border: 2.4px solid #3f75a2; box-shadow: 0 0 0 3px #e7f0f7, 0 4px 14px #252a2812; }

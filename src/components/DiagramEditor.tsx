@@ -68,6 +68,7 @@ function PlotObjectNode({ data, selected }: NodeProps) {
 
 function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, markerEnd, style, label, data, selected }: EdgeProps) {
   const relation = data as (Partial<LegalGraph['relations'][number]> & { derivedArc?: boolean; role?: string; future?: boolean; pairIndex?: number; pairTotal?: number; centerX?: number; centerY?: number; labelX?: number; labelY?: number; viewportZoom?: number; onSelectEdge?: (id: string) => void; onMoveLabel?: (id: string, x: number, y: number) => void }) | undefined;
+  const suppressClickAfterDrag = useRef(false);
   let path: string;
   let labelX: number;
   let labelY: number;
@@ -118,6 +119,7 @@ function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, mark
     if (relation?.derivedArc) return;
     event.preventDefault();
     event.stopPropagation();
+    suppressClickAfterDrag.current = false;
     const element = event.currentTarget;
     const startClientX = event.clientX;
     const startClientY = event.clientY;
@@ -129,6 +131,7 @@ function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, mark
       const dx = (pointer.clientX - startClientX) / zoom;
       const dy = (pointer.clientY - startClientY) / zoom;
       moved ||= Math.hypot(dx, dy) > 3;
+      if (moved) suppressClickAfterDrag.current = true;
       element.style.transform = `translate(-50%, -50%) translate(${startX + dx}px,${startY + dy}px) scale(var(--diagram-inverse-zoom, 1))`;
     };
     const onUp = (pointer: PointerEvent) => {
@@ -143,7 +146,15 @@ function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, mark
   return <>
     <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
     {hasLeader && <path className={`plot-label-leader${relation?.future ? ' future' : ''}`} d={`M ${anchorX} ${anchorY} L ${labelX} ${labelY}`} />}
-    <EdgeLabelRenderer><button type="button" disabled={relation?.derivedArc} className={`plot-edge-chip nodrag nopan kind-${relation?.kind || 'other'} status-${relation?.status || 'recognized'}${relation?.derivedArc ? ' property' : ''}${relation?.future ? ' future' : ''}${selected ? ' selected' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(var(--diagram-inverse-zoom, 1))` }} onPointerDown={startLabelDrag} onClick={event => { event.stopPropagation(); relation?.onSelectEdge?.(id); }}>
+    <EdgeLabelRenderer><button type="button" disabled={relation?.derivedArc} className={`plot-edge-chip nodrag nopan kind-${relation?.kind || 'other'} status-${relation?.status || 'recognized'}${relation?.derivedArc ? ' property' : ''}${relation?.future ? ' future' : ''}${selected ? ' selected' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) scale(var(--diagram-inverse-zoom, 1))` }} onPointerDown={startLabelDrag} onClick={event => {
+      event.stopPropagation();
+      if (suppressClickAfterDrag.current) {
+        suppressClickAfterDrag.current = false;
+        event.preventDefault();
+        return;
+      }
+      relation?.onSelectEdge?.(id);
+    }}>
       {relation?.date && <small>{relation.date}</small>}
       <span>{String(label || relation?.role || '')}</span>
     </button></EdgeLabelRenderer>
@@ -273,7 +284,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => window.requestAnimationFrame(() => flow.current?.fitView({ padding: 0.24, maxZoom: 1.7 })));
     return () => window.cancelAnimationFrame(frame);
-  }, [selected?.id, visibleTimelineIndexes.join('|')]);
+  }, [visibleTimelineIndexes.join('|')]);
 
   function add(kind: 'person' | 'object') {
     const node: Node = { id: crypto.randomUUID(), type: kind === 'person' ? 'plotParty' : 'plotObject', position: { x: 80 + (graph.nodes.length % 4) * 190, y: 80 + Math.floor(graph.nodes.length / 4) * 130 }, data: { label: kind === 'person' ? '당사자' : '목적물' }, className: kind === 'person' ? 'diagram-person' : 'diagram-object' };
@@ -385,14 +396,6 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       <button type="submit" className="primary">추가</button>
       <button type="button" onClick={() => setLinkFormOpen(false)}>취소</button>
     </form>}
-    {selected?.kind === 'edge' && <form className="diagram-link-form diagram-edge-editor" onSubmit={event => { event.preventDefault(); updateEdgeConnection(); }}>
-      <select aria-label="선택 관계 시작 노드" value={edgeSource} onChange={event => setEdgeSource(event.target.value)}>{graph.nodes.map(node => <option key={node.id} value={node.id}>{String(node.data.label || '')}</option>)}</select>
-      <span aria-hidden="true">→</span>
-      <select aria-label="선택 관계 도착 노드" value={edgeTarget} onChange={event => setEdgeTarget(event.target.value)}>{graph.nodes.map(node => <option key={node.id} value={node.id}>{String(node.data.label || '')}</option>)}</select>
-      <input aria-label="선택 관계 이름" value={label} onChange={event => setLabel(event.target.value)} />
-      <button type="submit" className="primary">연결 변경</button>
-      <button type="button" className="danger" onClick={remove}>연결 끊기</button>
-    </form>}
     {generationError && <div className="diagram-generation-error" role="alert">{generationError}<button onClick={() => setGenerationError('')}>닫기</button></div>}
     {draft && <div className="diagram-draft-review">
       <div><strong>AI 초안</strong><span>당사자 {draft.parties.length} · 목적물 {draft.objects.length} · 관계 {draft.relations.length} · 사건 {draft.events.length}</span>{reviewCount > 0 && <span>주장·분쟁·절차 {reviewCount}개 포함</span>}</div>
@@ -415,7 +418,16 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
         return <button key={event.id} className={visible ? 'on' : 'off'} aria-pressed={visible} onClick={() => { setTimelineIndex(index); setVisibleTimelineIndexes(current => current.includes(index) ? current.filter(item => item !== index) : [...current, index].sort((a, b) => a - b)); }}><b>{event.date || `${event.sequence || index + 1}단계`}</b><span>{event.text}</span></button>;
       })}</div>
     </aside>}
-    <div className="diagram-stage"><div className="diagram-canvas" style={{ '--diagram-inverse-zoom': 1 / viewportZoom } as CSSProperties}><ReactFlow nodes={renderNodes} edges={visibleEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onInit={instance => { flow.current = instance; requestAnimationFrame(() => instance.fitView({ padding: 0.18, maxZoom: 2 })); }}
+    <div className="diagram-stage">
+    {selected?.kind === 'edge' && <form className="diagram-link-form diagram-edge-editor" onSubmit={event => { event.preventDefault(); updateEdgeConnection(); }}>
+      <select aria-label="선택 관계 시작 노드" value={edgeSource} onChange={event => setEdgeSource(event.target.value)}>{graph.nodes.map(node => <option key={node.id} value={node.id}>{String(node.data.label || '')}</option>)}</select>
+      <span aria-hidden="true">→</span>
+      <select aria-label="선택 관계 도착 노드" value={edgeTarget} onChange={event => setEdgeTarget(event.target.value)}>{graph.nodes.map(node => <option key={node.id} value={node.id}>{String(node.data.label || '')}</option>)}</select>
+      <input aria-label="선택 관계 이름" value={label} onChange={event => setLabel(event.target.value)} />
+      <button type="submit" className="primary">연결 변경</button>
+      <button type="button" className="danger" onClick={remove}>연결 끊기</button>
+    </form>}
+    <div className="diagram-canvas" style={{ '--diagram-inverse-zoom': 1 / viewportZoom } as CSSProperties}><ReactFlow nodes={renderNodes} edges={visibleEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onInit={instance => { flow.current = instance; requestAnimationFrame(() => instance.fitView({ padding: 0.18, maxZoom: 2 })); }}
       onMove={(_, viewport) => setViewportZoom(currentZoom => Math.abs(currentZoom - viewport.zoom) < 0.001 ? currentZoom : viewport.zoom)}
       onNodesChange={changes => display({ ...current.current, nodes: applyNodeChanges(changes, current.current.nodes) })}
       onEdgesChange={changes => display({ ...current.current, edges: applyEdgeChanges(changes, current.current.edges) })}

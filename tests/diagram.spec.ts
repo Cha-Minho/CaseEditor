@@ -140,6 +140,7 @@ test('review and apply an AI relationship draft', async ({ page }) => {
   await expect(page.locator('.react-flow__node[data-id="p2"] .plot-party-node')).not.toHaveClass(/future/);
   const activePathBeforeDrag = await activeEdge.locator('.react-flow__edge-path').getAttribute('d');
   const activeLabel = page.locator('.plot-edge-chip', { hasText: '2013 촬영' });
+  const canvasBeforeDrag = await page.locator('.diagram-canvas').boundingBox();
   const labelBeforeDrag = await activeLabel.boundingBox();
   await page.mouse.move(labelBeforeDrag!.x + labelBeforeDrag!.width / 2, labelBeforeDrag!.y + labelBeforeDrag!.height / 2);
   await page.mouse.down();
@@ -147,13 +148,19 @@ test('review and apply an AI relationship draft', async ({ page }) => {
   await page.mouse.up();
   await expect.poll(async () => (await activeLabel.boundingBox())!.x).toBeGreaterThan(labelBeforeDrag!.x + 50);
   expect(await activeEdge.locator('.react-flow__edge-path').getAttribute('d')).toBe(activePathBeforeDrag);
+  await expect(page.getByLabel('선택 관계 이름')).toHaveCount(0);
+  await expect(page.locator('.diagram-evidence')).toHaveCount(0);
   await activeLabel.click();
+  await expect(page.getByLabel('선택 관계 이름')).toHaveValue('2013 촬영');
   await expect(page.getByText('인정 사실')).toBeVisible();
   await expect(page.getByText('갑은 2013. 12. 을을 촬영하였다')).toBeVisible();
   const resizedCanvasBox = await page.locator('.diagram-canvas').boundingBox();
   const evidenceBox = await page.locator('.diagram-stage .diagram-evidence').boundingBox();
+  expect(Math.abs(resizedCanvasBox!.width - canvasBeforeDrag!.width)).toBeLessThan(1);
+  expect(Math.abs(resizedCanvasBox!.height - canvasBeforeDrag!.height)).toBeLessThan(1);
   expect(evidenceBox!.x).toBeGreaterThanOrEqual(resizedCanvasBox!.x);
-  expect(evidenceBox!.y).toBeGreaterThanOrEqual(resizedCanvasBox!.y + resizedCanvasBox!.height - 1);
+  expect(evidenceBox!.y).toBeGreaterThanOrEqual(resizedCanvasBox!.y);
+  expect(evidenceBox!.y + evidenceBox!.height).toBeLessThanOrEqual(resizedCanvasBox!.y + resizedCanvasBox!.height + 1);
   const savedLabelTransform = await activeLabel.getAttribute('style');
   await page.screenshot({ path: 'test-results/diagram-evidence.png' });
   await page.keyboard.press('Escape');

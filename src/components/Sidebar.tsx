@@ -1,4 +1,6 @@
 import { ChangeEvent, DragEvent, FormEvent, PointerEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 import type { CaseItem, CaseNotes, Topic } from "../types";
 import { convertOldJson } from "../lib/oldJson";
 import type { AppSnapshot } from "../types";
@@ -47,9 +49,11 @@ export function Sidebar(props: Props) {
   const [readingPdf, setReadingPdf] = useState(false);
   const [importantOnly, setImportantOnly] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [addingCaseNos, setAddingCaseNos] = useState(false);
   const [marquee, setMarquee] = useState<Marquee | null>(null);
   const [folderMenu, setFolderMenu] = useState<FolderMenu | null>(null);
   const caseListRef = useRef<HTMLElement | null>(null);
+  const addDialogRef = useRef<HTMLDialogElement | null>(null);
   const folderMenuRef = useRef<HTMLDivElement | null>(null);
   const marqueeStart = useRef<{ x: number; y: number; base: Set<string> } | null>(null);
   const needle = query.trim().toLowerCase();
@@ -88,13 +92,24 @@ export function Sidebar(props: Props) {
     };
   }, [folderMenu]);
 
+  useEffect(() => {
+    if (addMenuOpen && addDialogRef.current && !addDialogRef.current.open) {
+      addDialogRef.current.showModal();
+    }
+  }, [addMenuOpen]);
+
   async function submitCaseNo(event: FormEvent) {
     event.preventDefault();
-    const value = caseNo.trim();
-    if (!value) return;
-    setCaseNo("");
-    await props.onAddApiCase(value);
-    setAddMenuOpen(false);
+    const values = caseNo.split(/[,，\n]/).map((value) => value.trim()).filter(Boolean);
+    if (!values.length || addingCaseNos) return;
+    setAddingCaseNos(true);
+    try {
+      for (const value of values) await props.onAddApiCase(value);
+      setCaseNo("");
+      setAddMenuOpen(false);
+    } finally {
+      setAddingCaseNos(false);
+    }
   }
 
   async function chooseImportFile(event: ChangeEvent<HTMLInputElement>) {
@@ -398,8 +413,9 @@ export function Sidebar(props: Props) {
         <span className="head-actions">
           <button
             className="primary add-case-button"
+            aria-haspopup="dialog"
             aria-expanded={addMenuOpen}
-            onClick={() => setAddMenuOpen((current) => !current)}
+            onClick={() => setAddMenuOpen(true)}
           >
             + 판례 추가
           </button>
@@ -428,33 +444,6 @@ export function Sidebar(props: Props) {
         placeholder="사건번호, 태그 검색"
         type="search"
       />
-
-      {addMenuOpen && (
-        <section className="case-add-panel" aria-label="판례 추가">
-          <form className="add-form" onSubmit={submitCaseNo}>
-            <input
-              value={caseNo}
-              onChange={(event) => setCaseNo(event.target.value)}
-              placeholder="사건번호 또는 법원명 + 사건번호"
-            />
-            <button type="submit" className="primary" disabled={!caseNo.trim()}>불러오기</button>
-          </form>
-          <div className="add-secondary-actions">
-            <label className={`ghost file-button ${readingPdf ? "is-loading" : ""}`}>
-              {readingPdf ? "PDF 읽는 중" : "PDF 판결문"}
-              <input type="file" accept="application/pdf,.pdf" multiple onChange={choosePdfFile} disabled={readingPdf} />
-            </label>
-            <button className="ghost blank-case" onClick={() => {
-              props.onAddBlank();
-              setAddMenuOpen(false);
-            }}>빈 판례</button>
-            <label className="ghost file-button">
-              JSON 가져오기
-              <input type="file" accept="application/json,.json" onChange={chooseImportFile} />
-            </label>
-          </div>
-        </section>
-      )}
 
       <nav
         className="case-list"
@@ -542,6 +531,56 @@ export function Sidebar(props: Props) {
             </>
           )}
         </div>
+      )}
+
+      {addMenuOpen && createPortal(
+        <dialog
+          ref={addDialogRef}
+          className="case-add-dialog"
+          aria-labelledby="case-add-title"
+          onCancel={() => setAddMenuOpen(false)}
+        >
+          <header className="case-add-heading">
+            <h2 id="case-add-title">판례 추가</h2>
+            <button className="icon-button" type="button" title="닫기" aria-label="닫기" onClick={() => setAddMenuOpen(false)}><X size={20} /></button>
+          </header>
+          <form className="case-add-section case-number-form" onSubmit={submitCaseNo}>
+            <label htmlFor="case-number-list">사건번호</label>
+            <textarea
+              id="case-number-list"
+              value={caseNo}
+              onChange={(event) => setCaseNo(event.target.value)}
+              placeholder="2016도348, 부산고등법원 2020노570"
+              rows={4}
+              autoFocus
+              disabled={addingCaseNos}
+            />
+            <button type="submit" className="primary" disabled={!caseNo.trim() || addingCaseNos}>
+              {addingCaseNos ? "불러오는 중" : "사건번호로 불러오기"}
+            </button>
+          </form>
+          <section className="case-add-section" aria-label="파일에서 추가">
+            <h3>파일</h3>
+            <div className="case-add-actions">
+              <label className={`ghost file-button ${readingPdf ? "is-loading" : ""}`}>
+                {readingPdf ? "PDF 읽는 중" : "PDF 판결문"}
+                <input type="file" accept="application/pdf,.pdf" multiple onChange={choosePdfFile} disabled={readingPdf} />
+              </label>
+              <label className="ghost file-button">
+                JSON 가져오기
+                <input type="file" accept="application/json,.json" onChange={chooseImportFile} />
+              </label>
+            </div>
+          </section>
+          <section className="case-add-section" aria-label="직접 작성">
+            <h3>직접 작성</h3>
+            <button className="ghost" type="button" onClick={() => {
+              props.onAddBlank();
+              setAddMenuOpen(false);
+            }}>빈 판례 만들기</button>
+          </section>
+        </dialog>,
+        document.body
       )}
     </aside>
   );

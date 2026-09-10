@@ -13,10 +13,11 @@ const cases: CaseItem[] = Array.from({ length: 5 }, (_, index) => ({
 
 function Fixture() {
   const [selected, setSelected] = useState<string[]>([]);
-  return <div style={{ width: 260, height: 700 }}><Sidebar userId="user-1" topics={[topic]} cases={cases} notes={[]} expandedIds={[topic.id]}
+  const [added, setAdded] = useState<string[]>([]);
+  return <><div style={{ width: 260, height: 700 }}><Sidebar userId="user-1" topics={[topic]} cases={cases} notes={[]} expandedIds={[topic.id]}
     selectedCaseId={null} selectedCaseIds={selected} configured={false} onSelectCase={() => {}} onSelectCases={setSelected}
     onMoveCases={() => {}} onMoveTopic={() => {}} onToggleTopic={() => {}} onAddTopic={() => {}} onRenameTopic={() => {}}
-    onDeleteTopic={() => {}} onAddBlank={() => {}} onAddApiCase={async () => {}} onAddPdfCases={async () => {}}
-    onImport={async () => {}} onDeleteCases={() => {}} onSignOut={() => {}} /></div>;
+    onDeleteTopic={() => {}} onAddBlank={() => {}} onAddApiCase={async (caseNo) => setAdded((current) => [...current, caseNo])} onAddPdfCases={async () => {}}
+    onImport={async () => {}} onDeleteCases={() => {}} onSignOut={() => {}} /></div><output aria-label="추가된 사건번호">{added.join('|')}</output></>;
 }
 createRoot(document.getElementById('root')!).render(<Fixture />);

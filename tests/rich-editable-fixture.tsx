@@ -7,7 +7,7 @@ function Fixture() {
   const [value, setValue] = useState('');
   const [secondValue, setSecondValue] = useState('');
   return <>
-    <RichEditableField label="첫 번째" value={value} collapsed={false} toolMode={null} onToggle={() => {}} onChange={setValue} onExitTool={() => {}} />
+    <RichEditableField label="첫 번째" value={value} collapsed={false} toolMode={null} dashIndent onToggle={() => {}} onChange={setValue} onExitTool={() => {}} />
     <RichEditableField label="두 번째" value={secondValue} collapsed={false} toolMode={null} onToggle={() => {}} onChange={setSecondValue} onExitTool={() => {}} />
   </>;
 }

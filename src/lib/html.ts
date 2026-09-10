@@ -1,5 +1,6 @@
 const ALLOWED_TAGS = new Set(["B", "I", "U", "STRONG", "EM", "BR", "DIV", "P", "SPAN", "MARK", "UL", "OL", "LI"]);
 const ALLOWED_ATTRS = new Set(["class"]);
+const ALLOWED_CLASSES = new Set(["case-highlight", "dash-indent"]);
 
 export function sanitizeHtml(html: string) {
   const template = document.createElement("template");
@@ -14,8 +15,14 @@ export function sanitizeHtml(html: string) {
           return;
         }
         Array.from(element.attributes).forEach((attr) => {
-          if (!ALLOWED_ATTRS.has(attr.name) || (attr.name === "class" && attr.value !== "case-highlight")) {
+          if (!ALLOWED_ATTRS.has(attr.name)) {
             element.removeAttribute(attr.name);
+            return;
+          }
+          if (attr.name === "class") {
+            const classes = attr.value.split(/\s+/).filter((name) => ALLOWED_CLASSES.has(name));
+            if (classes.length) element.className = classes.join(" ");
+            else element.removeAttribute("class");
           }
         });
       }

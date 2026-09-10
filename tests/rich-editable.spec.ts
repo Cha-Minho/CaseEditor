@@ -58,3 +58,35 @@ test('only restores the field that was active before window blur', async ({ page
   await expect(first).toHaveText('첫상자');
   await expect(second).toHaveText('둘X째상자');
 });
+
+test('keeps wrapped dash text aligned and resets the indent after Enter', async ({ page }) => {
+  await page.goto('/tests/rich-editable.html');
+  const editor = page.locator('[contenteditable="true"]').first();
+  await editor.evaluate((element) => { (element as HTMLElement).style.width = '180px'; });
+  await editor.click();
+  await page.keyboard.type('- this is a long note that wraps onto another visual line');
+
+  const dashLine = editor.locator('.dash-indent');
+  await expect(dashLine).toHaveCount(1);
+  const wrappedTextAlignment = await dashLine.evaluate((element) => {
+    const text = element.firstChild!;
+    const characterBox = (index: number) => {
+      const range = document.createRange();
+      range.setStart(text, index);
+      range.setEnd(text, index + 1);
+      return range.getBoundingClientRect();
+    };
+    const firstBodyCharacter = characterBox(2);
+    for (let index = 3; index < (text.textContent || '').length; index += 1) {
+      const box = characterBox(index);
+      if (box.top > firstBodyCharacter.top + 1) return Math.abs(box.left - firstBodyCharacter.left);
+    }
+    return Number.POSITIVE_INFINITY;
+  });
+  expect(wrappedTextAlignment).toBeLessThan(2);
+
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('next paragraph');
+  await expect(editor.locator('.dash-indent')).toHaveCount(1);
+  await expect(editor).toContainText('next paragraph');
+});

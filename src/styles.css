@@ -813,6 +813,11 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.12);
 }
 
+.field-box .dash-indent {
+  padding-left: 0.74em;
+  text-indent: -0.74em;
+}
+
 .case-highlight {
   background: var(--mark);
   border-radius: 2px;

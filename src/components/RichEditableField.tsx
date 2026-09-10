@@ -27,9 +27,10 @@ type Props = {
   onToggle: () => void;
   onChange: (value: string) => void;
   onExitTool: () => void;
+  dashIndent?: boolean;
 };
 
-export function RichEditableField({ label, value, collapsed, toolMode, onToggle, onChange, onExitTool }: Props) {
+export function RichEditableField({ label, value, collapsed, toolMode, onToggle, onChange, onExitTool, dashIndent = false }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const lastHtml = useRef(value);
   const history = useRef<History>({ undo: [], redo: [] });
@@ -120,10 +121,38 @@ export function RichEditableField({ label, value, collapsed, toolMode, onToggle,
   function handleInput(event: FormEvent<HTMLDivElement>) {
     enforceTypingMode((event.nativeEvent as InputEvent).data || "");
     replaceArrowShortcut();
+    if (dashIndent) syncDashIndentAtCaret();
     captureSelection();
     // Text typing has the browser's native undo history. Avoid replaying an old
     // highlighting snapshot over newer text edits.
     resetToolHistory();
+  }
+
+  function syncDashIndentAtCaret() {
+    const root = ref.current;
+    const selection = window.getSelection();
+    if (!root || !selection || selection.rangeCount === 0 || !selection.isCollapsed) return;
+    const range = selection.getRangeAt(0);
+    if (!root.contains(range.startContainer)) return;
+
+    const findBlock = () => {
+      let node: Node | null = range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? range.startContainer
+        : range.startContainer.parentNode;
+      while (node && node !== root) {
+        if (node instanceof HTMLElement && /^(DIV|P|LI)$/.test(node.tagName)) return node;
+        node = node.parentNode;
+      }
+      return null;
+    };
+
+    let block = findBlock();
+    if (!block && (root.textContent || "").startsWith("-")) {
+      document.execCommand("formatBlock", false, "div");
+      block = findBlock();
+    }
+    if (!block) return;
+    block.classList.toggle("dash-indent", (block.textContent || "").startsWith("-"));
   }
 
   function enforceTypingMode(inserted: string) {

@@ -236,6 +236,7 @@ export function Editor({
             value={combinedSummaryHtml}
             collapsed={collapsedFields.includes("summary_html")}
             toolMode={toolMode}
+            dashIndent
             onExitTool={() => setToolMode(null)}
             onToggle={() => onToggleField("summary_html")}
             onChange={(value) => {
@@ -250,6 +251,7 @@ export function Editor({
               value={selectedNotes[field]}
               collapsed={collapsedFields.includes(field)}
               toolMode={toolMode}
+              dashIndent
               onExitTool={() => setToolMode(null)}
               onToggle={() => onToggleField(field)}
               onChange={(value) => onUpdateField(selectedCase.id, field, value)}

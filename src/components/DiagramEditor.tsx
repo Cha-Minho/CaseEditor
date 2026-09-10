@@ -10,9 +10,26 @@ import { computePropertyArcs, dateKey, declutterEdgeLabels, legalGraphToDiagram 
 
 type Graph = NonNullable<CaseNotes['diagram']>;
 type Props = { title: string; sourceHtml: string; value: CaseNotes['diagram']; onChange: (graph: Graph) => void; onClose: () => void };
+type ProceduralRoleKind = 'police' | 'prosecutor' | 'court';
+
+const proceduralRoleLabels: Record<ProceduralRoleKind, string> = {
+  police: '경찰·수사기관',
+  prosecutor: '검사·검찰',
+  court: '법원·판사'
+};
+
+function proceduralRoleKind(label: unknown, role: unknown): ProceduralRoleKind | null {
+  const text = `${String(label || '')} ${String(role || '')}`;
+  if (/검사|검찰/.test(text)) return 'prosecutor';
+  if (/법원|재판부|판사|법관/.test(text)) return 'court';
+  if (/경찰|수사기관|수사관|사법경찰|경위|경감|경사|경장|순경/.test(text)) return 'police';
+  return null;
+}
 
 function PlotPartyNode({ data, selected }: NodeProps) {
-  return <div className={`plot-party-node${selected ? ' selected' : ''}${data.future ? ' future' : ''}`} title={String(data.role || '')}>
+  const roleKind = proceduralRoleKind(data.label, data.role);
+  const roleLabel = roleKind ? proceduralRoleLabels[roleKind] : String(data.role || '');
+  return <div className={`plot-party-node${roleKind ? ` role-${roleKind}` : ''}${selected ? ' selected' : ''}${data.future ? ' future' : ''}`} data-procedural-role={roleKind || undefined} title={roleLabel}>
     <Handle type="target" position={Position.Top} style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }} />
     <span>{String(data.label || '')}</span>
     <Handle type="source" position={Position.Bottom} style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }} />
@@ -311,6 +328,9 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
   const selectedEdge = selected?.kind === 'edge' ? graph.edges.find(edge => edge.id === selected.id) : null;
   const selectedRelation = selectedEdge?.data as LegalGraph['relations'][number] | undefined;
   const reviewCount = draft?.relations.filter(relation => relation.status !== 'recognized').length || 0;
+  const visibleProceduralRoles = (Object.keys(proceduralRoleLabels) as ProceduralRoleKind[]).filter(kind =>
+    graph.nodes.some(node => node.type === 'plotParty' && proceduralRoleKind(node.data.label, node.data.role) === kind)
+  );
   return createPortal(<dialog ref={dialog} className="diagram-dialog" aria-label="판례 관계도" onCancel={onClose} onKeyDown={event => {
     if ((event.target as HTMLElement).closest('input,textarea')) return;
     if ((event.ctrlKey || event.metaKey) && ['z', 'y'].includes(event.key.toLowerCase())) { event.preventDefault(); travel(event.key.toLowerCase() === 'z' && !event.shiftKey); }
@@ -374,7 +394,9 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       onEdgeClick={(_, edge) => selectEdge(edge.id)}
       onPaneClick={() => setSelected(null)} deleteKeyCode={null} fitView minZoom={0.2} maxZoom={2.5} proOptions={{ hideAttribution: true }}>
       <Controls showInteractive={false} />
-    </ReactFlow></div>
+    </ReactFlow>
+    {visibleProceduralRoles.length > 0 && <div className="diagram-role-legend" aria-label="당사자 신분 범례">{visibleProceduralRoles.map(kind => <span key={kind}><i className={`role-${kind}`} aria-hidden="true" />{proceduralRoleLabels[kind]}</span>)}</div>}
+    </div>
     {selectedRelation?.evidence && <div className="diagram-evidence"><span className={`relation-status status-${selectedRelation.status}`}>{selectedRelation.status === 'recognized' ? '인정 사실' : selectedRelation.status === 'alleged' ? '당사자 주장' : selectedRelation.status === 'disputed' ? '다툼 있음' : '소송 경과'}</span><span>{selectedRelation.evidence}</span><small>{Math.round((selectedRelation.confidence || 0) * 100)}%</small></div>}
     </div>
     </div>

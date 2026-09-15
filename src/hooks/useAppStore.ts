@@ -390,12 +390,13 @@ export function useAppStore(userId: string | null) {
 
     try {
       const result = await fetchLawCase(caseNo);
+      const loaded = result.found !== false && Boolean(result.source_html?.trim());
       const loadedCase = {
         ...caseItem,
         title: result.title || caseNo,
         case_no: result.case_no || caseNo,
-        api_status: result.found === false ? "failed" as const : "loaded" as const,
-        api_error: result.api_error || null,
+        api_status: loaded ? "loaded" as const : "failed" as const,
+        api_error: result.api_error || (loaded ? null : "판례 원문을 불러오지 못했습니다."),
         updated_at: nowIso()
       };
       const loadedNotes = {

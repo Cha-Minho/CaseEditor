@@ -48,8 +48,10 @@ test('create, connect, undo deletion and reopen case diagram', async ({ page }) 
   expect(errors).toEqual([]);
 });
 
-test('review and apply an AI relationship draft', async ({ page }) => {
-  await page.route('**/functions/v1/legal-graph', route => route.fulfill({
+test('keep AI relationship analysis running while the diagram is closed', async ({ page }) => {
+  await page.route('**/functions/v1/legal-graph', async route => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await route.fulfill({
     status: 200,
     contentType: 'application/json',
     body: JSON.stringify({
@@ -66,19 +68,18 @@ test('review and apply an AI relationship draft', async ({ page }) => {
         ...Array.from({ length: 6 }, (_, index) => ({ id: `ev${index + 4}`, sequence: index + 4, text: `${index + 4}단계 후속 조사와 진술 내용을 빠짐없이 확인하는 긴 사건 설명`, evidence: '후속 절차가 진행되었다' }))
       ]
     })
-  }));
+    });
+  });
   await page.goto('/tests/diagram.html');
   await page.getByText('관계도 열기').click();
   await page.getByTitle('판례 원문에서 AI 관계도 초안 만들기').click();
-  await expect(page.locator('.diagram-draft-review strong', { hasText: 'AI 초안' })).toBeVisible();
-  await expect(page.getByText('당사자 3 · 목적물 1 · 관계 2 · 사건 9')).toBeVisible();
-  await expect(page.locator('.diagram-draft-events li')).toHaveCount(9);
-  await expect(page.locator('.diagram-draft-events ol')).toHaveCSS('flex-direction', 'column');
-  await expect(page.locator('.diagram-draft-events ol')).toHaveCSS('overflow-y', 'auto');
-  await expect(page.locator('.diagram-draft-events li').first().locator('span')).toHaveCSS('white-space', 'normal');
-  await page.screenshot({ path: 'test-results/diagram-draft-events.png' });
-  await page.getByText('관계도에 적용').click();
+  await expect(page.getByText('분석 중')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByText('관계도 열기').click();
+  await expect(page.getByText('분석 중')).toBeVisible();
   await expect(page.locator('.react-flow__node')).toHaveCount(4);
+  await expect(page.getByText('분석 중')).toHaveCount(0);
   await expect(page.locator('.react-flow__node[data-id="p3"] .plot-party-node')).toHaveAttribute('data-procedural-role', 'police');
   await expect(page.locator('.react-flow__node[data-id="p3"] .plot-party-node')).toHaveText('공소외 1');
   await expect(page.getByLabel('당사자 신분 범례')).toContainText('경찰·수사기관');

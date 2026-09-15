@@ -5,11 +5,20 @@ import { ChevronLeft, ChevronRight, GitBranchPlus, UserPlus, SquarePlus, Undo2, 
 import '@xyflow/react/dist/style.css';
 import type { CaseNotes } from '../types';
 import type { LegalGraph } from '../types';
-import { generateLegalGraph } from '../lib/legalGraphApi';
-import { alignLegalGraphTimeline, computePropertyArcs, dateKey, declutterEdgeLabels, legalGraphToDiagram, propertyArcIsActive } from '../lib/plotGraph';
+import { alignLegalGraphTimeline, computePropertyArcs, dateKey, declutterEdgeLabels, propertyArcIsActive } from '../lib/plotGraph';
 
 type Graph = NonNullable<CaseNotes['diagram']>;
-type Props = { title: string; sourceHtml: string; value: CaseNotes['diagram']; onChange: (graph: Graph) => void; onClose: () => void };
+type Props = {
+  title: string;
+  sourceHtml: string;
+  value: CaseNotes['diagram'];
+  generating?: boolean;
+  generationError?: string;
+  onGenerate: () => void;
+  onDismissGenerationError: () => void;
+  onChange: (graph: Graph) => void;
+  onClose: () => void;
+};
 type ProceduralRoleKind = 'police' | 'prosecutor' | 'court';
 
 const proceduralRoleLabels: Record<ProceduralRoleKind, string> = {
@@ -164,7 +173,7 @@ function PlotEdge({ id, source, target, sourceX, sourceY, targetX, targetY, mark
 const nodeTypes = { plotParty: PlotPartyNode, plotObject: PlotObjectNode };
 const edgeTypes = { plotEdge: PlotEdge };
 
-export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: Props) {
+export function DiagramEditor({ title, sourceHtml, value, generating = false, generationError = '', onGenerate, onDismissGenerationError, onChange, onClose }: Props) {
   const [graph, setGraph] = useState<Graph>(() => value || { nodes: [], edges: [] });
   const current = useRef(graph);
   const undo = useRef<Graph[]>([]);
@@ -175,9 +184,6 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
   callback.current = onChange;
   const [selected, setSelected] = useState<{ kind: 'node' | 'edge'; id: string } | null>(null);
   const [label, setLabel] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [generationError, setGenerationError] = useState('');
-  const [draft, setDraft] = useState<LegalGraph | null>(null);
   const [timelineIndex, setTimelineIndex] = useState(0);
   const [visibleTimelineIndexes, setVisibleTimelineIndexes] = useState<number[]>([]);
   const [viewportZoom, setViewportZoom] = useState(1);
@@ -277,6 +283,12 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     return () => observer.disconnect();
   }, []);
   useEffect(() => {
+    if (!value || value === current.current) return;
+    display(value);
+    const frame = window.requestAnimationFrame(() => flow.current?.fitView({ padding: 0.18, maxZoom: 2 }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [value]);
+  useEffect(() => {
     const last = timeline.length - 1;
     setTimelineIndex(Math.max(0, last));
     setVisibleTimelineIndexes(last >= 0 ? [last] : []);
@@ -348,28 +360,8 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
     setSelected(null);
   }
 
-  async function createAiDraft() {
-    setGenerating(true);
-    setGenerationError('');
-    try {
-      setDraft(await generateLegalGraph(sourceHtml));
-    } catch (error) {
-      setGenerationError(error instanceof Error ? error.message : '관계도 초안을 만들지 못했습니다.');
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  function applyAiDraft() {
-    if (!draft) return;
-    change(legalGraphToDiagram(draft));
-    setDraft(null);
-    requestAnimationFrame(() => flow.current?.fitView({ padding: 0.18, maxZoom: 2 }));
-  }
-
   const selectedEdge = selected?.kind === 'edge' ? graph.edges.find(edge => edge.id === selected.id) : null;
   const selectedRelation = selectedEdge?.data as LegalGraph['relations'][number] | undefined;
-  const reviewCount = draft?.relations.filter(relation => relation.status !== 'recognized').length || 0;
   const visibleProceduralRoles = (Object.keys(proceduralRoleLabels) as ProceduralRoleKind[]).filter(kind =>
     graph.nodes.some(node => node.type === 'plotParty' && proceduralRoleKind(node.data.label, node.data.role) === kind)
   );
@@ -379,7 +371,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
   }}>
     <header className="diagram-heading"><strong>{title} · 관계도</strong><button aria-label="관계도 닫기" title="닫기 (Esc)" onClick={onClose}><X size={20} /></button></header>
     <div className="diagram-toolbar">
-      <button className="diagram-ai-button" title="판례 원문에서 AI 관계도 초안 만들기" disabled={generating || !sourceHtml.trim()} onClick={createAiDraft}><WandSparkles size={18} /><span>{generating ? '분석 중' : 'AI 초안'}</span></button>
+      <button className="diagram-ai-button" title="판례 원문에서 AI 관계도 초안 만들기" disabled={generating || !sourceHtml.trim()} onClick={onGenerate}><WandSparkles size={18} /><span>{generating ? '분석 중' : 'AI 초안'}</span></button>
       <button title="당사자 추가" onClick={() => add('person')}><UserPlus size={18} /><span>당사자</span></button>
       <button title="목적물 추가" onClick={() => add('object')}><SquarePlus size={18} /><span>목적물</span></button>
       <button title="관계 추가" disabled={graph.nodes.length < 2} onClick={openLinkForm}><GitBranchPlus size={18} /><span>관계</span></button>
@@ -396,13 +388,7 @@ export function DiagramEditor({ title, sourceHtml, value, onChange, onClose }: P
       <button type="submit" className="primary">추가</button>
       <button type="button" onClick={() => setLinkFormOpen(false)}>취소</button>
     </form>}
-    {generationError && <div className="diagram-generation-error" role="alert">{generationError}<button onClick={() => setGenerationError('')}>닫기</button></div>}
-    {draft && <div className="diagram-draft-review">
-      <div><strong>AI 초안</strong><span>당사자 {draft.parties.length} · 목적물 {draft.objects.length} · 관계 {draft.relations.length} · 사건 {draft.events.length}</span>{reviewCount > 0 && <span>주장·분쟁·절차 {reviewCount}개 포함</span>}</div>
-      <p>AI가 추출한 초안입니다. 적용한 뒤 각 관계의 근거와 인정 여부를 확인하세요.{graph.nodes.length ? ' 적용하면 현재 관계도를 교체합니다.' : ''}</p>
-      {draft.events.length > 0 && <details className="diagram-draft-events" open><summary>사건 순서 확인</summary><ol>{draft.events.slice().sort((a, b) => (a.sequence || 0) - (b.sequence || 0)).map(event => <li key={event.id}><b>{event.date || `${event.sequence || '?'}단계`}</b><span>{event.text}</span></li>)}</ol></details>}
-      <span className="diagram-review-actions"><button onClick={() => setDraft(null)}>취소</button><button className="primary" onClick={applyAiDraft}>관계도에 적용</button></span>
-    </div>}
+    {generationError && <div className="diagram-generation-error" role="alert">{generationError}<button onClick={onDismissGenerationError}>닫기</button></div>}
     <div className={`diagram-workspace${timeline.length ? ' has-timeline' : ''}`}>
     {timeline.length > 0 && <aside className="diagram-timeline">
       <div className="diagram-timeline-bar"><strong>사건 흐름</strong>

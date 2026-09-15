@@ -5,6 +5,8 @@ import { RichEditableField, ToolMode } from "./RichEditableField";
 import { Network } from 'lucide-react';
 import { DiagramEditor } from './DiagramEditor';
 import { compareTopicsByName } from '../lib/sort';
+import { generateLegalGraph } from '../lib/legalGraphApi';
+import { legalGraphToDiagram } from '../lib/plotGraph';
 
 type Props = {
   onUpdateDiagram: (caseId: string, diagram: CaseNotes['diagram']) => void;
@@ -26,6 +28,7 @@ type Props = {
 
 const referenceFields: EditableFieldKey[] = ["source_html", "holding_html", "judgment_summary_html"];
 const noteFields: EditableFieldKey[] = ["majority_html", "dissent_html", "concurring_html", "tags_html"];
+type DiagramAnalysis = { status: "generating" | "error"; error?: string };
 
 export function Editor({
   onUpdateDiagram,
@@ -46,6 +49,8 @@ export function Editor({
 }: Props) {
   const [toolMode, setToolMode] = useState<ToolMode>(null);
   const [diagramOpen, setDiagramOpen] = useState(false);
+  const [diagramAnalysisByCase, setDiagramAnalysisByCase] = useState<Record<string, DiagramAnalysis>>({});
+  const diagramAnalysisRuns = useRef(new Map<string, symbol>());
   const [moveMenuOpen, setMoveMenuOpen] = useState(false);
   const [moveExpandedIds, setMoveExpandedIds] = useState<Set<string>>(new Set());
   const [draftSplitWidth, setDraftSplitWidth] = useState(splitWidth);
@@ -162,6 +167,43 @@ export function Editor({
         {hasChildren && open && <div className="move-tree-children">{children.map(renderMoveTopic)}</div>}
       </div>
     );
+  }
+
+  async function analyzeDiagram(caseId: string, sourceHtml: string) {
+    if (diagramAnalysisRuns.current.has(caseId)) return;
+    const runId = Symbol(caseId);
+    diagramAnalysisRuns.current.set(caseId, runId);
+    setDiagramAnalysisByCase((current) => ({ ...current, [caseId]: { status: "generating" } }));
+
+    try {
+      const result = await generateLegalGraph(sourceHtml);
+      if (diagramAnalysisRuns.current.get(caseId) !== runId) return;
+      onUpdateDiagram(caseId, legalGraphToDiagram(result));
+      setDiagramAnalysisByCase((current) => {
+        const next = { ...current };
+        delete next[caseId];
+        return next;
+      });
+    } catch (error) {
+      if (diagramAnalysisRuns.current.get(caseId) !== runId) return;
+      setDiagramAnalysisByCase((current) => ({
+        ...current,
+        [caseId]: {
+          status: "error",
+          error: error instanceof Error ? error.message : "관계도를 분석하지 못했습니다."
+        }
+      }));
+    } finally {
+      if (diagramAnalysisRuns.current.get(caseId) === runId) diagramAnalysisRuns.current.delete(caseId);
+    }
+  }
+
+  function dismissDiagramAnalysisError(caseId: string) {
+    setDiagramAnalysisByCase((current) => {
+      const next = { ...current };
+      delete next[caseId];
+      return next;
+    });
   }
 
   const moveRoots = topics.filter((topic) => !topic.parent_id).sort(compareTopicsByName);
@@ -291,7 +333,18 @@ export function Editor({
           ))}
         </section>
       </div>
-      {diagramOpen && <DiagramEditor key={selectedCase.id} title={selectedCase.case_no || '관계도'} sourceHtml={selectedNotes.source_html} value={selectedNotes.diagram} onChange={(diagram) => onUpdateDiagram(selectedCase.id, diagram)} onClose={() => setDiagramOpen(false)} />}
+      {diagramOpen && <DiagramEditor
+        key={selectedCase.id}
+        title={selectedCase.case_no || '관계도'}
+        sourceHtml={selectedNotes.source_html}
+        value={selectedNotes.diagram}
+        generating={diagramAnalysisByCase[selectedCase.id]?.status === "generating"}
+        generationError={diagramAnalysisByCase[selectedCase.id]?.error || ""}
+        onGenerate={() => analyzeDiagram(selectedCase.id, selectedNotes.source_html)}
+        onDismissGenerationError={() => dismissDiagramAnalysisError(selectedCase.id)}
+        onChange={(diagram) => onUpdateDiagram(selectedCase.id, diagram)}
+        onClose={() => setDiagramOpen(false)}
+      />}
     </main>
   );
 }

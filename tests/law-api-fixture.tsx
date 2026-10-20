@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { fetchLawCase } from '../src/lib/lawApi';
+import { textFromHtml } from '../src/lib/html';
 
 function Fixture() {
   const [message, setMessage] = useState('');
@@ -8,7 +9,7 @@ function Fixture() {
   const load = async () => {
     try {
       const result = await fetchLawCase('2020도1538');
-      setMessage(`${result.case_no}:${result.source_html?.length || 0}`);
+      setMessage(`${result.case_no}:${textFromHtml(result.source_html || '').length}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '실패');
     }

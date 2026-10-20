@@ -1,6 +1,6 @@
 const ALLOWED_TAGS = new Set(["B", "I", "U", "STRONG", "EM", "BR", "DIV", "P", "SPAN", "MARK", "UL", "OL", "LI"]);
 const ALLOWED_ATTRS = new Set(["class"]);
-const ALLOWED_CLASSES = new Set(["case-highlight", "dash-indent"]);
+const ALLOWED_CLASSES = new Set(["case-highlight", "dash-indent", "pdf-quote", "pdf-footnotes", "judgment-heading"]);
 
 export function sanitizeHtml(html: string) {
   const template = document.createElement("template");

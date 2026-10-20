@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { formatReferenceHtml } from './judgmentFormat';
 
 export type LawCaseResult = {
   title: string;
@@ -33,7 +34,12 @@ export async function fetchLawCase(caseNo: string): Promise<LawCaseResult> {
         if (!detailFailure || attempt === 1) return data;
         lastError = new Error(data.api_error || "판례 원문을 불러오지 못했습니다.");
       } else if (data.source_html?.trim()) {
-        return data;
+        return {
+          ...data,
+          source_html: formatReferenceHtml(data.source_html),
+          holding_html: formatReferenceHtml(data.holding_html || ''),
+          judgment_summary_html: formatReferenceHtml(data.judgment_summary_html || '')
+        };
       } else {
         lastError = new Error("판례 제목만 불러오고 원문이 비어 있어 다시 시도합니다.");
       }

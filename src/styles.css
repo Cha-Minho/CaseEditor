@@ -818,6 +818,27 @@ select:focus {
   text-indent: -0.74em;
 }
 
+.field-box .pdf-quote {
+  border-left: 2px solid var(--line);
+  margin: 0.75em 0;
+  padding-left: 1em;
+}
+
+.field-box .pdf-footnotes {
+  border-top: 1px solid var(--line);
+  margin-top: 1.25em;
+  padding-top: 0.5em;
+}
+
+.field-box .judgment-heading {
+  margin-top: 1.25em;
+  margin-bottom: 0.4em;
+}
+
+.field-box > .judgment-heading:first-child {
+  margin-top: 0;
+}
+
 .case-highlight {
   background: var(--mark);
   border-radius: 2px;

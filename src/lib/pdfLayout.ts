@@ -154,7 +154,9 @@ export function documentFromPages(pages: PdfPage[]) {
     const paragraph = paragraphs[paragraphs.length - 1];
     const indented = line.x > line.left + line.size * 0.7 && line.x < line.left + line.size * 1.8;
     const previousShort = previous && previous.endX < previous.right - previous.size * 1.5;
-    let breakBefore = !previous || line.header || previous.header || previous.kind !== line.kind || heading(line.text) || (heading(previous.text) && previousShort)
+    const sentenceContinuation = previous && previous.endX >= previous.right - previous.size * 0.8
+      && !/[.!?…:;]$/.test(previous.text) && /^[가-하]\.\s/.test(line.text);
+    let breakBefore = !previous || line.header || previous.header || previous.kind !== line.kind || (heading(line.text) && !sentenceContinuation) || (heading(previous.text) && previousShort)
       || (previous.page === line.page && line.y - previous.y > Math.max(previous.size, line.size) * 3.1)
       || (indented && (line.x > previous.x + line.size * 0.65 || previousShort))
       || (previousShort && /[.!?…]$/.test(previous.text));

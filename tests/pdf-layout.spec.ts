@@ -63,3 +63,14 @@ test('do not split a numbered paragraph or a word at its physical line end', () 
   expect(result.paragraphs).toHaveLength(1);
   expect(result.text).toBe('1) 이 사건 유서의 작성자는 사망하였다. 피고인은 증거사용에 동의하지 않았다.');
 });
+
+test('a sentence ending wrapped to the next line is not a Korean section heading', () => {
+  const result = documentFromPages([pageFromTextItems([
+    text('그리고 진술을 하였습니', 60, 150, 478),
+    text('다. 다음 내용도 기록하였다.', 60, 180, 300),
+    text('다. 법원의 판단', 60, 210, 200)
+  ], viewport)]);
+  expect(result.paragraphs).toHaveLength(2);
+  expect(result.paragraphs[0].text).toBe('그리고 진술을 하였습니다. 다음 내용도 기록하였다.');
+  expect(result.paragraphs[1].text).toBe('다. 법원의 판단');
+});

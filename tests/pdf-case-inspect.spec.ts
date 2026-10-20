@@ -26,6 +26,7 @@ test('inspect local court PDFs when explicitly supplied', async ({ page }) => {
     expect(parsed.sourceHtml).not.toContain('방문</p><p>에');
     expect(parsed.sourceHtml).not.toContain('학교</p><p>를');
     expect(parsed.sourceHtml).not.toContain('(특</p>');
+    expect(parsed.sourceHtml).not.toContain('했었습니</p>');
     const conservation = await page.evaluate(async ({ raw, html }) => {
       const modulePath = '/src/lib/pdfLayout.ts';
       const { cleanPdfFragment } = await import(modulePath);

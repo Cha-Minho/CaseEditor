@@ -118,7 +118,7 @@ export function documentFromPages(pages: PdfPage[]) {
   }
   const flow: FlowLine[] = [];
   const footnotes: { page: number; text: string; lastLine: FlowLine }[] = [];
-  const hasCover = pages[0]?.lines.slice(0, 15).some(line => /(?:법\s*원|지\s*원)/.test(line.text));
+  const hasCover = pages[0]?.lines.slice(0, 15).some(line => /^(?:[가-힣]*법원(?:[가-힣]+지원)?|헌법재판소)$/.test(line.text.replace(/\s/g, '')));
   pages.forEach((page, pageIndex) => {
     let inFootnotes = false;
     const main: (PdfLine & { kind: 'body' | 'quote' })[] = [];

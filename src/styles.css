@@ -119,6 +119,55 @@ select:focus {
 
 /* ---------- sidebar ---------- */
 
+.app.toggle-layout {
+  grid-template-columns: 48px minmax(0, 1fr);
+  height: 100dvh;
+}
+
+.app.toggle-layout.sidebar-open {
+  grid-template-columns: 48px minmax(0, 1fr);
+}
+
+.sidebar-rail {
+  grid-column: 1;
+  grid-row: 1;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  padding: 12px 4px;
+  z-index: 31;
+}
+
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+}
+
+.sidebar-slot { min-width: 0; min-height: 0; overflow: hidden; }
+.sidebar-slot[hidden] { display: none; }
+.sidebar-slot > .sidebar { height: 100%; box-sizing: border-box; }
+.app.toggle-layout.sidebar-open > .sidebar-slot {
+    position: fixed;
+    inset: 0 auto 0 48px;
+    width: min(500px, calc(100vw - 48px));
+    z-index: 30;
+    box-shadow: 6px 0 20px #0002;
+}
+.app.toggle-layout.sidebar-open > .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0 0 0 48px;
+    z-index: 29;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+}
+.sidebar-backdrop { display: none; }
+
 .sidebar {
   background: var(--surface);
   border-right: 1px solid var(--line);
@@ -913,6 +962,13 @@ select:focus {
     height: auto;
     min-height: 100dvh;
   }
+
+  .app.toggle-layout { display: grid; height: 100dvh; min-height: 0; }
+  .app.toggle-layout > .editor-pane,
+  .app.toggle-layout.show-editor > .editor-pane { display: flex; min-height: 0; overflow: auto; }
+  .app.toggle-layout .sidebar-slot > .sidebar { display: flex; min-height: 0; height: 100dvh; }
+  .app.toggle-layout .sidebar-slot .case-list { overflow: auto; }
+  .app.toggle-layout .back-button { display: none; }
 
   .sidebar {
     border-right: 0;

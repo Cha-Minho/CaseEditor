@@ -3,6 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import { AuthView } from "./components/AuthView";
 import { Editor } from "./components/Editor";
 import { Sidebar } from "./components/Sidebar";
+import { SidebarLayout } from "./components/SidebarLayout";
 import { useAppStore } from "./hooks/useAppStore";
 import { localUserId } from "./lib/id";
 import { supabase, supabaseConfigured } from "./lib/supabase";
@@ -72,7 +73,7 @@ export default function App() {
   };
 
   return (
-    <div className={`app ${mobileView === "editor" ? "show-editor" : ""}`}>
+    <SidebarLayout className={mobileView === "editor" ? "show-editor" : ""}>
       <Sidebar
         userId={userId}
         topics={store.topics}
@@ -136,6 +137,6 @@ export default function App() {
         }}
         onAddBlank={() => store.addBlankCase(null)}
       />
-    </div>
+    </SidebarLayout>
   );
 }

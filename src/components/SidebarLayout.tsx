@@ -19,19 +19,17 @@ export function SidebarLayout({ children, className = '' }: { children: ReactNod
 
   return (
     <div className={`app toggle-layout ${open ? 'sidebar-open' : 'sidebar-closed'} ${className}`}>
-      <nav className="sidebar-rail" aria-label="목차 표시">
-        <button
-          ref={toggleRef}
-          className="sidebar-toggle"
-          aria-label={open ? '목차 닫기' : '목차 열기'}
-          aria-expanded={open}
-          aria-controls="case-navigation"
-          title={open ? '목차 닫기' : '목차 열기'}
-          onClick={() => setOpen(value => !value)}
-        >
-          {open ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
-        </button>
-      </nav>
+      <button
+        ref={toggleRef}
+        className="sidebar-toggle"
+        aria-label={open ? '목차 닫기' : '목차 열기'}
+        aria-expanded={open}
+        aria-controls="case-navigation"
+        title={open ? '목차 닫기' : '목차 열기'}
+        onClick={() => setOpen(value => !value)}
+      >
+        {open ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+      </button>
       {open && <button className="sidebar-backdrop" aria-label="목차 닫기" onClick={() => setOpen(false)} />}
       <div id="case-navigation" className="sidebar-slot" hidden={!open} onClickCapture={event => {
         const target = event.target;

@@ -7,6 +7,12 @@ export function SidebarLayout({ children, className = '' }: { children: ReactNod
   const [sidebar, ...content] = Children.toArray(children);
 
   useEffect(() => {
+    const close = () => setOpen(false);
+    window.addEventListener('case-editor:open-case', close);
+    return () => window.removeEventListener('case-editor:open-case', close);
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
     const close = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('[role="dialog"]')) return;
@@ -33,6 +39,7 @@ export function SidebarLayout({ children, className = '' }: { children: ReactNod
       {open && <button className="sidebar-backdrop" aria-label="목차 닫기" onClick={() => setOpen(false)} />}
       <div id="case-navigation" className="sidebar-slot" hidden={!open} onClickCapture={event => {
         const target = event.target;
+        if (target instanceof Element && target.closest('.case-explorer')) return;
         if (window.matchMedia('(max-width: 860px)').matches && target instanceof Element
           && target.closest('.case-item') && !target.closest('input, button')) setOpen(false);
       }}>

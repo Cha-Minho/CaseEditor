@@ -289,6 +289,32 @@ select:focus {
   z-index: 2;
 }
 
+.case-explorer { display: flex; flex-direction: column; min-height: 100%; flex: 1; gap: 8px; }
+.explorer-toolbar { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.explorer-toolbar button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; min-height: 32px; padding: 0; }
+.explorer-toolbar button:disabled { opacity: .35; cursor: default; }
+.explorer-tool-divider { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+.explorer-path { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; padding: 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 12px; }
+.explorer-path > span { display: inline-flex; align-items: center; gap: 3px; min-width: 0; max-width: 100%; }
+.explorer-path button { min-height: 26px; padding: 3px 5px; text-align: left; overflow-wrap: anywhere; }
+.explorer-path > button { display: inline-flex; align-items: center; }
+.explorer-content { flex: 1; min-height: 180px; padding: 3px 0 48px; }
+.explorer-folder { display: flex; align-items: center; min-height: 42px; border-radius: 5px; }
+.explorer-folder:hover, .explorer-case-row:hover { background: var(--surface-soft); }
+.explorer-folder-open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; min-height: 42px; padding: 7px 8px; text-align: left; }
+.explorer-folder-open > svg { flex: 0 0 auto; color: #bd932b; fill: #f9df8e; }
+.explorer-folder-open > span { overflow-wrap: anywhere; flex: 1; }
+.explorer-folder-open small { color: var(--muted); font-size: 11px; }
+.explorer-folder.is-selected { background: var(--brand-soft); }
+.explorer-case-row { border-radius: 5px; }
+.explorer-case-row.is-selected { background: var(--brand-soft); }
+.explorer-case.case-item { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 42px; }
+.explorer-case > svg { flex: 0 0 auto; color: var(--muted); }
+.explorer-case > span { overflow-wrap: anywhere; }
+.case-explorer .drop-target { background: var(--brand-soft); outline: 1px solid var(--brand); }
+.case-explorer .is-cut { opacity: .45; }
+.explorer-status { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); padding: 7px 4px; }
+
 .folder-root-actions {
   margin: 2px 0 5px;
   padding: 0 6px;

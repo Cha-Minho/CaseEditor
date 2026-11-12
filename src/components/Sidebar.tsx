@@ -1,13 +1,13 @@
-import { ChangeEvent, DragEvent, FormEvent, PointerEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, PointerEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { CaseExplorer } from "./CaseExplorer";
 import type { CaseItem, CaseNotes, Topic } from "../types";
 import { convertOldJson } from "../lib/oldJson";
 import type { AppSnapshot } from "../types";
 import { readCasePdf, type PdfCaseImport } from "../lib/pdfCase";
-import { compareCasesByTitle, compareTopicsByName } from "../lib/sort";
+import { compareCasesByTitle } from "../lib/sort";
 
-const UNCLASSIFIED_ID = "__unclassified__";
 
 type Marquee = { x: number; y: number; width: number; height: number };
 type FolderMenu = { topic: Topic | null; caseIds: string[]; x: number; y: number };
@@ -42,10 +42,6 @@ export function Sidebar(props: Props) {
   const [query, setQuery] = useState("");
   const [caseNo, setCaseNo] = useState("");
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
-  const [draggedIds, setDraggedIds] = useState<string[]>([]);
-  const [draggedTopicId, setDraggedTopicId] = useState<string | null>(null);
-  const [dropTopicId, setDropTopicId] = useState<string | null | undefined>(undefined);
-  const [topicDropId, setTopicDropId] = useState<string | null | undefined>(undefined);
   const [readingPdf, setReadingPdf] = useState(false);
   const [importantOnly, setImportantOnly] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
@@ -68,8 +64,6 @@ export function Sidebar(props: Props) {
     }).sort(compareCasesByTitle);
   }, [needle, notesByCaseId, visibleCases]);
 
-  const roots = props.topics.filter((topic) => !topic.parent_id).sort(compareTopicsByName);
-  const unclassified = visibleCases.filter((item) => !item.topic_id).sort(compareCasesByTitle);
 
   useEffect(() => {
     if (!folderMenu) return;
@@ -173,30 +167,6 @@ export function Sidebar(props: Props) {
     }
   }
 
-  function toggleChecked(id: string) {
-    setCheckedIds((current) => {
-      const next = new Set(current);
-      next.has(id) ? next.delete(id) : next.add(id);
-      props.onSelectCases(Array.from(next));
-      return next;
-    });
-  }
-
-  function caseIdsInTopic(topicId: string) {
-    const childMap = new Map<string | null, Topic[]>();
-    props.topics.forEach((topic) => {
-      const key = topic.parent_id || null;
-      childMap.set(key, [...(childMap.get(key) || []), topic]);
-    });
-    const topicIds = new Set<string>();
-    const collect = (id: string) => {
-      topicIds.add(id);
-      (childMap.get(id) || []).forEach((child) => collect(child.id));
-    };
-    collect(topicId);
-    return visibleCases.filter((item) => item.topic_id && topicIds.has(item.topic_id)).map((item) => item.id);
-  }
-
   function toggleCaseGroup(ids: string[]) {
     if (!ids.length) return;
     setCheckedIds((current) => {
@@ -227,50 +197,6 @@ export function Sidebar(props: Props) {
       setCheckedIds(new Set());
       props.onSelectCases([]);
     }
-  }
-
-  function startCaseDrag(event: DragEvent<HTMLButtonElement>, id: string) {
-    const ids = checkedIds.has(id) ? Array.from(checkedIds) : [id];
-    setDraggedIds(ids);
-    props.onSelectCases(ids);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", ids.join(","));
-  }
-
-  function allowCaseDrop(event: DragEvent<HTMLElement>, topicId: string | null) {
-    if (!draggedIds.length) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    setDropTopicId(topicId);
-  }
-
-  function dropCases(event: DragEvent<HTMLElement>, topicId: string | null) {
-    if (!draggedIds.length) return;
-    event.preventDefault();
-    props.onMoveCases(draggedIds, topicId);
-    setDraggedIds([]);
-    setDropTopicId(undefined);
-  }
-
-  function startTopicDrag(event: DragEvent<HTMLElement>, topicId: string) {
-    setDraggedTopicId(topicId);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("application/x-case-editor-topic", topicId);
-  }
-
-  function allowTopicDrop(event: DragEvent<HTMLElement>, topicId: string | null) {
-    if (!draggedTopicId || draggedTopicId === topicId) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    setTopicDropId(topicId);
-  }
-
-  function dropTopic(event: DragEvent<HTMLElement>, topicId: string | null) {
-    if (!draggedTopicId || draggedTopicId === topicId) return;
-    event.preventDefault();
-    props.onMoveTopic(draggedTopicId, topicId);
-    setDraggedTopicId(null);
-    setTopicDropId(undefined);
   }
 
   function startMarquee(event: PointerEvent<HTMLElement>) {
@@ -328,88 +254,6 @@ export function Sidebar(props: Props) {
     props.onSelectCases(ids);
   }
 
-  function renderCase(caseItem: CaseItem) {
-    const checked = checkedIds.has(caseItem.id);
-    return (
-      <div className="case-row" key={caseItem.id} data-case-id={caseItem.id}>
-        <button
-          className={`checkbox case-checkbox ${checked ? "on" : ""}`}
-          aria-label={`${caseItem.case_no || "사건번호 없음"} 선택`}
-          aria-pressed={checked}
-          onClick={(event) => {
-            event.stopPropagation();
-            toggleChecked(caseItem.id);
-          }}
-        >
-          {checked ? "✓" : ""}
-        </button>
-        <button
-        className={`case-item ${props.selectedCaseId === caseItem.id ? "active" : ""} ${checked ? "checked" : ""}`}
-        onClick={() => props.onSelectCase(caseItem.id)}
-        draggable
-        onDragStart={(event) => startCaseDrag(event, caseItem.id)}
-        onDragEnd={() => {
-          setDraggedIds([]);
-          setDropTopicId(undefined);
-        }}
-      >
-        <span className="case-item-title">
-          {caseItem.important && <span className="star">★</span>}
-          {caseItem.case_no || "사건번호 없음"}
-        </span>
-      </button>
-      </div>
-    );
-  }
-
-  function renderTopic(topic: Topic): JSX.Element {
-    const children = props.topics.filter((item) => item.parent_id === topic.id).sort(compareTopicsByName);
-    const topicCases = visibleCases.filter((item) => item.topic_id === topic.id).sort(compareCasesByTitle);
-    const open = props.expandedIds.includes(topic.id);
-    const allTopicCaseIds = caseIdsInTopic(topic.id);
-
-    return (
-      <div className="folder" key={topic.id}>
-        <div
-          className={`folder-row ${dropTopicId === topic.id ? "drop-target" : ""} ${topicDropId === topic.id ? "topic-drop-target" : ""}`}
-          onContextMenu={(event) => openFolderMenu(event, topic, allTopicCaseIds)}
-          draggable
-          onDragStart={(event) => startTopicDrag(event, topic.id)}
-          onDragEnd={() => {
-            setDraggedTopicId(null);
-            setTopicDropId(undefined);
-          }}
-          onDragOver={(event) => {
-            allowCaseDrop(event, topic.id);
-            allowTopicDrop(event, topic.id);
-          }}
-          onDragLeave={() => {
-            setDropTopicId((current) => current === topic.id ? undefined : current);
-            setTopicDropId((current) => current === topic.id ? undefined : current);
-          }}
-          onDrop={(event) => {
-            dropCases(event, topic.id);
-            dropTopic(event, topic.id);
-          }}
-        >
-          <button className="folder-toggle" onClick={() => props.onToggleTopic(topic.id)}>
-            <span className={`chevron ${open ? "open" : ""}`}>▸</span>
-            <span className="folder-name">{topic.name}</span>
-            <span className="folder-count">{children.length + topicCases.length}</span>
-          </button>
-        </div>
-        {open && (
-          <div className="folder-children">
-            {topicCases.map(renderCase)}
-            {children.map(renderTopic)}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  const unclassifiedOpen = props.expandedIds.includes(UNCLASSIFIED_ID);
-
   return (
     <aside className="sidebar">
       <header className="sidebar-head">
@@ -459,45 +303,19 @@ export function Sidebar(props: Props) {
           setMarquee(null);
         }}
       >
-        {searchResults ? (
-          <>
-            <p className="list-label">{searchResults.length}개 결과</p>
-            {searchResults.map(renderCase)}
-          </>
-        ) : (
-          <>
-            <div
-              className={`folder-root-actions ${topicDropId === null ? "topic-drop-target" : ""}`}
-              onDragOver={(event) => allowTopicDrop(event, null)}
-              onDragLeave={() => setTopicDropId((current) => current === null ? undefined : current)}
-              onDrop={(event) => dropTopic(event, null)}
-            >
-              <button className="ghost" onClick={() => props.onAddTopic(null)}>+ 폴더</button>
-            </div>
-            {roots.map(renderTopic)}
-            {unclassified.length > 0 && (
-              <div className="folder">
-                <div
-                  className={`folder-row ${dropTopicId === null ? "drop-target" : ""}`}
-                  onContextMenu={(event) => openFolderMenu(event, null, unclassified.map((item) => item.id))}
-                  onDragOver={(event) => allowCaseDrop(event, null)}
-                  onDragLeave={() => setDropTopicId((current) => current === null ? undefined : current)}
-                  onDrop={(event) => dropCases(event, null)}
-                >
-                  <button className="folder-toggle muted" onClick={() => props.onToggleTopic(UNCLASSIFIED_ID)}>
-                    <span className={`chevron ${unclassifiedOpen ? "open" : ""}`}>▸</span>
-                    <span className="folder-name">미분류</span>
-                    <span className="folder-count">{unclassified.length}</span>
-                  </button>
-                </div>
-                {unclassifiedOpen && <div className="folder-children">{unclassified.map(renderCase)}</div>}
-              </div>
-            )}
-            {roots.length === 0 && unclassified.length === 0 && (
-              <p className="list-empty">아직 판례가 없습니다.<br />판례 추가 버튼으로 새 판례를 넣어보세요.</p>
-            )}
-          </>
-        )}
+        <CaseExplorer
+          topics={props.topics}
+          cases={visibleCases}
+          results={searchResults || (importantOnly ? visibleCases.sort(compareCasesByTitle) : null)}
+          checked={checkedIds}
+          onChecked={(ids) => { setCheckedIds(new Set(ids)); props.onSelectCases(ids); }}
+          onOpen={props.onSelectCase}
+          onMoveCases={props.onMoveCases}
+          onMoveTopic={props.onMoveTopic}
+          onAddTopic={props.onAddTopic}
+          onNavigate={() => setQuery('')}
+          onFolderMenu={openFolderMenu}
+        />
         {marquee && <div className="selection-marquee" style={{ left: marquee.x, top: marquee.y, width: marquee.width, height: marquee.height }} />}
       </nav>
 

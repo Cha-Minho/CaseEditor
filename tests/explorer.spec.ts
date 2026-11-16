@@ -26,23 +26,23 @@ test('navigate folders with history and open a case only on double click',async(
 test('select a folder group, clear selection, cut cases and paste in another folder',async({page})=>{
   await page.locator('.explorer-folder',{hasText:'형사소송법'}).click({button:'right'});
   await page.getByRole('menuitem',{name:'전체 선택',exact:true}).click();
-  await expect(page.locator('.select-bar')).toContainText('3개 선택됨');
+  await expect(page.locator('.editor-pane')).toHaveAttribute('data-selected-count','3');
   await page.locator('.explorer-folder',{hasText:'형사소송법'}).click({button:'right'});
   await page.getByRole('menuitem',{name:'전체 선택 해제',exact:true}).click();
-  await expect(page.locator('.select-bar')).toHaveCount(0);
+  await expect(page.locator('.editor-pane')).toHaveAttribute('data-selected-count','0');
   await page.locator('.explorer-folder-open',{hasText:'형사소송법'}).dblclick();
   await page.locator('.explorer-case').first().click();
   await page.locator('.explorer-case').last().click({modifiers:['Shift']});
-  await expect(page.locator('.select-bar')).toContainText('2개 선택됨');
+  await expect(page.locator('.editor-pane')).toHaveAttribute('data-selected-count','2');
   await page.getByRole('button',{name:'잘라내기',exact:true}).click();
   await page.getByRole('button',{name:'전체 폴더',exact:true}).click();
   await page.locator('.explorer-folder-open',{hasText:'민법'}).dblclick();
   await page.getByRole('button',{name:'이동하여 붙여넣기',exact:true}).click();
   await expect(page.locator('.explorer-case')).toHaveCount(2);
   await page.getByRole('button',{name:'전체 선택 / 해제',exact:true}).click();
-  await expect(page.locator('.select-bar')).toContainText('2개 선택됨');
+  await expect(page.locator('.editor-pane')).toHaveAttribute('data-selected-count','2');
   await page.getByRole('button',{name:'전체 선택 / 해제',exact:true}).click();
-  await expect(page.locator('.select-bar')).toHaveCount(0);
+  await expect(page.locator('.editor-pane')).toHaveAttribute('data-selected-count','0');
 });
 test('drag a case into a folder and move a folder without changing its contents',async({page})=>{
   await page.locator('.explorer-folder-open',{hasText:'형사소송법'}).dblclick();
@@ -64,9 +64,9 @@ test('marquee and Ctrl click select cases without opening the editor',async({pag
   await page.mouse.down();
   await page.mouse.move(first.x+20,first.y+3,{steps:12});
   await page.mouse.up();
-  await expect(page.locator('.select-bar')).toContainText('2개 선택됨');
+  await expect(page.locator('.editor-pane')).toHaveAttribute('data-selected-count','2');
   await page.locator('.explorer-case').first().click({modifiers:['Control']});
-  await expect(page.locator('.select-bar')).toContainText('1개 선택됨');
+  await expect(page.locator('.editor-pane')).toHaveAttribute('data-selected-count','1');
   await expect(page.locator('.sidebar')).toBeVisible();
 });
 test('mobile opens by tapping and has no horizontal overflow',async({browser})=>{
@@ -109,10 +109,37 @@ for (const width of [1440,390]) {
     await list.evaluate(el=>{el.scrollTop=el.scrollHeight;});
     const items=page.locator('.explorer-case-row');
     const a=(await items.nth(await items.count()-2).boundingBox())!,b=(await items.last().boundingBox())!;
-    await page.mouse.move(b.x+b.width-3,b.y+b.height+20);
+    await page.mouse.move(b.x+3,b.y+b.height-2);
     await page.mouse.down();
     await page.mouse.move(a.x+20,a.y+2,{steps:10});
     await page.mouse.up();
-    await expect(page.locator('.select-bar')).toContainText('2개 선택됨');
+    await expect(page.locator('.editor-pane')).toHaveAttribute('data-selected-count','2');
   });
 }
+
+test('toolbar trash follows paste, activates on selection, and confirms deletion',async({page})=>{
+  const trash=page.getByRole('button',{name:'선택 항목 삭제',exact:true});
+  await expect(trash).toBeDisabled();
+  expect(await trash.evaluate(el=>el.previousElementSibling?.getAttribute('aria-label'))).toBe('이동하여 붙여넣기');
+  await expect(page.locator('.select-bar')).toHaveCount(0);
+  await expect(page.locator('.explorer-content')).toHaveCSS('padding-bottom','0px');
+  await page.locator('.explorer-folder-open',{hasText:'형사소송법'}).dblclick();
+  const pathY=(await page.locator('.explorer-path').boundingBox())!.y;
+  await page.getByRole('button',{name:'2023도11371 선택',exact:true}).click();
+  await expect(trash).toBeEnabled();
+  expect((await page.locator('.explorer-path').boundingBox())!.y).toBe(pathY);
+  page.once('dialog',dialog=>dialog.dismiss());
+  await trash.click();
+  await expect(page.locator('.explorer-case')).toHaveCount(2);
+  page.once('dialog',dialog=>dialog.accept());
+  await trash.click();
+  await expect(page.locator('.explorer-case')).toHaveCount(1);
+  await expect(trash).toBeDisabled();
+  await page.getByRole('button',{name:'전체 폴더',exact:true}).click();
+  await page.locator('.explorer-folder-open',{hasText:'민법'}).click();
+  await expect(trash).toBeEnabled();
+  page.once('dialog',dialog=>dialog.accept());
+  await trash.click();
+  await expect(page.locator('.explorer-folder-open',{hasText:'민법'})).toHaveCount(0);
+  await expect(trash).toBeDisabled();
+});

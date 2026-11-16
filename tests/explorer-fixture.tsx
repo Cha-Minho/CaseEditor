@@ -28,7 +28,7 @@ function Fixture() {
     onToggleTopic={()=>{}} onAddTopic={parent_id=>setTopics(ts=>[...ts,{...ts[0],id:'new',name:'새 폴더',parent_id:parent_id||null}])}
     onRenameTopic={(id,name)=>setTopics(ts=>ts.map(t=>t.id===id?{...t,name}:t))} onDeleteTopic={id=>setTopics(ts=>ts.filter(t=>t.id!==id))}
     onAddBlank={()=>{}} onAddApiCase={async()=>{}} onAddPdfCases={async()=>{}} onImport={async()=>{}} onDeleteCases={ids=>setCases(cs=>cs.filter(c=>!ids.includes(c.id)))} onSignOut={()=>{}}/>
-    <main className="editor-pane"><header className="editor-header"><h2>{selected}</h2></header><div className="field-box">판례 메모</div></main>
+    <main className="editor-pane" data-selected-count={ids.length}><header className="editor-header"><h2>{selected}</h2></header><div className="field-box">판례 메모</div></main>
   </SidebarLayout>;
 }
 createRoot(document.getElementById('root')!).render(<Fixture/>);

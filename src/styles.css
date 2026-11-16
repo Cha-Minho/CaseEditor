@@ -208,23 +208,6 @@ select:focus {
   color: var(--star);
 }
 
-.select-bar {
-  align-items: center;
-  background: var(--brand-soft);
-  border-radius: 10px;
-  color: var(--brand);
-  display: flex;
-  font-size: 12.5px;
-  font-weight: 700;
-  justify-content: space-between;
-  padding: 4px 4px 4px 12px;
-}
-
-.select-bar .danger {
-  background: var(--surface);
-  min-height: 30px;
-}
-
 .checkbox {
   align-items: center;
   border: 1.5px solid var(--line);
@@ -293,12 +276,13 @@ select:focus {
 .explorer-toolbar { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; flex-shrink: 0; }
 .explorer-toolbar button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; min-height: 32px; padding: 0; }
 .explorer-toolbar button:disabled { opacity: .35; cursor: default; }
+.explorer-toolbar .explorer-delete:not(:disabled) { color: var(--danger); }
 .explorer-tool-divider { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
 .explorer-path { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; padding: 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 12px; flex-shrink: 0; }
 .explorer-path > span { display: inline-flex; align-items: center; gap: 3px; min-width: 0; max-width: 100%; }
 .explorer-path button { min-height: 26px; padding: 3px 5px; text-align: left; overflow-wrap: anywhere; }
 .explorer-path > button { display: inline-flex; align-items: center; }
-.explorer-content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; position: relative; padding: 3px 0 48px; overscroll-behavior: contain; }
+.explorer-content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; position: relative; padding: 3px 0 0; overscroll-behavior: contain; }
 .explorer-folder { display: flex; align-items: center; min-height: 42px; border-radius: 5px; }
 .explorer-folder:hover, .explorer-case-row:hover { background: var(--surface-soft); }
 .explorer-folder-open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; min-height: 42px; padding: 7px 8px; text-align: left; }

@@ -277,13 +277,6 @@ export function Sidebar(props: Props) {
         </span>
       </header>
 
-      {checkedIds.size > 0 && (
-        <div className="select-bar">
-          <span>{checkedIds.size}개 선택됨</span>
-          <button className="danger" onClick={deleteChecked}>삭제</button>
-        </div>
-      )}
-
       <input
         className="search-input"
         value={query}
@@ -313,6 +306,8 @@ export function Sidebar(props: Props) {
           onOpen={props.onSelectCase}
           onMoveCases={props.onMoveCases}
           onMoveTopic={props.onMoveTopic}
+          onDeleteCases={deleteChecked}
+          onDeleteTopic={deleteTopic}
           onAddTopic={props.onAddTopic}
           onNavigate={() => setQuery('')}
           onFolderMenu={openFolderMenu}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent, type DragEvent, type RefObject, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, ArrowUp, Scissors, ClipboardPaste, FolderPlus, Folder, FileText, Home, CheckSquare } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUp, Scissors, ClipboardPaste, FolderPlus, Folder, FileText, Home, CheckSquare, Trash2 } from 'lucide-react';
 import type { CaseItem, Topic } from '../types';
 import { compareCasesByTitle, compareTopicsByName } from '../lib/sort';
 
@@ -16,6 +16,8 @@ type Props = {
   onOpen: (id: string) => void;
   onMoveCases: (ids: string[], topic: string | null) => void;
   onMoveTopic: (id: string, parent: string | null) => void;
+  onDeleteCases: () => void;
+  onDeleteTopic: (topic: Topic) => void;
   onAddTopic: (parent?: string | null) => void;
   onNavigate: () => void;
   onFolderMenu: (event: MouseEvent, topic: Topic | null, ids: string[]) => void;
@@ -103,9 +105,13 @@ export function CaseExplorer(props: Props) {
       <button title="상위 폴더" aria-label="상위 폴더" disabled={location === ROOT} onClick={() => navigate(parent)}><ArrowUp size={18}/></button>
       <span className="explorer-tool-divider"/>
       <button title="새 폴더" aria-label="새 폴더" disabled={location === UNCLASSIFIED} onClick={() => props.onAddTopic(location === ROOT ? null : location)}><FolderPlus size={18}/></button>
-      <button title="전체 선택 / 해제" aria-label="전체 선택 / 해제" disabled={!cases.length} onClick={() => props.onChecked(allChecked ? [] : cases.map(c => c.id))}><CheckSquare size={18}/></button>
+      <button title="전체 선택 / 해제" aria-label="전체 선택 / 해제" disabled={!cases.length} onClick={() => { setSelectedFolder(null); props.onChecked(allChecked ? [] : cases.map(c => c.id)); }}><CheckSquare size={18}/></button>
       <button title="잘라내기" aria-label="잘라내기" disabled={!props.checked.size && !selectedFolder} onClick={() => setCut(props.checked.size ? {cases: [...props.checked]} : {topic: selectedFolder!})}><Scissors size={18}/></button>
       <button title="이동하여 붙여넣기" aria-label="이동하여 붙여넣기" disabled={!canPaste} onClick={() => { if (cut) { move(cut, location); setCut(null); } }}><ClipboardPaste size={18}/></button>
+      <button className="explorer-delete" title="선택 항목 삭제" aria-label="선택 항목 삭제" disabled={!props.checked.size && !byId.has(selectedFolder || '')} onClick={() => {
+        if (props.checked.size) props.onDeleteCases();
+        else { const topic = byId.get(selectedFolder || ''); if (topic) props.onDeleteTopic(topic); }
+      }}><Trash2 size={18}/></button>
     </div>
     <nav className="explorer-path" aria-label="현재 경로">
       <button title="전체 폴더" aria-label="전체 폴더" onClick={() => navigate(ROOT)} {...dropHandlers(ROOT)}><Home size={16}/></button>
@@ -119,7 +125,7 @@ export function CaseExplorer(props: Props) {
       </div>)}
       {!props.results && location === ROOT && <div className={`explorer-folder ${dropTarget === UNCLASSIFIED ? 'drop-target' : ''}`} {...dropHandlers(UNCLASSIFIED)} onContextMenu={e => props.onFolderMenu(e, null, props.cases.filter(c => !c.topic_id).map(c => c.id))}><button className="explorer-folder-open" onClick={() => { if (window.matchMedia('(pointer: coarse)').matches) navigate(UNCLASSIFIED); }} onDoubleClick={() => navigate(UNCLASSIFIED)}><Folder size={20}/><span>미분류</span><small>{props.cases.filter(c => !c.topic_id).length}</small></button></div>}
       {cases.map(c => <div key={c.id} data-case-id={c.id} className={`case-row explorer-case-row ${props.checked.has(c.id) ? 'is-selected' : ''} ${cut && 'cases' in cut && cut.cases.includes(c.id) ? 'is-cut' : ''}`}>
-        <button className={`checkbox case-checkbox ${props.checked.has(c.id) ? 'on' : ''}`} aria-label={`${c.case_no || '사건번호 없음'} 선택`} aria-pressed={props.checked.has(c.id)} onClick={() => { const next=new Set(props.checked); next.has(c.id) ? next.delete(c.id) : next.add(c.id); anchor.current=c.id; props.onChecked([...next]); }}>{props.checked.has(c.id) ? '✓' : ''}</button>
+        <button className={`checkbox case-checkbox ${props.checked.has(c.id) ? 'on' : ''}`} aria-label={`${c.case_no || '사건번호 없음'} 선택`} aria-pressed={props.checked.has(c.id)} onClick={() => { setSelectedFolder(null); const next=new Set(props.checked); next.has(c.id) ? next.delete(c.id) : next.add(c.id); anchor.current=c.id; props.onChecked([...next]); }}>{props.checked.has(c.id) ? '✓' : ''}</button>
         <button className="case-item explorer-case" draggable onDragStart={e => startDrag(e,{cases:props.checked.has(c.id) ? [...props.checked] : [c.id]})} onClick={e => { select(e,c.id); if (window.matchMedia('(pointer: coarse)').matches) open(c.id); }} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); open(c.id); } }} onDoubleClick={() => open(c.id)} title={c.case_no || c.title}><FileText size={18}/><span>{c.important && <span className="star">★</span>}{c.case_no || '사건번호 없음'}</span></button>
       </div>)}
       {!props.results && !cases.length && (location === UNCLASSIFIED || !folders.length && location !== ROOT) && <p className="list-empty">비어 있는 폴더</p>}

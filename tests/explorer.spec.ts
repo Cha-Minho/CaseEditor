@@ -84,3 +84,35 @@ test('mobile opens by tapping and has no horizontal overflow',async({browser})=>
     await expect(page.locator('.editor-header')).toContainText('2023도11371');
   } finally { await context.close(); }
 });
+
+for (const width of [1440,390]) {
+  test(`only the folder list scrolls, with fixed path at ${width}px`,async({page})=>{
+    await page.setViewportSize({width,height:720});
+    await page.goto('/tests/explorer.html?long');
+    await page.getByRole('button',{name:'목차 열기',exact:true}).click();
+    await page.locator('.explorer-folder-open',{hasText:'민법'}).dblclick();
+    const path=page.locator('.explorer-path'),toolbar=page.locator('.explorer-toolbar'),list=page.locator('.explorer-content');
+    const pathBox=(await path.boundingBox())!,toolbarBox=(await toolbar.boundingBox())!;
+    await expect(page.locator('.explorer-status')).toHaveCount(0);
+    expect(await list.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+    await list.hover();
+    await page.mouse.wheel(0,1600);
+    await expect.poll(()=>list.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
+    expect((await path.boundingBox())!.y).toBe(pathBox.y);
+    expect((await toolbar.boundingBox())!.y).toBe(toolbarBox.y);
+    expect(await page.locator('.case-list').evaluate(el=>el.scrollTop)).toBe(0);
+    expect(await page.locator('.sidebar').evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1);
+    await page.screenshot({path:`test-results/explorer-scroll-${width}.png`});
+    await page.getByRole('button',{name:'전체 폴더',exact:true}).click();
+    await page.locator('.explorer-folder-open',{hasText:'형사소송법'}).dblclick();
+    expect(await list.evaluate(el=>el.scrollTop)).toBe(0);
+    await list.evaluate(el=>{el.scrollTop=el.scrollHeight;});
+    const items=page.locator('.explorer-case-row');
+    const a=(await items.nth(await items.count()-2).boundingBox())!,b=(await items.last().boundingBox())!;
+    await page.mouse.move(b.x+b.width-3,b.y+b.height+20);
+    await page.mouse.down();
+    await page.mouse.move(a.x+20,a.y+2,{steps:10});
+    await page.mouse.up();
+    await expect(page.locator('.select-bar')).toContainText('2개 선택됨');
+  });
+}

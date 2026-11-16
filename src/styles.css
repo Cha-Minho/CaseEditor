@@ -276,7 +276,7 @@ select:focus {
   gap: 1px;
   margin: 0 -6px;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 2px 6px;
   position: relative;
 }
@@ -289,16 +289,16 @@ select:focus {
   z-index: 2;
 }
 
-.case-explorer { display: flex; flex-direction: column; min-height: 100%; flex: 1; gap: 8px; }
-.explorer-toolbar { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.case-explorer { display: flex; flex-direction: column; min-height: 0; flex: 1; gap: 8px; overflow: hidden; }
+.explorer-toolbar { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; flex-shrink: 0; }
 .explorer-toolbar button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; min-height: 32px; padding: 0; }
 .explorer-toolbar button:disabled { opacity: .35; cursor: default; }
 .explorer-tool-divider { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
-.explorer-path { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; padding: 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 12px; }
+.explorer-path { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; padding: 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 12px; flex-shrink: 0; }
 .explorer-path > span { display: inline-flex; align-items: center; gap: 3px; min-width: 0; max-width: 100%; }
 .explorer-path button { min-height: 26px; padding: 3px 5px; text-align: left; overflow-wrap: anywhere; }
 .explorer-path > button { display: inline-flex; align-items: center; }
-.explorer-content { flex: 1; min-height: 180px; padding: 3px 0 48px; }
+.explorer-content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; position: relative; padding: 3px 0 48px; overscroll-behavior: contain; }
 .explorer-folder { display: flex; align-items: center; min-height: 42px; border-radius: 5px; }
 .explorer-folder:hover, .explorer-case-row:hover { background: var(--surface-soft); }
 .explorer-folder-open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; min-height: 42px; padding: 7px 8px; text-align: left; }
@@ -313,7 +313,6 @@ select:focus {
 .explorer-case > span { overflow-wrap: anywhere; }
 .case-explorer .drop-target { background: var(--brand-soft); outline: 1px solid var(--brand); }
 .case-explorer .is-cut { opacity: .45; }
-.explorer-status { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); padding: 7px 4px; }
 
 .folder-root-actions {
   margin: 2px 0 5px;
@@ -993,7 +992,7 @@ select:focus {
   .app.toggle-layout > .editor-pane,
   .app.toggle-layout.show-editor > .editor-pane { display: flex; min-height: 0; overflow: auto; }
   .app.toggle-layout .sidebar-slot > .sidebar { display: flex; min-height: 0; height: 100dvh; }
-  .app.toggle-layout .sidebar-slot .case-list { overflow: auto; }
+  .app.toggle-layout .sidebar-slot .case-list { overflow: hidden; }
   .app.toggle-layout .back-button { display: none; }
 
   .sidebar {

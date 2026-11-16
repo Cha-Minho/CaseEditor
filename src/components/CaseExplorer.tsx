@@ -1,4 +1,4 @@
-import { useRef, useState, type MouseEvent, type DragEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type DragEvent, type RefObject, type ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUp, Scissors, ClipboardPaste, FolderPlus, Folder, FileText, Home, CheckSquare } from 'lucide-react';
 import type { CaseItem, Topic } from '../types';
 import { compareCasesByTitle, compareTopicsByName } from '../lib/sort';
@@ -6,6 +6,8 @@ import { compareCasesByTitle, compareTopicsByName } from '../lib/sort';
 const ROOT = '__root__';
 const UNCLASSIFIED = '__unclassified__';
 type Props = {
+  contentRef: RefObject<HTMLDivElement>;
+  selectionOverlay: ReactNode;
   topics: Topic[];
   cases: CaseItem[];
   results: CaseItem[] | null;
@@ -30,6 +32,7 @@ export function CaseExplorer(props: Props) {
   const current = history[index];
   const byId = new Map(props.topics.map(t => [t.id, t]));
   const location = current === ROOT || current === UNCLASSIFIED || byId.has(current) ? current : ROOT;
+  useEffect(() => { props.contentRef.current?.scrollTo(0, 0); }, [location, props.contentRef]);
   const parent = location === UNCLASSIFIED ? ROOT : byId.get(location)?.parent_id || ROOT;
   const folders = props.topics.filter(t => t.parent_id === (location === ROOT ? null : location)).sort(compareTopicsByName);
   const cases = props.results || props.cases.filter(c => location === UNCLASSIFIED ? !c.topic_id : c.topic_id === location).sort(compareCasesByTitle);
@@ -109,7 +112,7 @@ export function CaseExplorer(props: Props) {
       {breadcrumbs.map(t => <span key={t.id}><span aria-hidden="true">›</span><button onClick={() => navigate(t.id)} {...dropHandlers(t.id)} title={t.name}>{t.name}</button></span>)}
       {location === UNCLASSIFIED && <span>› 미분류</span>}
     </nav>
-    <div className={`explorer-content ${dropTarget === location ? 'drop-target' : ''}`} {...dropHandlers(location)}>
+    <div ref={props.contentRef} className={`explorer-content ${dropTarget === location ? 'drop-target' : ''}`} {...dropHandlers(location)}>
       {props.results && <p className="list-label">검색 결과 {cases.length}개</p>}
       {!props.results && location !== UNCLASSIFIED && folders.map(t => <div className={`explorer-folder ${selectedFolder === t.id ? 'is-selected' : ''} ${dropTarget === t.id ? 'drop-target' : ''} ${cut && 'topic' in cut && cut.topic === t.id ? 'is-cut' : ''}`} key={t.id} draggable onDragStart={e => startDrag(e, {topic: t.id})} {...dropHandlers(t.id)} onContextMenu={e => props.onFolderMenu(e, t, descendantCases(t.id))}>
         <button className="explorer-folder-open" onClick={() => { if (window.matchMedia('(pointer: coarse)').matches) navigate(t.id); else { setSelectedFolder(t.id); props.onChecked([]); } }} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); navigate(t.id); } }} onDoubleClick={() => navigate(t.id)}><Folder size={20}/><span>{t.name}</span><small>{props.topics.filter(c => c.parent_id === t.id).length + props.cases.filter(c => c.topic_id === t.id).length}</small></button>
@@ -120,7 +123,7 @@ export function CaseExplorer(props: Props) {
         <button className="case-item explorer-case" draggable onDragStart={e => startDrag(e,{cases:props.checked.has(c.id) ? [...props.checked] : [c.id]})} onClick={e => { select(e,c.id); if (window.matchMedia('(pointer: coarse)').matches) open(c.id); }} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); open(c.id); } }} onDoubleClick={() => open(c.id)} title={c.case_no || c.title}><FileText size={18}/><span>{c.important && <span className="star">★</span>}{c.case_no || '사건번호 없음'}</span></button>
       </div>)}
       {!props.results && !cases.length && (location === UNCLASSIFIED || !folders.length && location !== ROOT) && <p className="list-empty">비어 있는 폴더</p>}
+      {props.selectionOverlay}
     </div>
-    <div className="explorer-status">{!props.results && location !== UNCLASSIFIED ? `${folders.length + (location === ROOT ? 1 : 0)}개 폴더 · ` : ''}{cases.length}개 판례{props.checked.size ? ` · ${props.checked.size}개 선택` : ''}</div>
   </section>;
 }

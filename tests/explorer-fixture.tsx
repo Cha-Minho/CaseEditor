@@ -5,16 +5,19 @@ import { SidebarLayout } from '../src/components/SidebarLayout';
 import type { CaseItem, Topic } from '../src/types';
 import '../src/styles.css';
 function Fixture() {
+  const longList = new URLSearchParams(window.location.search).has('long');
   const [topics,setTopics]=useState<Topic[]>([
     {id:'criminal',name:'형사소송법',parent_id:null},
     {id:'civil',name:'민법',parent_id:null},
     {id:'evidence',name:'증거재판주의',parent_id:'criminal'},
+    ...(longList ? Array.from({length:40},(_,i)=>({id:`folder-${i}`,name:`민법 세부 폴더 ${i+1}`,parent_id:'civil'})) : []),
   ].map(t=>({...t,user_id:'fixture',sort_order:0,created_at:'',updated_at:'',deleted_at:null})));
   const [cases,setCases]=useState<CaseItem[]>([
     {id:'c1',case_no:'2023도11371',topic_id:'criminal'},
     {id:'c2',case_no:'2024도163',topic_id:'criminal'},
     {id:'c3',case_no:'2026도4423',topic_id:'evidence'},
     {id:'c4',case_no:'2023도13081',topic_id:null},
+    ...(longList ? Array.from({length:50},(_,i)=>({id:`case-${i}`,case_no:`2025도${1000+i}`,topic_id:'criminal'})) : []),
   ].map(c=>({...c,title:c.case_no,user_id:'fixture',important:false,api_status:'manual',api_error:null,created_at:'',updated_at:'',deleted_at:null})));
   const [selected,setSelected]=useState('판례 편집');
   const [ids,setIds]=useState<string[]>([]);

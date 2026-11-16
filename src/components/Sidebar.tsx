@@ -48,7 +48,7 @@ export function Sidebar(props: Props) {
   const [addingCaseNos, setAddingCaseNos] = useState(false);
   const [marquee, setMarquee] = useState<Marquee | null>(null);
   const [folderMenu, setFolderMenu] = useState<FolderMenu | null>(null);
-  const caseListRef = useRef<HTMLElement | null>(null);
+  const caseListRef = useRef<HTMLDivElement>(null);
   const addDialogRef = useRef<HTMLDialogElement | null>(null);
   const folderMenuRef = useRef<HTMLDivElement | null>(null);
   const marqueeStart = useRef<{ x: number; y: number; base: Set<string> } | null>(null);
@@ -202,7 +202,7 @@ export function Sidebar(props: Props) {
   function startMarquee(event: PointerEvent<HTMLElement>) {
     if (event.button !== 0 || (event.target as HTMLElement).closest("button, input, label")) return;
     const list = caseListRef.current;
-    if (!list) return;
+    if (!list || !list.contains(event.target as Node)) return;
     const rect = list.getBoundingClientRect();
     const point = { x: event.clientX - rect.left, y: event.clientY - rect.top + list.scrollTop };
     marqueeStart.current = { ...point, base: event.ctrlKey ? new Set(checkedIds) : new Set() };
@@ -294,7 +294,6 @@ export function Sidebar(props: Props) {
 
       <nav
         className="case-list"
-        ref={caseListRef}
         onPointerDown={startMarquee}
         onPointerMove={updateMarquee}
         onPointerUp={finishMarquee}
@@ -304,6 +303,8 @@ export function Sidebar(props: Props) {
         }}
       >
         <CaseExplorer
+          contentRef={caseListRef}
+          selectionOverlay={marquee && <div className="selection-marquee" style={{ left: marquee.x, top: marquee.y, width: marquee.width, height: marquee.height }} />}
           topics={props.topics}
           cases={visibleCases}
           results={searchResults || (importantOnly ? visibleCases.sort(compareCasesByTitle) : null)}
@@ -316,7 +317,6 @@ export function Sidebar(props: Props) {
           onNavigate={() => setQuery('')}
           onFolderMenu={openFolderMenu}
         />
-        {marquee && <div className="selection-marquee" style={{ left: marquee.x, top: marquee.y, width: marquee.width, height: marquee.height }} />}
       </nav>
 
       <footer className="sidebar-foot">
